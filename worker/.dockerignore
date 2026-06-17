@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.conda/
+.mypy_cache/
+.pytest_cache/
+*.log
