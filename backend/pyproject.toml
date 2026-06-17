@@ -1,0 +1,13 @@
+[project]
+name = "hakka-stage-ai-backend"
+version = "0.1.0"
+description = "FastAPI API service for hakka-stage-ai."
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.32,<1.0",
+]
+
+[tool.uv]
+# 后端当前只作为 API 服务运行，不需要把 app 安装成 Python 包。
+package = false
