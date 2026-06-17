@@ -2,7 +2,7 @@
 
 > 面向技术组执行版本  
 > 开发周期：2026 年 6 月 12 日 - 2026 年 7 月 20 日  
-> 技术组配置：2 名人工智能学院研究生，具备 Java、Python、前后端开发、大模型 API 调用、n8n / Coze 工作流、Codex / Claude Code 辅助编程能力。
+> 技术组配置：2 名人工智能学院研究生，具备 Java、Python、前后端开发、大模型 API 调用、Codex 辅助编程能力。本项目技术实现统一采用 Python 后端技术栈，Java 能力作为团队储备，不进入本期主架构。
 
 ## 1. 项目定位与交付目标
 
@@ -54,7 +54,7 @@ flowchart LR
 | 真实舞台灯光和追光自动控制 | 不做 | 依赖现场设备、灯光协议和舞台条件 |
 | 全自动舞台合成 | 不做 | 属于综合导演系统，短期成本过高 |
 | 长视频完整演出自动分析 | 降级 | 改为片段上传、人工观察记录加 AI 复盘 |
-| 动作纠错 | 降级 | 改为视频打卡、关键帧抽取、基础姿态观察、老师复核 |
+| 动作纠错 | 降级 | 改为视频打卡、RTMPose 骨架提取、DTW 对齐、规则评分和老师复核 |
 
 ### 1.4 7 月 20 日验收标准
 
@@ -75,29 +75,26 @@ flowchart LR
 
 | 能力 | 可承担工作 |
 |---|---|
-| Java 开发 | Spring Boot 后端、数据库、权限、业务接口 |
-| Python 开发 | AI 服务、大模型调用、视频/音频处理、脚本工具 |
-| 前端开发 | Vue 页面、表单、上传、报告预览、导出交互 |
+| Java 开发 | 团队储备能力，本期不作为主后端技术栈 |
+| Python 开发 | FastAPI API 服务、Python Worker、大模型调用、视频/音频处理、脚本工具 |
+| 前端开发 | React 页面、表单、上传、报告预览、导出交互 |
 | AI 能力 | 大模型 API、提示词工程、结构化输出、多模态工具接入 |
-| n8n / Coze | 自动化工作流、演示 Bot、Webhook 串联 |
-| Codex / Claude Code | 快速生成代码、审查代码、补测试、重构提示词 |
+| Codex | 快速生成代码、审查代码、补测试、重构提示词 |
 
 ### 2.2 总体实施策略
 
-本项目采用 **自建 Web 系统为主，AI 工具和工作流平台为辅** 的策略。
+本项目采用 **自建 Web 系统承载核心业务流程，Python API 服务和 Python Worker 承载生成与分析能力** 的策略。
 
-不要把核心业务系统完全交给 n8n 或 Coze，因为教学数据、学生上传视频、报告、权限和导出都需要稳定的数据结构和长期维护。n8n / Coze 更适合做演示流程、通知和外部 Bot。
+教学数据、学生上传视频、报告、权限和导出都需要稳定的数据结构和长期维护，因此本期只保留自建 Web 系统、FastAPI API 服务和 Python Worker 这条主线，避免增加部署、权限、调试和验收复杂度。
 
 建议分工如下：
 
 | 层级 | 工具或平台 | 定位 |
 |---|---|---|
-| 核心业务系统 | Vue + Spring Boot + FastAPI | 项目主系统，保存数据，承载完整流程 |
+| 核心业务系统 | React + FastAPI + Python Worker | 项目主系统，保存数据，承载完整流程 |
 | 大模型能力 | DeepSeek / 通义千问 / OpenAI 等 OpenAI 兼容接口 | 文本生成、结构化分析、报告生成 |
 | 媒体处理 | FFmpeg + OpenCV + RTMPose / MMPose | 短视频抽帧、人体关键点提取、动作对齐与纠错 |
-| 自动化工作流 | n8n | Webhook、定时任务、通知、批量示例生成 |
-| 演示 Bot | Coze | 对外演示问答入口，调用后端接口 |
-| AI 编程 | Codex + Claude Code | 需求拆解、代码生成、测试、代码审查、文档维护 |
+| AI 编程 | Codex | 需求拆解、代码生成、测试、代码审查、文档维护 |
 
 ### 2.3 两人开发分工
 
@@ -138,39 +135,38 @@ flowchart LR
 
 ### 3.1 架构总览
 
-系统采用“前端应用 + Java 业务后端 + Python AI 服务 + 数据库 + 对象存储 + 异步队列”的结构。
+系统采用“前端应用 + FastAPI API 服务 + Python Worker + 数据库 + 对象存储 + 异步队列”的结构。统一使用 Python 语言，但 API 服务和长任务 Worker 分进程运行，避免视频处理和模型推理阻塞 HTTP 请求。
 
 ```mermaid
 flowchart TB
-    U1["老师 / 编导"] --> FE["Vue 3 Web 前端"]
+    U1["老师 / 编导"] --> FE["React Web 前端"]
     U2["学生"] --> FE
-    FE --> BE["Spring Boot 业务后端"]
-    BE --> DB["PostgreSQL 数据库"]
-    BE --> OS["MinIO / OSS 对象存储"]
-    BE --> R["Redis 队列与缓存"]
-    BE --> AI["FastAPI AI 服务"]
-    AI --> LLM["大模型 API"]
-    AI --> MEDIA["FFmpeg / OpenCV / RTMPose / MMPose"]
-    BE --> EXPORT["Markdown / Word 导出"]
-    N8N["n8n 工作流"] --> BE
-    COZE["Coze Bot"] --> BE
+    FE --> API["FastAPI API 服务"]
+    API --> DB["PostgreSQL 数据库"]
+    API --> OS["MinIO / OSS 对象存储"]
+    API --> R["Redis 队列与缓存"]
+    API --> EXPORT["Markdown / Word 导出"]
+    R --> WORKER["Python Worker 长任务"]
+    WORKER --> LLM["大模型 API"]
+    WORKER --> MEDIA["FFmpeg / OpenCV / RTMPose / MMPose"]
+    WORKER --> MOTION["Kimodo / Wan2.2 Animate / Seedance 2.0"]
+    WORKER --> DB
+    WORKER --> OS
 ```
 
-### 3.2 为什么不采用纯前端或纯工作流方案
+### 3.2 为什么不采用纯前端方案
 
 纯前端方案开发快，但无法稳定管理学生视频、账号权限、报告历史和异步任务。
 
-纯 n8n / Coze 方案适合快速 Demo，但不适合长期维护复杂业务数据，也不适合做文件权限、视频存储和报告复核。
-
-因此本项目应采用自建系统承载核心流程，n8n / Coze 只做外围增强。
+因此本项目应采用自建系统承载核心流程，所有正式业务数据统一由后端和数据库管理。
 
 ### 3.3 服务拆分
 
 | 服务 | 技术 | 职责 |
 |---|---|---|
-| Web 前端 | Vue 3 + Vite + TypeScript | 页面展示、表单填写、上传、报告预览 |
-| 业务后端 | Spring Boot 3 + Java 17 | 登录权限、业务接口、数据落库、任务调度 |
-| AI 服务 | FastAPI + Python 3.11 | 大模型调用、媒体处理、AI 报告生成 |
+| Web 前端 | React + Vite + TypeScript | 页面展示、表单填写、上传、报告预览 |
+| API 服务 | FastAPI + Python 3.11 | 登录权限、业务接口、数据落库、文件上传、导出入口 |
+| Worker 服务 | Python 3.11 + Celery / RQ | 大模型调用、媒体处理、动作生成、练习纠错、AI 报告生成 |
 | 数据库 | PostgreSQL | 用户、课程、剧目、提交记录、报告 |
 | 缓存与队列 | Redis | 异步任务状态、短期缓存 |
 | 对象存储 | MinIO，本地演示；云端可换 OSS/S3 | 视频、图片、导出文件 |
@@ -184,16 +180,16 @@ docker-compose
 ├── postgres
 ├── redis
 ├── minio
-├── backend-spring
-├── ai-fastapi
+├── api-fastapi
+├── worker-python
 └── frontend-vite
 ```
 
 开发时可以拆开启动：
 
 - 前端：`npm run dev`
-- Java 后端：IDEA 或 `mvn spring-boot:run`
-- Python AI 服务：`uvicorn app.main:app --reload`
+- FastAPI API 服务：`uvicorn app.main:app --reload`
+- Python Worker：`celery -A app.worker worker -l info` 或 `rq worker`
 - PostgreSQL / Redis / MinIO：Docker Compose
 
 ### 3.5 环境变量设计
@@ -238,16 +234,18 @@ REDIS_PORT=6379
 
 | 技术 | 用途 |
 |---|---|
-| Vue 3 | 主前端框架 |
+| React | 主前端框架 |
 | Vite | 构建工具，启动快，适合短周期开发 |
 | TypeScript | 提高接口和状态类型稳定性 |
-| Element Plus | 后台管理、表单、表格、弹窗、上传组件 |
-| Pinia | 全局状态管理 |
-| Vue Router | 页面路由 |
-| Axios | 请求后端 API |
+| Tailwind CSS | 页面样式和响应式布局 |
+| shadcn/ui | 表单、按钮、弹窗、表格、提示等基础组件 |
+| React Router | 页面路由 |
+| TanStack Query | API 请求、缓存、刷新和异步状态管理 |
+| React Hook Form | 表单状态管理 |
+| Zod | 前端表单校验，并可与后端接口 schema 对齐 |
 | Markdown 渲染组件 | 展示 AI 生成报告 |
 
-选择 Vue + Element Plus 的原因是开发速度快，适合做表单密集型系统；本项目主要是输入、生成、复核、导出，不需要复杂动画或大型前端工程。
+选择 React 技术栈的原因是 AI Coding 支持更成熟，组件、表单、接口请求和校验方案更容易被 Codex 稳定生成和维护。`shadcn/ui` 适合快速搭建后台型业务界面，`TanStack Query + React Hook Form + Zod` 可以把“请求状态、表单填写、字段校验、错误提示”拆得比较清楚，适合本项目大量“填写参数 -> 调用 AI -> 编辑结果 -> 保存导出”的交互。
 
 ### 4.2 页面结构
 
@@ -310,19 +308,21 @@ flowchart LR
 
 ### 5.1 后端技术栈
 
-业务后端建议使用：
+业务后端统一使用 Python 技术栈，API 服务和 Worker 服务共享数据模型、任务状态和提示词模板。
 
 | 技术 | 用途 |
 |---|---|
-| Spring Boot 3 | 主后端框架 |
-| Java 17 | 稳定版本，生态成熟 |
-| Spring Web | REST API |
-| Spring Security + JWT | 登录鉴权 |
-| Spring Data JPA | 数据库访问 |
+| FastAPI | 主后端框架，提供 REST API 和自动接口文档 |
+| Python 3.11 | 统一后端、Worker 和 AI 能力开发语言 |
+| Pydantic | 请求、响应和配置校验 |
+| SQLAlchemy / SQLModel | 数据库访问和 ORM |
+| Alembic | 数据库迁移 |
+| JWT + Passlib | 登录鉴权和密码哈希 |
 | PostgreSQL | 结构化业务数据 |
 | Redis | 异步任务状态和缓存 |
-| MinIO Java SDK | 文件上传和下载 |
-| springdoc-openapi | 自动生成接口文档 |
+| Celery / RQ | 长任务队列，用于视频处理、模型调用和报告生成 |
+| MinIO Python SDK | 文件上传和下载 |
+| Jinja2 | Markdown / Word 导出模板、提示词模板 |
 
 ### 5.2 权限角色
 
@@ -390,28 +390,29 @@ flowchart LR
 | `FAILED` | 处理失败 |
 | `CANCELLED` | 已取消 |
 
-前端通过轮询 `/api/ai-tasks/{taskId}` 获取进度。
+前端通过轮询 `/api/ai-tasks/{taskId}` 获取进度。API 服务只负责任务创建和状态查询，真正耗时的视频处理、姿态提取、动作生成和报告生成由 Python Worker 执行。
 
 ### 5.6 导出设计
 
 导出分两类：
 
 1. Markdown：后端直接根据模板拼接，便于继续编辑。
-2. Word：后端调用 Python 导出服务或 Java 模板引擎生成 `.docx`。
+2. Word：后端使用 Python 文档生成库生成 `.docx`。
 
 第一版优先实现 Markdown。Word 可以在 7 月中旬作为增强功能补上。
 
 ## 6. AI 能力实现方案
 
-### 6.1 AI 服务技术栈
+### 6.1 AI 能力技术栈
 
-AI 服务建议独立为 Python FastAPI 服务：
+AI 能力由统一 Python 技术栈承载。FastAPI API 服务负责接收请求、创建任务和返回结果；Python Worker 负责执行大模型调用、视频处理、姿态估计、动作生成和报告生成。
 
 | 技术 | 用途 |
 |---|---|
-| FastAPI | 对后端提供 AI 能力接口 |
+| FastAPI | 对前端提供 AI 生成和分析相关 API |
 | Pydantic | 请求和响应结构校验 |
 | OpenAI-compatible SDK | 统一调用 DeepSeek、通义千问、OpenAI |
+| Celery / RQ | 调度视频分析、动作生成、报告生成等长任务 |
 | FFmpeg | 视频抽帧、音频裁剪、变速 |
 | OpenCV | 视频帧读取和基础图像处理 |
 | RTMPose / MMPose | 人体关键点提取和骨架序列生成 |
@@ -446,7 +447,7 @@ AI 服务建议独立为 Python FastAPI 服务：
 
 ### 6.3 提示词模板管理
 
-提示词不要散落在代码里。建议按功能放在 AI 服务的 `prompts/` 目录：
+提示词不要散落在代码里。建议按功能放在后端项目的 `prompts/` 目录：
 
 ```text
 prompts
@@ -520,7 +521,7 @@ flowchart TB
 最小可交付版本：
 
 1. 老师输入动作名称、动作描述、节拍和教学提示。
-2. AI 服务使用 `motion_script.md` 把中文描述改写为 Kimodo 可用的英文动作 prompt。
+2. Python Worker 使用 `motion_script.md` 把中文描述改写为 Kimodo 可用的英文动作 prompt。
 3. 云端运行 Kimodo，生成 2-3 个骨骼动作候选。
 4. 后端把候选动作渲染为 MP4 或 GIF 预览。
 5. 前端提供候选预览、重新生成和确认按钮。
@@ -624,36 +625,20 @@ AI 报告不要写成“动作正确率 95%”这类不可靠结论，而写成�
 
 本机 RTX 3060 6G 不建议批量跑人声分离。演示阶段可以准备少量样例音频，提前离线处理。
 
-### 6.7 n8n 与 Coze 使用方式
+### 6.7 Codex 使用方式
 
-n8n 用于系统外部自动化，不作为核心业务系统。
-
-推荐 n8n 工作流：
-
-1. 每天固定时间调用后端 API，生成当天排练提醒。
-2. 老师提交观察记录后，自动触发复盘报告生成。
-3. 把生成的报告链接发送到微信群、飞书或邮件。
-4. 批量导入演示数据，方便彩排。
-
-Coze 用于演示 Bot：
-
-1. 用户输入“帮我生成一个客家山歌主题课程”。
-2. Coze Bot 调用后端 Webhook。
-3. 后端返回教案摘要和系统链接。
-
-Coze 不直接保存核心数据，核心数据仍由 Spring Boot 后端落库。
-
-### 6.8 Codex 与 Claude Code 使用方式
-
-Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
+Codex 作为统一的 AI 开发工具，用于辅助技术组完成需求拆解、代码实现、测试补全、代码审查、提示词迭代和文档维护。Codex 只参与开发过程，不作为系统运行时依赖。
 
 建议使用方式：
 
-| 工具 | 主要用途 |
+| 使用场景 | Codex 用法 |
 |---|---|
-| Codex | 代码实现、仓库检索、测试补全、代码审查、文档同步 |
-| Claude Code | 长上下文重构、前端页面生成、复杂提示词改写、交互细节优化 |
-| 两者配合 | 一个实现，一个 review，减少 vibe coding 引入的隐藏问题 |
+| 需求拆解 | 根据需求文档拆分前端页面、后端接口、Worker 任务和验收点 |
+| 代码实现 | 按模块生成或修改 React、FastAPI、Python Worker 代码 |
+| 提示词迭代 | 维护教案生成、剧本生成、动作脚本、练习报告等提示词模板 |
+| 测试补全 | 补充接口测试、AI mock 测试和关键流程验证脚本 |
+| 代码审查 | 检查业务逻辑、异常处理、权限边界和文档同步情况 |
+| 文档维护 | 在需求、技术方案和接口说明变化时同步更新 Markdown 文档 |
 
 仓库中建议保留 `AGENTS.md`，写明：
 
@@ -662,7 +647,7 @@ Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
 - 修改功能后要补充对应文档或接口说明。
 - AI 生成结果必须经过结构化校验。
 
-### 6.9 参考技术资料
+### 6.8 参考技术资料
 
 实现时优先查阅官方文档：
 
@@ -670,7 +655,6 @@ Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
 - 阿里云百炼 OpenAI 兼容接口：<https://help.aliyun.com/zh/model-studio/developer-reference/compatibility-of-openai-with-dashscope>
 - OpenAI API 文档：<https://platform.openai.com/docs>
 - FastAPI 文档：<https://fastapi.tiangolo.com/>
-- Spring Boot 文档：<https://docs.spring.io/spring-boot/>
 - MMPose 文档：<https://mmpose.readthedocs.io/>
 - RTMPose 论文：<https://arxiv.org/abs/2303.07399>
 - MediaPipe Pose Landmarker 文档：<https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker>，仅作为轻量备用方案参考
@@ -680,8 +664,6 @@ Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
 - Wan-Animate 项目页：<https://humanaigc.github.io/wan-animate/>
 - ComfyUI Wan2.2 Animate 工作流：<https://docs.comfy.org/tutorials/video/wan/wan2-2-animate>
 - Seedance 2.0：<https://seed.bytedance.com/en/seedance2_0>
-- n8n 文档：<https://docs.n8n.io/>
-- Coze 文档：<https://www.coze.com/docs>
 
 ## 7. 各需求模块落地路径
 
@@ -713,8 +695,8 @@ Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
 
 1. 前端表单收集参数。
 2. 后端保存课程信息。
-3. 后端调用 AI 服务的教案生成接口。
-4. AI 服务使用 `lesson_plan.md` 提示词生成 JSON。
+3. API 服务创建教案生成任务。
+4. Python Worker 使用 `lesson_plan.md` 提示词生成 JSON。
 5. 后端校验 JSON 并落库。
 6. 前端展示可编辑教案。
 7. 支持 Markdown 导出。
@@ -766,7 +748,7 @@ Codex 和 Claude Code 作为开发提效工具，而不是业务运行依赖。
 
 1. 老师新建动作示范材料，填写动作名称、文字描述、节拍和教学提示。
 2. 后端创建示范材料记录，并创建异步动作生成任务。
-3. AI 服务调用大模型，把中文动作描述规范化为 Kimodo 可用的动作 prompt。
+3. Python Worker 调用大模型，把中文动作描述规范化为 Kimodo 可用的动作 prompt。
 4. 云端运行 Kimodo，生成 2-3 个 3D 骨骼动作候选。
 5. 系统将 Kimodo 输出渲染成 MP4 或 GIF 骨骼动画预览。
 6. 老师在前端挑选一个候选版本；如果不满意，可以修改动作描述后重新生成。
@@ -850,7 +832,7 @@ AI 报告结构：
 
 实现方式：
 
-后端读取剧本结构，调用 AI 服务生成角色训练表。前端用表格展示，每个角色一行，支持老师修改。
+API 服务读取剧本结构并创建生成任务，Python Worker 生成角色训练表。前端用表格展示，每个角色一行，支持老师修改。
 
 ### 7.7 歌舞融合建议
 
@@ -909,18 +891,18 @@ AI 报告结构：
 | 阶段二 | 6 月 16 日 - 6 月 24 日 | 教案生成、课堂互动、示范材料管理 |
 | 阶段三 | 6 月 25 日 - 7 月 3 日 | 视频打卡、基础姿态分析、练习报告 |
 | 阶段四 | 7 月 4 日 - 7 月 10 日 | 歌舞剧剧本、分角色训练、歌舞融合建议 |
-| 阶段五 | 7 月 11 日 - 7 月 16 日 | 复盘报告、n8n / Coze 演示流、系统联调 |
+| 阶段五 | 7 月 11 日 - 7 月 16 日 | 复盘报告、系统联调、演示数据和文档打磨 |
 | 阶段六 | 7 月 17 日 - 7 月 20 日 | 演示材料、彩排、最终交付 |
 
 ### 8.2 详细排期
 
-| 日期 | 成员 A：后端与 AI 服务 | 成员 B：前端与演示 | 当日交付 |
+| 日期 | 成员 A：后端与 AI Worker | 成员 B：前端与演示 | 当日交付 |
 |---|---|---|---|
-| 6 月 12 日 | 确认技术架构、初始化后端和 AI 服务目录 | 画页面草图、确认功能菜单 | MVP 范围和页面结构确定 |
-| 6 月 13 日 | 搭建 Spring Boot、PostgreSQL、Redis、MinIO | 搭建 Vue 3、路由、布局、登录页 | 前后端骨架可启动 |
+| 6 月 12 日 | 确认技术架构、初始化 FastAPI API 和 Worker 目录 | 画页面草图、确认功能菜单 | MVP 范围和页面结构确定 |
+| 6 月 13 日 | 搭建 FastAPI、PostgreSQL、Redis、MinIO | 搭建 React、路由、布局、登录页 | 前后端骨架可启动 |
 | 6 月 14 日 | 设计核心表和基础 API | 完成工作台、基础表单组件 | 数据模型和基础页面完成 |
 | 6 月 15 日 | 打通前后端请求和文件上传 | 完成上传组件和接口封装 | 系统主干跑通 |
-| 6 月 16 日 | 实现 AI 服务 LLMClient | 实现教案生成表单 | 教案生成接口初版 |
+| 6 月 16 日 | 实现 Worker LLMClient | 实现教案生成表单 | 教案生成接口初版 |
 | 6 月 17 日 | 编写教案提示词和 JSON 校验 | 完成教案预览和编辑 | 教案生成可用 |
 | 6 月 18 日 | 教案保存和查询接口 | 完成教案列表和详情页 | 教案模块闭环 |
 | 6 月 19 日 | 课堂互动生成接口 | 课堂互动页面 | 互动脚本可生成 |
@@ -947,8 +929,8 @@ AI 报告结构：
 | 7 月 10 日 | 歌舞剧模块联调 | 优化歌舞剧流程 | 歌舞剧主线可演示 |
 | 7 月 11 日 | 复盘报告接口 | 复盘报告页面 | 复盘报告可生成 |
 | 7 月 12 日 | 复盘报告导出 | 复盘编辑体验优化 | 复盘模块完成 |
-| 7 月 13 日 | n8n Webhook 接入后端 | 配置 n8n 演示流 | n8n 可触发系统能力 |
-| 7 月 14 日 | Coze 调用后端接口 | 配置 Coze Bot 演示 | Bot 演示入口完成 |
+| 7 月 13 日 | 补充演示用固定案例数据 | 完善演示页面和示例报告 | 演示案例数据完整 |
+| 7 月 14 日 | 联调导出、权限和异常兜底 | 优化页面细节和操作路径 | 演示流程更稳定 |
 | 7 月 15 日 | 修复全流程接口问题 | 修复页面体验问题 | 两条主线联调完成 |
 | 7 月 16 日 | 冻结功能，不再加新需求 | 准备演示脚本和截图 | 交付候选版本 |
 | 7 月 17 日 | 准备备用静态数据 | 准备演示账号和样例 | 演示材料完整 |
@@ -964,7 +946,7 @@ AI 报告结构：
 | 6 月 24 日 | 教案、互动、示范材料三件事能跑通 |
 | 7 月 3 日 | 学生视频打卡和练习报告能跑通 |
 | 7 月 10 日 | 歌舞剧创编和分角色训练能跑通 |
-| 7 月 16 日 | n8n / Coze 演示流接入，系统进入冻结 |
+| 7 月 16 日 | 系统进入冻结，准备最终演示材料 |
 | 7 月 20 日 | 完成交付演示 |
 
 ### 8.4 风险与兜底方案
@@ -975,7 +957,6 @@ AI 报告结构：
 | 视频分析效果一般 | 明确说明是辅助观察，不做专业判分 |
 | 时间不够 | 优先保教案、互动、剧本、训练计划、复盘报告，视频分析可简化 |
 | 前后端联调耗时 | 所有 API 先用 OpenAPI 文档和 mock 数据约定 |
-| n8n / Coze 接入不顺利 | 作为演示增强，不影响核心 Web 系统 |
 | 本机算力不足 | 长视频、批量视频、人声分离统一放到云端或预处理 |
 
 ### 8.5 最终交付物清单
@@ -983,15 +964,13 @@ AI 报告结构：
 到 7 月 20 日，建议交付：
 
 1. 可运行的 Web 系统。
-2. 前端、后端、AI 服务源码。
+2. 前端、FastAPI API 服务、Python Worker 源码。
 3. Docker Compose 本地启动配置。
 4. 示例账号。
 5. 示例课程和歌舞剧项目数据。
 6. 示例学生练习视频和分析报告。
 7. Markdown / Word 导出样例。
-8. n8n 工作流导出文件。
-9. Coze Bot 配置说明。
-10. 系统演示脚本和备用截图。
+8. 系统演示脚本和备用截图。
 
 ### 8.6 一句话总结
 
