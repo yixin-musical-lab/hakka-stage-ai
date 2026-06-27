@@ -22,6 +22,9 @@ def main() -> None:
         _getenv_with_default("POSTGRES_HOST", "localhost"),
         _getenv_with_default("REDIS_HOST", "localhost"),
         _getenv_with_default("MINIO_ENDPOINT", "http://localhost:9000"),
+        _getenv_with_default("LLM_DEFAULT_PROVIDER", "deepseek"),
+        _getenv_with_default("LLM_DEFAULT_MODEL", "deepseek-v4-flash"),
+        _getenv_with_default("LLM_DEFAULT_REASONING_LEVEL", "standard"),
     ]
     if not all(required_values):
         raise SystemExit("worker dependency environment is incomplete")

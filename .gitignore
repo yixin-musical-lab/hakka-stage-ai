@@ -13,6 +13,8 @@ dist/
 # Local environment files
 .env
 .env.local
+deepseek-apikey.txt
+默认业务空间-apiKey-*.csv
 
 # Docker / runtime data
 *.log
