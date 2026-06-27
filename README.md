@@ -1,11 +1,11 @@
 # 客韵智演 / hakka-stage-ai
 
-AI 歌舞剧教学与排演辅助系统。当前仓库处于第一阶段：先搭建 Docker 优先的最小可运行骨架，保证 PostgreSQL、Redis、MinIO、FastAPI 后端、Python Worker 和 Vite 前端能启动并互通。
+AI 歌舞剧教学与排演辅助系统。当前仓库已进入第一个业务功能：课前教案生成。系统通过 FastAPI 创建教案生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化教案，前端提供可编辑的教案工作台。
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、Python Worker 空服务、React 连通检查页、基础环境变量示例。
-- 暂不包含：登录鉴权、业务数据表、教案生成、视频分析、AI 报告、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案生成与编辑页、基础环境变量示例。
+- 暂不包含：登录鉴权、复杂权限、视频分析、AI 练习报告、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 ## 项目目录结构
@@ -13,12 +13,14 @@ AI 歌舞剧教学与排演辅助系统。当前仓库处于第一阶段：先�
 ```text
 hakka-stage-ai/
 ├── backend/              # FastAPI API 服务，使用 uv 管理依赖
-│   ├── app/              # 后端应用代码
+│   ├── app/              # 后端应用代码，按 api/core/models/schemas/services 分层
+│   │   ├── api/router.py # 后端 API 总路由，统一汇总各业务模块
+│   │   └── services/     # 路由复用的业务辅助逻辑和外部服务封装
 │   ├── pyproject.toml    # 后端依赖声明
 │   └── uv.lock           # 后端依赖锁文件
 ├── worker/               # Python Worker 长任务服务，使用 conda 管理依赖
 │   ├── app/              # Worker 入口和健康检查
-│   └── environment.yml   # Worker conda 环境定义
+│   └── environment.yml   # Worker conda 环境定义，包含 LLM / Redis / PostgreSQL 客户端依赖
 ├── frontend/             # React + Vite + TypeScript 前端
 │   ├── src/              # 前端源码
 │   └── package-lock.json # 前端依赖锁文件
@@ -88,6 +90,15 @@ uv --version
 | `BACKEND_PORT` | `8000` | 后端端口 |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | 允许访问后端 API 的前端来源 |
 | `VITE_API_BASE_URL` | `auto` | 前端请求后端的基础地址；`auto` 会按当前访问主机自动请求同一台机器的 `8000` 端口 |
+| `DEEPSEEK_API_KEY` | 空 | DeepSeek 本地真实密钥，只写入 `.env`，不能提交到 Git |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek OpenAI 兼容接口地址 |
+| `QWEN_API_KEY` | 空 | 百炼 Qwen 本地真实密钥，只写入 `.env`，不能提交到 Git |
+| `QWEN_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 百炼 OpenAI 兼容接口地址 |
+| `LLM_DEFAULT_PROVIDER` | `deepseek` | 默认大模型供应商，可在每次生成时改选 |
+| `LLM_DEFAULT_MODEL` | `deepseek-v4-flash` | 默认教案生成模型 |
+| `LLM_DEFAULT_REASONING_LEVEL` | `standard` | 默认推理强度，可选 `off`、`standard`、`enhanced` |
+| `LLM_MOCK_MODE` | `false` | API Key 或网络不可用时可临时设为 `true`，使用本地演示教案兜底 |
+| `LLM_TIMEOUT_SECONDS` | `90` | Worker 调用大模型的单次请求超时时间 |
 | `POSTGRES_HOST` | `postgres` | PostgreSQL 主机名；Docker 内使用 `postgres`，宿主机本地开发通常使用 `localhost` |
 | `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
 | `POSTGRES_DB` | `hakka_stage_ai` | PostgreSQL 数据库名 |
@@ -196,6 +207,7 @@ npm run dev -- --host 0.0.0.0
 docker compose config
 
 cd backend
+uv sync
 uv run python -m compileall app
 
 cd ..\worker
@@ -210,6 +222,43 @@ npm run build
 ```powershell
 docker compose ps
 ```
+
+## 课前教案生成链路
+
+第一版采用异步全链路，不让前端直接调用大模型：
+
+1. 前端在“AI 教案生成工作台”填写舞种、主题、年龄段、课时、人数、教学目标、学员基础、课程风格和注意事项。
+2. 前端请求 `POST /api/lesson-plans/generate`。
+3. FastAPI 写入 `courses`、`lesson_plans`、`ai_tasks`，并把任务推入 Redis 队列 `ai:lesson_plan`。
+4. Python Worker 消费任务，读取提示词 `worker/app/prompts/lesson_plan_v1.md`，按任务选择调用 DeepSeek 或百炼 Qwen 生成 JSON 教案。
+5. Worker 写回结构化教案和任务状态。
+6. 前端轮询 `GET /api/ai-tasks/{task_id}`，成功后读取 `GET /api/lesson-plans/{lesson_plan_id}` 并展示可编辑内容。
+7. 老师修改后，前端调用 `PUT /api/lesson-plans/{lesson_plan_id}` 保存编辑稿。
+
+如果模型 Key 暂不可用，可以把 `.env` 中 `LLM_MOCK_MODE=true` 后重启 backend 和 worker。此模式只用于演示链路，不代表真实模型输出。
+
+当前接口：
+
+| API | 方法 | 说明 |
+|---|---|---|
+| `/api/llm-options` | GET | 查询可选模型供应商、模型和推理强度 |
+| `/api/lesson-plans/generate` | POST | 创建教案生成任务 |
+| `/api/ai-tasks/{task_id}` | GET | 查询 AI 任务进度 |
+| `/api/lesson-plans` | GET | 查询已保存教案列表 |
+| `/api/lesson-plans/{lesson_plan_id}` | GET | 读取教案详情 |
+| `/api/lesson-plans/{lesson_plan_id}` | PUT | 保存老师编辑后的教案 |
+| `/api/lesson-plans/{lesson_plan_id}` | DELETE | 删除已保存教案 |
+| `/api/lesson-plans/{lesson_plan_id}/markdown` | GET | 导出教案 Markdown |
+
+前端当前页面：
+
+| 页面 | 说明 |
+|---|---|
+| `/` | 系统主页和模块工作台 |
+| `/lesson-plans/generate` | AI 教案生成 |
+| `/lesson-plans` | 已保存教案 |
+| `/lesson-plans/{id}` | 教案查看、继续编辑和导出 |
+| `/health` | 后端 `/health` 连通状态展示 |
 
 ## Troubleshooting
 
@@ -229,7 +278,7 @@ Docker Compose 启动前建议先执行：
 Copy-Item .env.example .env
 ```
 
-当前骨架的后端本地启动带有默认值，忘记 `.env` 时通常仍能跑通；后续接入真实大模型密钥或云服务后，`.env` 会变成必需文件。
+后端本地启动带有多数默认值，但调用真实模型时必须在 `.env` 或当前终端环境中配置 `DEEPSEEK_API_KEY` 或 `QWEN_API_KEY`。
 
 ### `uv` 命令找不到
 
@@ -273,7 +322,7 @@ Invoke-RestMethod http://localhost:8000/health
 
 - 应提交：源码、`pyproject.toml`、`uv.lock`、`environment.yml`、`package-lock.json`、Dockerfile、Compose 配置和文档。
 - 不应提交：`.env`、`backend/.venv/`、`node_modules/`、`dist/`、缓存目录和本地日志。
-- 当前骨架不包含真实密钥，`.env.example` 只保留本地演示默认值。
+- 当前仓库不提交真实密钥，`.env.example` 只保留本地演示默认值和密钥占位。
 
 ## 贡献流程
 
@@ -288,6 +337,7 @@ Invoke-RestMethod http://localhost:8000/health
 
 ## 下一步建议
 
-1. 增加数据库连接探活和 Alembic 迁移骨架。
+1. 增加 Alembic 迁移骨架，替换开发期自动建表。
 2. 增加 mock 登录和三类角色入口。
-3. 根据技术方案逐步实现教案生成、课堂互动、示范材料管理等教学辅助主线。
+3. 在教案模块补 Markdown / Word 导出。
+4. 继续实现课堂互动脚本和示范材料管理。

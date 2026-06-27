@@ -220,15 +220,13 @@ docker-compose
 
 ```env
 # 大模型配置
-LLM_PROVIDER=deepseek
-LLM_BASE_URL=https://api.deepseek.com
-LLM_API_KEY=替换为真实密钥
-LLM_MODEL=deepseek-chat
-
-# 也可以切换到通义千问或 OpenAI 兼容接口
-# LLM_PROVIDER=qwen
-# LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-# LLM_MODEL=qwen-plus
+DEEPSEEK_API_KEY=替换为 DeepSeek 密钥
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+QWEN_API_KEY=替换为百炼业务空间密钥
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_DEFAULT_PROVIDER=deepseek
+LLM_DEFAULT_MODEL=deepseek-v4-flash
+LLM_DEFAULT_REASONING_LEVEL=standard
 
 # 存储配置
 MINIO_ENDPOINT=http://localhost:9000
