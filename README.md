@@ -59,25 +59,12 @@ flowchart TB
 
 ## 前置工具
 
-协同开发前建议先确认本机有以下工具：
+协同开发前建议先确认本机有以下工具。只用 Docker Compose 全栈启动时，通常只需要 Docker Desktop；如果要在宿主机本地分别调试 backend、worker、frontend，再安装 Node.js、Miniforge / conda 和 uv。
 
 - Docker Desktop：用于一键启动 PostgreSQL、Redis、MinIO、后端、worker 和前端。
 - Node.js 22+：用于本地启动 Vite 前端。
 - Miniforge / conda：用于创建 `worker/` 的 Python Worker 环境。
 - uv：用于创建 `backend/` 的 FastAPI 后端虚拟环境。
-
-Windows PowerShell 安装 uv：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-如果当前 PowerShell 还识别不到 `uv`，先把安装目录加入当前会话：
-
-```powershell
-$env:Path = "C:\Users\$env:USERNAME\.local\bin;$env:Path"
-uv --version
-```
 
 ## 环境变量说明
 
@@ -116,37 +103,58 @@ uv --version
 
 如果只是想把系统跑起来、验证环境或做整体联调，优先使用 Docker Compose 全栈启动。
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 docker compose up --build
+```
+
+如果希望后台运行，使用：
+
+```bash
+docker compose up --build -d
 ```
 
 启动后访问：
 
 - 前端：http://localhost:5173
 - 后端健康检查：http://localhost:8000/health
-- FastAPI 文档：http://localhost:8000/docs
+- FastAPI Swagger UI：http://localhost:8000/docs
 - MinIO 控制台：http://localhost:9001
 - PostgreSQL：localhost:5432
 - Redis：localhost:6379
 
 验证 Compose 配置：
 
-```powershell
+```bash
 docker compose config
 ```
 
+注意：`docker compose config` 会展开 `.env` 里的真实密钥，只适合本机排查，不要把完整输出贴到公开位置。
+
 停止服务：
 
-```powershell
+```bash
 docker compose down
 ```
 
 如果需要同时删除本地数据卷：
 
-```powershell
+```bash
 docker compose down -v
 ```
+
+### 按改动范围重建服务
+
+日常开发不需要每次都完整重建所有服务，按实际改动范围执行即可。
+
+| 改动内容 | 推荐命令 |
+|---|---|
+| 只改 `.env` | `docker compose up -d` |
+| 只改后端代码或后端依赖 | `docker compose up --build -d backend` |
+| 只改 worker 代码或 `worker/environment.yml` | `docker compose up --build -d worker` |
+| 只改前端代码或前端依赖 | `docker compose up --build -d frontend` |
+| 改了 Compose / Dockerfile / 多个服务 | `docker compose up --build -d` |
+
 
 ## 日常开发启动：Docker 基础设施 + 本地业务服务
 
@@ -154,19 +162,19 @@ docker compose down -v
 
 首次本地开发前建议准备环境变量文件，Docker Compose 会自动读取根目录 `.env`：
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
 先启动基础设施：
 
-```powershell
+```bash
 docker compose up postgres redis minio
 ```
 
 后端：
 
-```powershell
+```bash
 cd backend
 uv sync
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -176,7 +184,7 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Worker：
 
-```powershell
+```bash
 cd worker
 conda env create -f environment.yml
 conda activate hakka-worker
@@ -185,7 +193,7 @@ python -m app.main
 
 如果 `hakka-worker` 已经存在，使用更新命令：
 
-```powershell
+```bash
 cd worker
 conda env update -f environment.yml --prune
 conda activate hakka-worker
@@ -193,7 +201,7 @@ conda activate hakka-worker
 
 前端：
 
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev -- --host 0.0.0.0
@@ -203,62 +211,25 @@ npm run dev -- --host 0.0.0.0
 
 提交前建议跑以下轻量检查：
 
-```powershell
+```bash
 docker compose config
 
 cd backend
 uv sync
 uv run python -m compileall app
 
-cd ..\worker
+cd ../worker
 conda run -n hakka-worker python -m app.healthcheck
 
-cd ..\frontend
+cd ../frontend
 npm run build
 ```
 
 查看 Docker 服务状态：
 
-```powershell
+```bash
 docker compose ps
 ```
-
-## 课前教案生成链路
-
-第一版采用异步全链路，不让前端直接调用大模型：
-
-1. 前端在“AI 教案生成工作台”填写舞种、主题、年龄段、课时、人数、教学目标、学员基础、课程风格和注意事项。
-2. 前端请求 `POST /api/lesson-plans/generate`。
-3. FastAPI 写入 `courses`、`lesson_plans`、`ai_tasks`，并把任务推入 Redis 队列 `ai:lesson_plan`。
-4. Python Worker 消费任务，读取提示词 `worker/app/prompts/lesson_plan_v1.md`，按任务选择调用 DeepSeek 或百炼 Qwen 生成 JSON 教案。
-5. Worker 写回结构化教案和任务状态。
-6. 前端轮询 `GET /api/ai-tasks/{task_id}`，成功后读取 `GET /api/lesson-plans/{lesson_plan_id}` 并展示可编辑内容。
-7. 老师修改后，前端调用 `PUT /api/lesson-plans/{lesson_plan_id}` 保存编辑稿。
-
-如果模型 Key 暂不可用，可以把 `.env` 中 `LLM_MOCK_MODE=true` 后重启 backend 和 worker。此模式只用于演示链路，不代表真实模型输出。
-
-当前接口：
-
-| API | 方法 | 说明 |
-|---|---|---|
-| `/api/llm-options` | GET | 查询可选模型供应商、模型和推理强度 |
-| `/api/lesson-plans/generate` | POST | 创建教案生成任务 |
-| `/api/ai-tasks/{task_id}` | GET | 查询 AI 任务进度 |
-| `/api/lesson-plans` | GET | 查询已保存教案列表 |
-| `/api/lesson-plans/{lesson_plan_id}` | GET | 读取教案详情 |
-| `/api/lesson-plans/{lesson_plan_id}` | PUT | 保存老师编辑后的教案 |
-| `/api/lesson-plans/{lesson_plan_id}` | DELETE | 删除已保存教案 |
-| `/api/lesson-plans/{lesson_plan_id}/markdown` | GET | 导出教案 Markdown |
-
-前端当前页面：
-
-| 页面 | 说明 |
-|---|---|
-| `/` | 系统主页和模块工作台 |
-| `/lesson-plans/generate` | AI 教案生成 |
-| `/lesson-plans` | 已保存教案 |
-| `/lesson-plans/{id}` | 教案查看、继续编辑和导出 |
-| `/health` | 后端 `/health` 连通状态展示 |
 
 ## Troubleshooting
 
@@ -266,7 +237,7 @@ docker compose ps
 
 如果 `5173`、`8000`、`5432`、`6379`、`9000` 或 `9001` 已被其他程序占用，先关闭占用程序，或修改 `.env` 和启动命令中的端口。修改后建议重新执行：
 
-```powershell
+```bash
 docker compose config
 ```
 
@@ -274,31 +245,17 @@ docker compose config
 
 Docker Compose 启动前建议先执行：
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
 后端本地启动带有多数默认值，但调用真实模型时必须在 `.env` 或当前终端环境中配置 `DEEPSEEK_API_KEY` 或 `QWEN_API_KEY`。
-
-### `uv` 命令找不到
-
-先确认是否安装 uv：
-
-```powershell
-uv --version
-```
-
-如果找不到，重新执行安装命令，或把用户目录加入当前 PowerShell 会话：
-
-```powershell
-$env:Path = "C:\Users\$env:USERNAME\.local\bin;$env:Path"
-```
 
 ### `hakka-worker` 环境已存在
 
 如果首次创建时报环境已存在，不要重复创建，改用更新命令：
 
-```powershell
+```bash
 cd worker
 conda env update -f environment.yml --prune
 conda activate hakka-worker
@@ -308,15 +265,27 @@ conda activate hakka-worker
 
 先确认后端健康检查可访问：
 
-```powershell
-Invoke-RestMethod http://localhost:8000/health
+```bash
+curl http://localhost:8000/health
 ```
 
 如果后端正常但前端仍报错，检查 `VITE_API_BASE_URL`。默认建议保持 `auto`，这样通过 `localhost:5173` 或局域网 IP 访问前端时，都会自动请求同一主机的 `8000` 端口。修改后需要重启 Vite 前端。
 
 ### Docker 镜像拉取慢或中断
 
-本项目镜像和依赖首次下载可能较慢。遇到 `unexpected EOF`、`IncompleteRead` 等网络中断时，通常可以直接重试原命令，Docker 会复用已经下载的层。
+本项目镜像和依赖首次下载可能较慢。遇到 `unexpected EOF`、`IncompleteRead`、`failed to resolve source metadata` 等网络中断时，通常可以直接重试原命令，Docker 会复用已经下载的层。
+
+如果失败点是 worker 的 Miniforge 基础镜像，先单独拉固定版本：
+
+```bash
+docker pull condaforge/miniforge3:26.3.2-3
+docker compose build worker
+```
+
+worker 的基础镜像已固定为 `condaforge/miniforge3:26.3.2-3`，避免继续使用会漂移的 `latest`。
+只要本机还保留这个基础镜像，并且没有显式加 `--pull`，后续重建 worker 会复用本地基础镜像层，不会每次重新下载 Miniforge 镜像。
+
+不要把 `worker/Dockerfile` 改回 `latest`，否则不同时间构建可能拿到不同基础环境，也更容易受远端镜像变化影响。
 
 ## Git 提交注意
 
