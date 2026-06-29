@@ -1,0 +1,102 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
+import { EmptyState } from "../components/ui/EmptyState";
+import { PageTitle } from "../components/ui/PageTitle";
+import { deleteRoleTrainingPlan, fetchRoleTrainingPlans } from "../lib/api";
+import { downloadRoleTrainingMarkdown } from "../lib/download";
+import { formatDateTime } from "../lib/format";
+import type { RoleTrainingPlanSummary } from "../types";
+
+export function RoleTrainingPlanListPage() {
+  const [plans, setPlans] = useState<RoleTrainingPlanSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchRoleTrainingPlans(controller.signal)
+      .then((data) => {
+        setPlans(data);
+        setNotice("");
+      })
+      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "读取训练计划列表失败。"))
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
+
+  async function handleDownload(plan: RoleTrainingPlanSummary) {
+    try {
+      setNotice("");
+      await downloadRoleTrainingMarkdown(plan.id, plan.title);
+    } catch (caughtError) {
+      setNotice(caughtError instanceof Error ? caughtError.message : "导出 Markdown 失败。");
+    }
+  }
+
+  async function handleDelete(plan: RoleTrainingPlanSummary) {
+    const confirmed = window.confirm(`确认删除“${plan.title}”吗？删除后无法在列表中恢复。`);
+    if (!confirmed) {
+      return;
+    }
+    try {
+      setDeletingId(plan.id);
+      setNotice("");
+      await deleteRoleTrainingPlan(plan.id);
+      setPlans((current) => current.filter((item) => item.id !== plan.id));
+      setNotice(`已删除训练计划：${plan.title}`);
+    } catch (caughtError) {
+      setNotice(caughtError instanceof Error ? caughtError.message : "删除训练计划失败。");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  return (
+    <main className="page-frame">
+      <PageTitle
+        eyebrow="训练资料库"
+        title="分角色训练计划"
+        description="查看、继续编辑并导出已生成的角色训练计划。"
+        action={
+          <Link className="primary-button link-button" to="/musical-scripts">
+            从剧本生成
+          </Link>
+        }
+      />
+
+      {notice ? <p className="notice">{notice}</p> : null}
+      {loading ? <EmptyState title="正在读取训练计划" text="请稍候，系统正在从后端加载已保存内容。" /> : null}
+      {!loading && plans.length === 0 ? (
+        <EmptyState title="还没有保存的训练计划" text="先打开一份剧本，再基于剧本生成分角色训练计划。" />
+      ) : null}
+
+      <section className="lesson-list" aria-label="分角色训练计划列表">
+        {plans.map((plan) => (
+          <article className="lesson-list-item" key={plan.id}>
+            <div>
+              <span className="status-badge">{plan.status}</span>
+              <h2>{plan.title}</h2>
+              <p>
+                更新时间：{formatDateTime(plan.updated_at)}
+                {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
+                {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
+              </p>
+            </div>
+            <div className="button-row">
+              <Link className="secondary-button link-button" to={`/role-training-plans/${plan.id}`}>
+                查看
+              </Link>
+              <button className="secondary-button" type="button" onClick={() => void handleDownload(plan)}>
+                导出 Markdown
+              </button>
+              <button className="danger-button" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
+                {deletingId === plan.id ? "删除中" : "删除"}
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}

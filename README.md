@@ -1,11 +1,11 @@
 # 客韵智演 / hakka-stage-ai
 
-AI 歌舞剧教学与排演辅助系统。当前仓库已进入第一个业务功能：课前教案生成。系统通过 FastAPI 创建教案生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化教案，前端提供可编辑的教案工作台。
+AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生成、歌舞剧剧本创编和分角色训练计划。系统通过 FastAPI 创建 AI 生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化初稿，前端提供可编辑、可保存、可导出的工作台。
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案生成与编辑页、基础环境变量示例。
-- 暂不包含：登录鉴权、复杂权限、视频分析、AI 练习报告、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、歌舞剧剧本生成 API、分角色训练计划 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案 / 剧本 / 训练计划生成与编辑页、Markdown 导出、基础环境变量示例。
+- 暂不包含：登录鉴权、复杂权限、课堂互动脚本、视频分析、AI 练习报告、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 ## 项目目录结构
@@ -220,6 +220,7 @@ uv run python -m compileall app
 
 cd ../worker
 conda run -n hakka-worker python -m app.healthcheck
+conda run -n hakka-worker python -m compileall app
 
 cd ../frontend
 npm run build
@@ -308,5 +309,6 @@ worker 的基础镜像已固定为 `condaforge/miniforge3:26.3.2-3`，避免继�
 
 1. 增加 Alembic 迁移骨架，替换开发期自动建表。
 2. 增加 mock 登录和三类角色入口。
-3. 在教案模块补 Markdown / Word 导出。
-4. 继续实现课堂互动脚本和示范材料管理。
+3. 继续实现课堂互动脚本和示范材料管理。
+4. 为剧本创编和分角色训练补充演示数据、接口级 mock 流程和页面手测记录。
+5. 在重要报告模块补 Word 导出。

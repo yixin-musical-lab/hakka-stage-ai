@@ -1,0 +1,260 @@
+from uuid import UUID
+
+from sqlalchemy.orm import Session
+
+from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan
+from app.schemas import (
+    MusicalScriptGenerateRequest,
+    MusicalScriptSummaryResponse,
+    RoleTrainingPlanSummaryResponse,
+)
+
+
+def build_project_title(request: MusicalScriptGenerateRequest) -> str:
+    """根据剧目生成表单构造列表标题。"""
+
+    return f"{request.theme} · {request.duration_minutes}分钟歌舞剧"
+
+
+def model_info(record: MusicalScript | RoleTrainingPlan) -> tuple[str | None, str | None]:
+    """从模型信息里提取供应商和模型名。"""
+
+    raw_model_info = record.raw_model_info or {}
+    provider = raw_model_info.get("provider")
+    model = raw_model_info.get("model")
+    return (
+        provider if isinstance(provider, str) else None,
+        model if isinstance(model, str) else None,
+    )
+
+
+def reasoning_level(record: MusicalScript | RoleTrainingPlan) -> str | None:
+    """从模型信息里提取本次生成的推理强度。"""
+
+    raw_model_info = record.raw_model_info or {}
+    value = raw_model_info.get("reasoning_level")
+    return value if isinstance(value, str) else None
+
+
+def musical_script_summary(musical_script: MusicalScript) -> MusicalScriptSummaryResponse:
+    """把 ORM 剧本记录转成列表摘要。"""
+
+    provider, model = model_info(musical_script)
+    return MusicalScriptSummaryResponse(
+        id=musical_script.id,
+        project_id=musical_script.project_id,
+        title=musical_script.title,
+        status=musical_script.status,
+        provider=provider,
+        model=model,
+        reasoning_level=reasoning_level(musical_script),
+        created_at=musical_script.created_at,
+        updated_at=musical_script.updated_at,
+    )
+
+
+def role_training_summary(role_training_plan: RoleTrainingPlan) -> RoleTrainingPlanSummaryResponse:
+    """把 ORM 分角色训练计划转成列表摘要。"""
+
+    provider, model = model_info(role_training_plan)
+    return RoleTrainingPlanSummaryResponse(
+        id=role_training_plan.id,
+        project_id=role_training_plan.project_id,
+        script_id=role_training_plan.script_id,
+        title=role_training_plan.title,
+        status=role_training_plan.status,
+        provider=provider,
+        model=model,
+        reasoning_level=reasoning_level(role_training_plan),
+        created_at=role_training_plan.created_at,
+        updated_at=role_training_plan.updated_at,
+    )
+
+
+def render_musical_script_markdown(musical_script: MusicalScript) -> str | None:
+    """把结构化剧本渲染成 Markdown 文本。"""
+
+    content = musical_script.edited_content or musical_script.content
+    if not content:
+        return None
+
+    raw_model_info = musical_script.raw_model_info or {}
+    provider = raw_model_info.get("provider", "unknown")
+    model = raw_model_info.get("model", "unknown")
+    generated_at = raw_model_info.get("generated_at", "unknown")
+
+    return "\n\n".join(
+        [
+            f"# {content.get('title', musical_script.title)}",
+            "## 剧目简介\n" + str(content.get("synopsis", "")),
+            "## 分幕剧情\n" + _script_acts_markdown(content.get("acts", [])),
+            "## 人物设定\n" + _characters_markdown(content.get("characters", [])),
+            "## 表演留白段落\n" + _performance_slots_markdown(content.get("performance_slots", [])),
+            "## 编导确认提醒\n" + _markdown_list(content.get("director_notes", [])),
+            f"---\n\n模型信息：{provider} / {model} / {generated_at}",
+        ]
+    )
+
+
+def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str | None:
+    """把结构化分角色训练计划渲染成 Markdown 文本。"""
+
+    content = role_training_plan.edited_content or role_training_plan.content
+    if not content:
+        return None
+
+    raw_model_info = role_training_plan.raw_model_info or {}
+    provider = raw_model_info.get("provider", "unknown")
+    model = raw_model_info.get("model", "unknown")
+    generated_at = raw_model_info.get("generated_at", "unknown")
+
+    return "\n\n".join(
+        [
+            f"# {content.get('title', role_training_plan.title)}",
+            "## 排练概况\n" + str(content.get("project_overview", "")),
+            "## 分角色任务\n" + _role_tasks_markdown(content.get("role_tasks", [])),
+            "## 每日排练安排\n" + _daily_plan_markdown(content.get("daily_plan", [])),
+            "## 老师检查点\n" + _markdown_list(content.get("teacher_checkpoints", [])),
+            f"---\n\n模型信息：{provider} / {model} / {generated_at}",
+        ]
+    )
+
+
+def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID) -> bool:
+    """删除剧本、基于该剧本的训练计划和关联任务，并清理无人引用的剧目。"""
+
+    musical_script = db.get(MusicalScript, musical_script_id)
+    if musical_script is None:
+        return False
+
+    project_id = musical_script.project_id
+    db.query(AiTask).filter(AiTask.business_id == musical_script.id).delete(synchronize_session=False)
+    related_training_ids = [
+        row[0] for row in db.query(RoleTrainingPlan.id).filter(RoleTrainingPlan.script_id == musical_script.id).all()
+    ]
+    if related_training_ids:
+        db.query(AiTask).filter(AiTask.business_id.in_(related_training_ids)).delete(synchronize_session=False)
+        db.query(RoleTrainingPlan).filter(RoleTrainingPlan.id.in_(related_training_ids)).delete(synchronize_session=False)
+    db.query(MusicalScript).filter(MusicalScript.id == musical_script_id).delete(synchronize_session=False)
+    db.flush()
+    _delete_project_if_unused(db, project_id)
+    db.commit()
+    return True
+
+
+def delete_role_training_with_related_data(db: Session, role_training_plan_id: UUID) -> bool:
+    """删除分角色训练计划和关联 AI 任务，不删除原始剧本。"""
+
+    role_training_plan = db.get(RoleTrainingPlan, role_training_plan_id)
+    if role_training_plan is None:
+        return False
+
+    project_id = role_training_plan.project_id
+    db.query(AiTask).filter(AiTask.business_id == role_training_plan.id).delete(synchronize_session=False)
+    db.query(RoleTrainingPlan).filter(RoleTrainingPlan.id == role_training_plan_id).delete(synchronize_session=False)
+    db.flush()
+    _delete_project_if_unused(db, project_id)
+    db.commit()
+    return True
+
+
+def _delete_project_if_unused(db: Session, project_id: UUID) -> None:
+    """当剧目没有剧本和训练计划引用时清理剧目草稿。"""
+
+    script_count = db.query(MusicalScript).filter(MusicalScript.project_id == project_id).count()
+    training_count = db.query(RoleTrainingPlan).filter(RoleTrainingPlan.project_id == project_id).count()
+    if script_count == 0 and training_count == 0:
+        project = db.get(MusicalProject, project_id)
+        if project is not None:
+            db.query(MusicalProject).filter(MusicalProject.id == project_id).delete(synchronize_session=False)
+
+
+def _markdown_list(items: list[str]) -> str:
+    """把字符串列表渲染成 Markdown 列表。"""
+
+    if not items:
+        return "- 暂无"
+    return "\n".join(f"- {item}" for item in items)
+
+
+def _script_acts_markdown(items: list[dict]) -> str:
+    """渲染分幕剧情、旁白和台词。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"### {item.get('name', '未命名段落')}（{item.get('duration_minutes', 0)} 分钟）")
+        lines.append(f"- 剧情：{item.get('story_outline', '')}")
+        lines.append(f"- 情绪：{item.get('emotion', '')}")
+        narrator_text = item.get("narrator_text", "")
+        if narrator_text:
+            lines.append(f"- 旁白：{narrator_text}")
+        dialogues = item.get("dialogues", [])
+        if dialogues:
+            lines.append("- 台词：")
+            for dialogue in dialogues:
+                lines.append(
+                    f"  - **{dialogue.get('role_name', '角色')}**：{dialogue.get('line', '')}"
+                    f"（{dialogue.get('stage_direction', '')}）"
+                )
+    return "\n".join(lines)
+
+
+def _characters_markdown(items: list[dict]) -> str:
+    """渲染人物设定。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"- **{item.get('name', '未命名角色')}**（{item.get('role_type', '')}）")
+        lines.append(f"  - 性格：{item.get('personality', '')}")
+        lines.append(f"  - 弧光：{item.get('character_arc', '')}")
+        lines.append(f"  - 表演提示：{item.get('performance_tips', '')}")
+        lines.append(f"  - 关键台词：{'；'.join(item.get('key_lines', []))}")
+    return "\n".join(lines)
+
+
+def _performance_slots_markdown(items: list[dict]) -> str:
+    """渲染舞蹈、独唱、群舞留白段落。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"- **{item.get('act_name', '未命名段落')} / {item.get('slot_type', '')}**")
+        lines.append(f"  - {item.get('description', '')}")
+        lines.append(f"  - 建议时长：{item.get('suggested_duration', '')}")
+        lines.append(f"  - 提醒：{item.get('notes', '')}")
+    return "\n".join(lines)
+
+
+def _role_tasks_markdown(items: list[dict]) -> str:
+    """渲染角色维度训练任务。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"### {item.get('role_name', '未命名角色')}（{item.get('role_type', '')}）")
+        lines.append(f"- 台词训练：{item.get('line_focus', '')}")
+        lines.append(f"- 演唱训练：{item.get('singing_focus', '')}")
+        lines.append(f"- 舞蹈训练：{item.get('dance_focus', '')}")
+        lines.append(f"- 走位提醒：{item.get('blocking_tips', '')}")
+        lines.append("- 每日任务：" + ("；".join(item.get("daily_tasks", [])) or "暂无"))
+        lines.append("- 老师检查点：" + ("；".join(item.get("teacher_checkpoints", [])) or "暂无"))
+    return "\n".join(lines)
+
+
+def _daily_plan_markdown(items: list[dict]) -> str:
+    """渲染每日训练安排。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"- **{item.get('day', '未命名日期')}**：{item.get('focus', '')}")
+        lines.append(f"  - 任务：{'；'.join(item.get('tasks', []))}")
+        lines.append(f"  - 预期结果：{item.get('expected_result', '')}")
+    return "\n".join(lines)

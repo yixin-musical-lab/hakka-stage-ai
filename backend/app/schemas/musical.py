@@ -1,0 +1,208 @@
+from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import BaseModel, Field
+
+
+class MusicalScriptGenerateRequest(BaseModel):
+    """M01 剧本生成请求。"""
+
+    theme: str = Field(..., min_length=1, max_length=200, description="剧目主题，例如：客家文化、乡土美育")
+    duration_minutes: int = Field(..., ge=3, le=60, description="演出时长，单位分钟")
+    actor_count: int = Field(..., ge=1, le=120, description="演员人数")
+    age_group: str = Field(..., min_length=1, max_length=80, description="演员年龄段，例如：8-12 岁")
+    style_requirements: str = Field(..., min_length=1, max_length=1200, description="风格要求，例如：温暖、积极、校园展示")
+    required_elements: str = Field("", max_length=1200, description="必须出现的元素，例如：客家山歌、劳动场景")
+    forbidden_content: str = Field("", max_length=1200, description="禁忌内容或限制，例如：台词不能太长")
+    llm_provider: Literal["deepseek", "qwen"] | None = Field(None, description="大模型供应商")
+    llm_model: str | None = Field(None, min_length=1, max_length=120, description="本次生成使用的模型")
+    reasoning_level: Literal["off", "standard", "enhanced"] | None = Field(None, description="本次生成使用的推理强度")
+
+
+class MusicalScriptGenerateResponse(BaseModel):
+    """创建剧本生成任务后的响应。"""
+
+    task_id: UUID
+    musical_script_id: UUID
+    status: str
+    message: str
+
+
+class ScriptDialogueLine(BaseModel):
+    """剧本中的一句台词或旁白。"""
+
+    role_name: str
+    line: str
+    stage_direction: str
+
+
+class ScriptAct(BaseModel):
+    """剧本中的一幕或一个剧情段落。"""
+
+    name: str
+    duration_minutes: int = Field(ge=0)
+    story_outline: str
+    emotion: str
+    narrator_text: str
+    dialogues: list[ScriptDialogueLine]
+
+
+class ScriptCharacter(BaseModel):
+    """剧本角色卡。"""
+
+    name: str
+    role_type: str
+    personality: str
+    character_arc: str
+    performance_tips: str
+    key_lines: list[str]
+
+
+class PerformanceSlot(BaseModel):
+    """舞蹈、独唱、群舞等留白段落。"""
+
+    act_name: str
+    slot_type: str
+    description: str
+    suggested_duration: str
+    notes: str
+
+
+class MusicalScriptContent(BaseModel):
+    """M01 结构化剧本正文。"""
+
+    title: str
+    synopsis: str
+    acts: list[ScriptAct]
+    characters: list[ScriptCharacter]
+    performance_slots: list[PerformanceSlot]
+    director_notes: list[str]
+
+
+class MusicalScriptResponse(BaseModel):
+    """剧本详情响应。"""
+
+    id: UUID
+    project_id: UUID
+    title: str
+    status: str
+    content: MusicalScriptContent | None
+    edited_content: MusicalScriptContent | None
+    raw_model_info: dict | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MusicalScriptSummaryResponse(BaseModel):
+    """剧本列表摘要响应。"""
+
+    id: UUID
+    project_id: UUID
+    title: str
+    status: str
+    provider: str | None
+    model: str | None
+    reasoning_level: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MusicalScriptUpdateRequest(BaseModel):
+    """保存编导编辑后的剧本。"""
+
+    edited_content: MusicalScriptContent
+
+
+class RoleTrainingGenerateRequest(BaseModel):
+    """M05 分角色训练计划生成请求。"""
+
+    script_id: UUID = Field(..., description="要引用的剧本 ID")
+    rehearsal_days: int = Field(..., ge=1, le=60, description="排练周期，单位天")
+    session_minutes: int = Field(..., ge=10, le=240, description="每次排练时长，单位分钟")
+    training_focus: str = Field(..., min_length=1, max_length=1200, description="训练重点，例如：台词、唱段、舞蹈、走位")
+    notes: str = Field("", max_length=1200, description="补充说明或排练限制")
+    llm_provider: Literal["deepseek", "qwen"] | None = Field(None, description="大模型供应商")
+    llm_model: str | None = Field(None, min_length=1, max_length=120, description="本次生成使用的模型")
+    reasoning_level: Literal["off", "standard", "enhanced"] | None = Field(None, description="本次生成使用的推理强度")
+
+
+class RoleTrainingGenerateResponse(BaseModel):
+    """创建分角色训练计划任务后的响应。"""
+
+    task_id: UUID
+    role_training_plan_id: UUID
+    status: str
+    message: str
+
+
+class RoleDailyPlan(BaseModel):
+    """某一天的排练安排。"""
+
+    day: str
+    focus: str
+    tasks: list[str]
+    expected_result: str
+
+
+class RoleTrainingItem(BaseModel):
+    """单个角色的训练任务。"""
+
+    role_name: str
+    role_type: str
+    line_focus: str
+    singing_focus: str
+    dance_focus: str
+    blocking_tips: str
+    daily_tasks: list[str]
+    teacher_checkpoints: list[str]
+
+
+class RoleTrainingContent(BaseModel):
+    """M05 结构化分角色训练计划正文。"""
+
+    title: str
+    project_overview: str
+    role_tasks: list[RoleTrainingItem]
+    daily_plan: list[RoleDailyPlan]
+    teacher_checkpoints: list[str]
+
+
+class RoleTrainingPlanResponse(BaseModel):
+    """分角色训练计划详情响应。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    title: str
+    status: str
+    rehearsal_days: int
+    session_minutes: int
+    training_focus: str
+    notes: str
+    content: RoleTrainingContent | None
+    edited_content: RoleTrainingContent | None
+    raw_model_info: dict | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoleTrainingPlanSummaryResponse(BaseModel):
+    """分角色训练计划列表摘要响应。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    title: str
+    status: str
+    provider: str | None
+    model: str | None
+    reasoning_level: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoleTrainingPlanUpdateRequest(BaseModel):
+    """保存老师编辑后的分角色训练计划。"""
+
+    edited_content: RoleTrainingContent

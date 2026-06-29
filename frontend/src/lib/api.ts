@@ -7,6 +7,14 @@ import type {
   LessonPlanResponse,
   LessonPlanSummary,
   LlmOptionsResponse,
+  MusicalScriptContent,
+  MusicalScriptForm,
+  MusicalScriptResponse,
+  MusicalScriptSummary,
+  RoleTrainingContent,
+  RoleTrainingForm,
+  RoleTrainingPlanResponse,
+  RoleTrainingPlanSummary,
 } from "../types";
 
 export async function fetchHealth(signal?: AbortSignal) {
@@ -84,6 +92,120 @@ export async function deleteLessonPlan(lessonPlanId: string) {
 
 export async function fetchLessonPlanMarkdown(lessonPlanId: string) {
   const response = await fetch(`${apiBaseUrl}/api/lesson-plans/${lessonPlanId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function createMusicalScriptTask(form: MusicalScriptForm) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; musical_script_id: string; status: string };
+}
+
+export async function fetchMusicalScripts(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalScriptSummary[];
+}
+
+export async function fetchMusicalScript(musicalScriptId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts/${musicalScriptId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalScriptResponse;
+}
+
+export async function updateMusicalScript(musicalScriptId: string, editedContent: MusicalScriptContent) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts/${musicalScriptId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalScriptResponse;
+}
+
+export async function deleteMusicalScript(musicalScriptId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts/${musicalScriptId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchMusicalScriptMarkdown(musicalScriptId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-scripts/${musicalScriptId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function createRoleTrainingTask(form: RoleTrainingForm) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; role_training_plan_id: string; status: string };
+}
+
+export async function fetchRoleTrainingPlans(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RoleTrainingPlanSummary[];
+}
+
+export async function fetchRoleTrainingPlan(roleTrainingPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans/${roleTrainingPlanId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RoleTrainingPlanResponse;
+}
+
+export async function updateRoleTrainingPlan(roleTrainingPlanId: string, editedContent: RoleTrainingContent) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans/${roleTrainingPlanId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RoleTrainingPlanResponse;
+}
+
+export async function deleteRoleTrainingPlan(roleTrainingPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans/${roleTrainingPlanId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchRoleTrainingMarkdown(roleTrainingPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans/${roleTrainingPlanId}/markdown`);
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }
