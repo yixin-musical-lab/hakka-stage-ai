@@ -1,4 +1,7 @@
 import { TextareaField, TextField } from "../ui/FormFields";
+import { FieldLegend, FieldSet } from "../ui/field";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import type { LessonActivity, LessonPlanContent, MovementStep } from "../../types";
 
 export function LessonEditor({
@@ -39,17 +42,17 @@ export function LessonEditor({
 
 function EditableList({ title, values, onChange }: { title: string; values: string[]; onChange: (values: string[]) => void }) {
   return (
-    <section className="edit-section">
-      <h3>{title}</h3>
+    <FieldSet className="edit-section">
+      <FieldLegend>{title}</FieldLegend>
       {values.map((value, index) => (
-        <textarea
+        <Textarea
           key={`${title}-${index}`}
           value={value}
           rows={2}
           onChange={(event) => onChange(values.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
         />
       ))}
-    </section>
+    </FieldSet>
   );
 }
 
@@ -63,23 +66,23 @@ function ActivityList({
   onChange: (values: LessonActivity[]) => void;
 }) {
   return (
-    <section className="edit-section">
-      <h3>{title}</h3>
+    <FieldSet className="edit-section">
+      <FieldLegend>{title}</FieldLegend>
       {values.map((activity, index) => (
         <div className="activity-row" key={`${title}-${index}`}>
-          <input
+          <Input
             value={activity.name}
             onChange={(event) => updateActivity(index, { ...activity, name: event.target.value })}
             aria-label={`${title}名称`}
           />
-          <input
+          <Input
             type="number"
             min={0}
             value={activity.duration_minutes}
             onChange={(event) => updateActivity(index, { ...activity, duration_minutes: Number(event.target.value) })}
             aria-label={`${title}时长`}
           />
-          <textarea
+          <Textarea
             value={activity.description}
             rows={3}
             onChange={(event) => updateActivity(index, { ...activity, description: event.target.value })}
@@ -87,7 +90,7 @@ function ActivityList({
           />
         </div>
       ))}
-    </section>
+    </FieldSet>
   );
 
   function updateActivity(index: number, nextValue: LessonActivity) {
@@ -97,17 +100,17 @@ function ActivityList({
 
 function MovementList({ values, onChange }: { values: MovementStep[]; onChange: (values: MovementStep[]) => void }) {
   return (
-    <section className="edit-section">
-      <h3>动作拆解</h3>
+    <FieldSet className="edit-section">
+      <FieldLegend>动作拆解</FieldLegend>
       {values.map((step, index) => (
         <div className="movement-row" key={`movement-${index}`}>
-          <input
+          <Input
             value={step.name}
             onChange={(event) => updateStep(index, { ...step, name: event.target.value })}
             aria-label="动作名称"
           />
-          <input value={step.beats} onChange={(event) => updateStep(index, { ...step, beats: event.target.value })} aria-label="节拍" />
-          <textarea
+          <Input value={step.beats} onChange={(event) => updateStep(index, { ...step, beats: event.target.value })} aria-label="节拍" />
+          <Textarea
             value={step.teaching_tips}
             rows={3}
             onChange={(event) => updateStep(index, { ...step, teaching_tips: event.target.value })}
@@ -115,7 +118,7 @@ function MovementList({ values, onChange }: { values: MovementStep[]; onChange: 
           />
         </div>
       ))}
-    </section>
+    </FieldSet>
   );
 
   function updateStep(index: number, nextValue: MovementStep) {

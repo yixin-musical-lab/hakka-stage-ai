@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { MusicalScriptEditor } from "../components/musical/MusicalScriptEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { NumberField, TextareaField } from "../components/ui/FormFields";
+import { LlmSettings } from "../components/ui/LlmSettings";
 import { PageTitle } from "../components/ui/PageTitle";
 import {
   createRoleTrainingTask,
@@ -194,17 +197,17 @@ export function MusicalScriptDetailPage() {
         description="查看、继续修改并导出编导确认稿，也可以基于当前剧本生成分角色训练计划。"
         action={
           <div className="button-row">
-            <button className="secondary-button" type="button" onClick={() => navigate("/musical-scripts")}>
+            <Button variant="secondary" type="button" onClick={() => navigate("/musical-scripts")}>
               返回列表
-            </button>
+            </Button>
             {musicalScript ? (
-              <button className="secondary-button" type="button" onClick={() => void handleDownloadMarkdown()}>
+              <Button variant="secondary" type="button" onClick={() => void handleDownloadMarkdown()}>
                 导出 Markdown
-              </button>
+              </Button>
             ) : null}
-            <button className="primary-button compact" type="button" disabled={!editedContent || saving} onClick={() => void saveMusicalScript()}>
+            <Button type="button" disabled={!editedContent || saving} onClick={() => void saveMusicalScript()}>
               {saving ? "保存中..." : "保存编辑稿"}
-            </button>
+            </Button>
           </div>
         }
       />
@@ -213,56 +216,64 @@ export function MusicalScriptDetailPage() {
       {loading ? <EmptyState title="正在读取剧本" text="请稍候，系统正在读取剧本详情。" /> : null}
 
       <section className="script-detail-layout">
-        <aside className="surface-panel">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">分角色训练</p>
-              <h2>生成训练计划</h2>
-            </div>
-          </div>
-          {roleForm ? (
-            <form onSubmit={submitRoleTraining}>
-              <div className="field-grid">
-                <NumberField label="排练天数" value={roleForm.rehearsal_days} onChange={(value) => updateRoleForm("rehearsal_days", value)} />
-                <NumberField label="单次分钟" value={roleForm.session_minutes} onChange={(value) => updateRoleForm("session_minutes", value)} />
+        <Card asChild className="surface-panel">
+          <aside>
+            <div className="section-heading">
+              <div>
+                <p className="section-kicker">分角色训练</p>
+                <h2>生成训练计划</h2>
               </div>
-              <RoleModelPicker
-                form={roleForm}
-                llmOptions={llmOptions}
-                selectedModelOptions={selectedModelOptions}
-                onProviderChange={changeRoleProvider}
-                onChange={updateRoleForm}
-              />
-              <TextareaField label="训练重点" value={roleForm.training_focus} onChange={(value) => updateRoleForm("training_focus", value)} />
-              <TextareaField label="补充说明" value={roleForm.notes} onChange={(value) => updateRoleForm("notes", value)} />
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={submittingRoleTraining || taskInProgress || openingTrainingPlan || !llmOptions || selectedProvider?.configured === false}
-              >
-                {submittingRoleTraining
-                  ? "正在提交任务..."
-                  : taskInProgress
-                    ? "训练计划生成中..."
-                    : openingTrainingPlan
-                      ? "正在打开训练计划..."
-                      : "生成训练计划"}
-              </button>
-              {openingTrainingPlan ? <p className="redirect-hint">训练计划已生成，正在打开详情页...</p> : null}
-              <TaskProgress task={task} />
-            </form>
-          ) : (
-            <EmptyState title="等待剧本" text="剧本读取完成后可以生成分角色训练计划。" />
-          )}
-        </aside>
+            </div>
+            {roleForm ? (
+              <form onSubmit={submitRoleTraining}>
+                <div className="field-grid">
+                  <NumberField label="排练天数" value={roleForm.rehearsal_days} onChange={(value) => updateRoleForm("rehearsal_days", value)} />
+                  <NumberField label="单次分钟" value={roleForm.session_minutes} onChange={(value) => updateRoleForm("session_minutes", value)} />
+                </div>
+                <LlmSettings
+                  provider={roleForm.llm_provider}
+                  model={roleForm.llm_model}
+                  reasoningLevel={roleForm.reasoning_level}
+                  llmOptions={llmOptions}
+                  selectedModelOptions={selectedModelOptions}
+                  onProviderChange={(providerId) => changeRoleProvider(providerId as RoleTrainingForm["llm_provider"])}
+                  onModelChange={(modelId) => updateRoleForm("llm_model", modelId)}
+                  onReasoningLevelChange={(level) => updateRoleForm("reasoning_level", level as RoleTrainingForm["reasoning_level"])}
+                />
+                <TextareaField label="训练重点" value={roleForm.training_focus} onChange={(value) => updateRoleForm("training_focus", value)} />
+                <TextareaField label="补充说明" value={roleForm.notes} onChange={(value) => updateRoleForm("notes", value)} />
+                <Button
+                  className="w-full"
+                  type="submit"
+                  data-busy={submittingRoleTraining || taskInProgress || openingTrainingPlan ? "true" : undefined}
+                  disabled={submittingRoleTraining || taskInProgress || openingTrainingPlan || !llmOptions || selectedProvider?.configured === false}
+                >
+                  {submittingRoleTraining
+                    ? "正在提交任务..."
+                    : taskInProgress
+                      ? "训练计划生成中..."
+                      : openingTrainingPlan
+                        ? "正在打开训练计划..."
+                        : "生成训练计划"}
+                </Button>
+                {openingTrainingPlan ? <p className="redirect-hint">训练计划已生成，正在打开详情页...</p> : null}
+                <TaskProgress task={task} />
+              </form>
+            ) : (
+              <EmptyState title="等待剧本" text="剧本读取完成后可以生成分角色训练计划。" />
+            )}
+          </aside>
+        </Card>
 
-        <section className="surface-panel">
-          {editedContent ? (
-            <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
-          ) : !loading ? (
-            <EmptyState title="剧本内容不可用" text="这份剧本可能尚未生成成功，暂时无法编辑或导出。" />
-          ) : null}
-        </section>
+        <Card asChild className="surface-panel">
+          <section>
+            {editedContent ? (
+              <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
+            ) : !loading ? (
+              <EmptyState title="剧本内容不可用" text="这份剧本可能尚未生成成功，暂时无法编辑或导出。" />
+            ) : null}
+          </section>
+        </Card>
       </section>
     </main>
   );
@@ -276,61 +287,4 @@ export function MusicalScriptDetailPage() {
     const defaultModel = provider?.models[0]?.id ?? roleForm?.llm_model ?? "";
     setRoleForm((current) => (current ? { ...current, llm_provider: providerId, llm_model: defaultModel } : current));
   }
-}
-
-function RoleModelPicker({
-  form,
-  llmOptions,
-  selectedModelOptions,
-  onProviderChange,
-  onChange,
-}: {
-  form: RoleTrainingForm;
-  llmOptions: LlmOptionsResponse | null;
-  selectedModelOptions: LlmOptionsResponse["providers"][number]["models"];
-  onProviderChange: (providerId: RoleTrainingForm["llm_provider"]) => void;
-  onChange: <Key extends keyof RoleTrainingForm>(key: Key, value: RoleTrainingForm[Key]) => void;
-}) {
-  return (
-    <div className="edit-section model-picker">
-      <h3>模型设置</h3>
-      <label className="field">
-        <span>模型供应商</span>
-        <select value={form.llm_provider} onChange={(event) => onProviderChange(event.target.value as RoleTrainingForm["llm_provider"])}>
-          {(llmOptions?.providers ?? []).map((provider) => (
-            <option key={provider.id} value={provider.id} disabled={!provider.configured}>
-              {provider.label}
-              {provider.configured ? "" : "（未配置密钥）"}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
-        <span>模型</span>
-        <select value={form.llm_model} onChange={(event) => onChange("llm_model", event.target.value)}>
-          {selectedModelOptions.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="field">
-        <span>推理强度</span>
-        <div className="segmented-control" role="group" aria-label="推理强度">
-          {(llmOptions?.reasoning_levels ?? []).map((level) => (
-            <button
-              key={level.id}
-              className={form.reasoning_level === level.id ? "segment-button active" : "segment-button"}
-              type="button"
-              title={level.description}
-              onClick={() => onChange("reasoning_level", level.id)}
-            >
-              {level.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }

@@ -1,4 +1,6 @@
 import { Link } from "react-router";
+import { Badge } from "../ui/badge";
+import { Card } from "../ui/card";
 
 export function ModuleTile({
   title,
@@ -13,7 +15,7 @@ export function ModuleTile({
 }) {
   const content = (
     <>
-      <span className={status === "已接入" ? "module-status live" : "module-status"}>{status}</span>
+      <Badge variant={status === "已接入" ? "default" : "secondary"}>{status}</Badge>
       <h3>{title}</h3>
       <p>{description}</p>
     </>
@@ -21,11 +23,15 @@ export function ModuleTile({
 
   if (to) {
     return (
-      <Link className="module-tile interactive" to={to}>
-        {content}
-      </Link>
+      <Card asChild className="module-tile interactive">
+        <Link to={to}>{content}</Link>
+      </Card>
     );
   }
 
-  return <article className="module-tile">{content}</article>;
+  return (
+    <Card asChild className="module-tile">
+      <article>{content}</article>
+    </Card>
+  );
 }

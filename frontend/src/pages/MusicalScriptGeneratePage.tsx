@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { MusicalScriptEditor } from "../components/musical/MusicalScriptEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { NumberField, TextareaField, TextField } from "../components/ui/FormFields";
+import { LlmSettings } from "../components/ui/LlmSettings";
 import { PageTitle } from "../components/ui/PageTitle";
 import {
   createMusicalScriptTask,
@@ -138,75 +141,87 @@ export function MusicalScriptGeneratePage() {
         title="AI 剧本生成"
         description="输入剧目条件后生成剧情结构、人物、台词、旁白和表演留白段落。"
         action={
-          <button className="secondary-button" type="button" onClick={() => navigate("/musical-scripts")}>
+          <Button variant="secondary" type="button" onClick={() => navigate("/musical-scripts")}>
             已保存的剧本
-          </button>
+          </Button>
         }
       />
 
       <section className="lesson-layout">
-        <form className="surface-panel input-panel" onSubmit={submitMusicalScript}>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">剧目条件</p>
-              <h2>生成一份创编初稿</h2>
+        <Card asChild className="surface-panel input-panel">
+          <form onSubmit={submitMusicalScript}>
+            <div className="section-heading">
+              <div>
+                <p className="section-kicker">剧目条件</p>
+                <h2>生成一份创编初稿</h2>
+              </div>
+              <Button variant="secondary" type="button" onClick={fillExampleScript}>
+                填入示例
+              </Button>
             </div>
-            <button className="secondary-button" type="button" onClick={fillExampleScript}>
-              填入示例
-            </button>
-          </div>
 
-          <div className="field-grid">
-            <TextField label="剧目主题" value={form.theme} onChange={(value) => updateForm("theme", value)} />
-            <NumberField label="演出分钟" value={form.duration_minutes} onChange={(value) => updateForm("duration_minutes", value)} />
-            <NumberField label="演员人数" value={form.actor_count} onChange={(value) => updateForm("actor_count", value)} />
-            <TextField label="年龄段" value={form.age_group} onChange={(value) => updateForm("age_group", value)} />
-          </div>
-
-          <ModelPicker
-            form={form}
-            llmOptions={llmOptions}
-            selectedModelOptions={selectedModelOptions}
-            onProviderChange={changeProvider}
-            onChange={updateForm}
-          />
-
-          <TextareaField label="风格要求" value={form.style_requirements} onChange={(value) => updateForm("style_requirements", value)} />
-          <TextareaField label="必须出现的元素" value={form.required_elements} onChange={(value) => updateForm("required_elements", value)} />
-          <TextareaField label="禁忌内容" value={form.forbidden_content} onChange={(value) => updateForm("forbidden_content", value)} />
-
-          <button className="primary-button" type="submit" disabled={submitting || taskInProgress || !llmOptions || selectedProvider?.configured === false}>
-            {submitting ? "正在提交任务..." : taskInProgress ? "剧本生成中..." : "生成剧本"}
-          </button>
-        </form>
-
-        <section className="surface-panel result-panel" aria-live="polite">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">生成结果</p>
-              <h2>{editedContent?.title ?? "等待生成剧本"}</h2>
+            <div className="field-grid">
+              <TextField label="剧目主题" value={form.theme} onChange={(value) => updateForm("theme", value)} />
+              <NumberField label="演出分钟" value={form.duration_minutes} onChange={(value) => updateForm("duration_minutes", value)} />
+              <NumberField label="演员人数" value={form.actor_count} onChange={(value) => updateForm("actor_count", value)} />
+              <TextField label="年龄段" value={form.age_group} onChange={(value) => updateForm("age_group", value)} />
             </div>
-            <div className="button-row">
-              {musicalScript ? (
-                <button className="secondary-button" type="button" onClick={() => navigate(`/musical-scripts/${musicalScript.id}`)}>
-                  打开详情
-                </button>
-              ) : null}
-              <button className="secondary-button" type="button" disabled={!canSave || saving} onClick={() => void saveMusicalScript()}>
-                {saving ? "保存中..." : "保存编辑稿"}
-              </button>
+
+            <LlmSettings
+              provider={form.llm_provider}
+              model={form.llm_model}
+              reasoningLevel={form.reasoning_level}
+              llmOptions={llmOptions}
+              selectedModelOptions={selectedModelOptions}
+              onProviderChange={(providerId) => changeProvider(providerId as MusicalScriptForm["llm_provider"])}
+              onModelChange={(modelId) => updateForm("llm_model", modelId)}
+              onReasoningLevelChange={(level) => updateForm("reasoning_level", level as MusicalScriptForm["reasoning_level"])}
+            />
+
+            <TextareaField label="风格要求" value={form.style_requirements} onChange={(value) => updateForm("style_requirements", value)} />
+            <TextareaField label="必须出现的元素" value={form.required_elements} onChange={(value) => updateForm("required_elements", value)} />
+            <TextareaField label="禁忌内容" value={form.forbidden_content} onChange={(value) => updateForm("forbidden_content", value)} />
+
+            <Button
+              className="w-full"
+              type="submit"
+              data-busy={submitting || taskInProgress ? "true" : undefined}
+              disabled={submitting || taskInProgress || !llmOptions || selectedProvider?.configured === false}
+            >
+              {submitting ? "正在提交任务..." : taskInProgress ? "剧本生成中..." : "生成剧本"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card asChild className="surface-panel result-panel">
+          <section aria-live="polite">
+            <div className="section-heading">
+              <div>
+                <p className="section-kicker">生成结果</p>
+                <h2>{editedContent?.title ?? "等待生成剧本"}</h2>
+              </div>
+              <div className="button-row">
+                {musicalScript ? (
+                  <Button variant="secondary" type="button" onClick={() => navigate(`/musical-scripts/${musicalScript.id}`)}>
+                    打开详情
+                  </Button>
+                ) : null}
+                <Button variant="secondary" type="button" disabled={!canSave || saving} onClick={() => void saveMusicalScript()}>
+                  {saving ? "保存中..." : "保存编辑稿"}
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <TaskProgress task={task} />
-          {notice ? <p className="notice">{notice}</p> : null}
+            <TaskProgress task={task} />
+            {notice ? <p className="notice">{notice}</p> : null}
 
-          {editedContent ? (
-            <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
-          ) : (
-            <EmptyState title="还没有剧本初稿" text="提交任务后，生成完成的结构化剧本会显示在这里。" />
-          )}
-        </section>
+            {editedContent ? (
+              <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
+            ) : (
+              <EmptyState title="还没有剧本初稿" text="提交任务后，生成完成的结构化剧本会显示在这里。" />
+            )}
+          </section>
+        </Card>
       </section>
     </main>
   );
@@ -229,63 +244,4 @@ export function MusicalScriptGeneratePage() {
       reasoning_level: current.reasoning_level,
     }));
   }
-}
-
-function ModelPicker({
-  form,
-  llmOptions,
-  selectedModelOptions,
-  onProviderChange,
-  onChange,
-}: {
-  form: MusicalScriptForm;
-  llmOptions: LlmOptionsResponse | null;
-  selectedModelOptions: LlmOptionsResponse["providers"][number]["models"];
-  onProviderChange: (providerId: MusicalScriptForm["llm_provider"]) => void;
-  onChange: <Key extends keyof MusicalScriptForm>(key: Key, value: MusicalScriptForm[Key]) => void;
-}) {
-  return (
-    <div className="edit-section model-picker">
-      <h3>模型设置</h3>
-      <div className="field-grid">
-        <label className="field">
-          <span>模型供应商</span>
-          <select value={form.llm_provider} onChange={(event) => onProviderChange(event.target.value as MusicalScriptForm["llm_provider"])}>
-            {(llmOptions?.providers ?? []).map((provider) => (
-              <option key={provider.id} value={provider.id} disabled={!provider.configured}>
-                {provider.label}
-                {provider.configured ? "" : "（未配置密钥）"}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>模型</span>
-          <select value={form.llm_model} onChange={(event) => onChange("llm_model", event.target.value)}>
-            {selectedModelOptions.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="field">
-        <span>推理强度</span>
-        <div className="segmented-control" role="group" aria-label="推理强度">
-          {(llmOptions?.reasoning_levels ?? []).map((level) => (
-            <button
-              key={level.id}
-              className={form.reasoning_level === level.id ? "segment-button active" : "segment-button"}
-              type="button"
-              title={level.description}
-              onClick={() => onChange("reasoning_level", level.id)}
-            >
-              {level.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }

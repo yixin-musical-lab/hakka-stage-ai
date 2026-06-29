@@ -1,4 +1,7 @@
 import { TextareaField, TextField } from "../ui/FormFields";
+import { FieldGroup, FieldLegend, FieldSet } from "../ui/field";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import type { RoleDailyPlan, RoleTrainingContent, RoleTrainingItem } from "../../types";
 
 export function RoleTrainingEditor({
@@ -28,41 +31,41 @@ export function RoleTrainingEditor({
 
 function RoleTaskList({ values, onChange }: { values: RoleTrainingItem[]; onChange: (values: RoleTrainingItem[]) => void }) {
   return (
-    <section className="edit-section">
-      <h3>分角色任务</h3>
+    <FieldSet className="edit-section">
+      <FieldLegend>分角色任务</FieldLegend>
       {values.map((roleTask, index) => (
-        <div className="nested-editor" key={`role-task-${index}`}>
+        <FieldGroup className="nested-editor" key={`role-task-${index}`}>
           <div className="field-grid">
-            <input
+            <Input
               value={roleTask.role_name}
               onChange={(event) => updateRoleTask(index, { ...roleTask, role_name: event.target.value })}
               aria-label="角色名称"
             />
-            <input
+            <Input
               value={roleTask.role_type}
               onChange={(event) => updateRoleTask(index, { ...roleTask, role_type: event.target.value })}
               aria-label="角色类型"
             />
           </div>
-          <textarea
+          <Textarea
             value={roleTask.line_focus}
             rows={2}
             onChange={(event) => updateRoleTask(index, { ...roleTask, line_focus: event.target.value })}
             aria-label="台词训练重点"
           />
-          <textarea
+          <Textarea
             value={roleTask.singing_focus}
             rows={2}
             onChange={(event) => updateRoleTask(index, { ...roleTask, singing_focus: event.target.value })}
             aria-label="演唱训练重点"
           />
-          <textarea
+          <Textarea
             value={roleTask.dance_focus}
             rows={2}
             onChange={(event) => updateRoleTask(index, { ...roleTask, dance_focus: event.target.value })}
             aria-label="舞蹈训练重点"
           />
-          <textarea
+          <Textarea
             value={roleTask.blocking_tips}
             rows={2}
             onChange={(event) => updateRoleTask(index, { ...roleTask, blocking_tips: event.target.value })}
@@ -78,9 +81,9 @@ function RoleTaskList({ values, onChange }: { values: RoleTrainingItem[]; onChan
             values={roleTask.teacher_checkpoints}
             onChange={(checkpoints) => updateRoleTask(index, { ...roleTask, teacher_checkpoints: checkpoints })}
           />
-        </div>
+        </FieldGroup>
       ))}
-    </section>
+    </FieldSet>
   );
 
   function updateRoleTask(index: number, nextValue: RoleTrainingItem) {
@@ -90,28 +93,28 @@ function RoleTaskList({ values, onChange }: { values: RoleTrainingItem[]; onChan
 
 function DailyPlanList({ values, onChange }: { values: RoleDailyPlan[]; onChange: (values: RoleDailyPlan[]) => void }) {
   return (
-    <section className="edit-section">
-      <h3>每日排练安排</h3>
+    <FieldSet className="edit-section">
+      <FieldLegend>每日排练安排</FieldLegend>
       {values.map((dailyPlan, index) => (
-        <div className="nested-editor" key={`daily-plan-${index}`}>
+        <FieldGroup className="nested-editor" key={`daily-plan-${index}`}>
           <div className="field-grid">
-            <input value={dailyPlan.day} onChange={(event) => updateDailyPlan(index, { ...dailyPlan, day: event.target.value })} aria-label="日期" />
-            <input
+            <Input value={dailyPlan.day} onChange={(event) => updateDailyPlan(index, { ...dailyPlan, day: event.target.value })} aria-label="日期" />
+            <Input
               value={dailyPlan.focus}
               onChange={(event) => updateDailyPlan(index, { ...dailyPlan, focus: event.target.value })}
               aria-label="当天重点"
             />
           </div>
           <EditableList title="当天任务" values={dailyPlan.tasks} onChange={(tasks) => updateDailyPlan(index, { ...dailyPlan, tasks })} />
-          <textarea
+          <Textarea
             value={dailyPlan.expected_result}
             rows={2}
             onChange={(event) => updateDailyPlan(index, { ...dailyPlan, expected_result: event.target.value })}
             aria-label="预期结果"
           />
-        </div>
+        </FieldGroup>
       ))}
-    </section>
+    </FieldSet>
   );
 
   function updateDailyPlan(index: number, nextValue: RoleDailyPlan) {
@@ -121,17 +124,17 @@ function DailyPlanList({ values, onChange }: { values: RoleDailyPlan[]; onChange
 
 function EditableList({ title, values, onChange }: { title: string; values: string[]; onChange: (values: string[]) => void }) {
   return (
-    <section className="edit-section compact-section">
-      <h3>{title}</h3>
+    <FieldSet className="edit-section compact-section">
+      <FieldLegend>{title}</FieldLegend>
       {values.map((value, index) => (
-        <textarea
+        <Textarea
           key={`${title}-${index}`}
           value={value}
           rows={2}
           onChange={(event) => onChange(values.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
         />
       ))}
-    </section>
+    </FieldSet>
   );
 }
 

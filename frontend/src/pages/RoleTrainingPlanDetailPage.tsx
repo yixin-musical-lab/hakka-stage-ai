@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { RoleTrainingEditor } from "../components/musical/RoleTrainingEditor";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { fetchRoleTrainingPlan, updateRoleTrainingPlan } from "../lib/api";
@@ -68,17 +70,17 @@ export function RoleTrainingPlanDetailPage() {
         description="查看、继续修改并导出老师确认稿。"
         action={
           <div className="button-row">
-            <button className="secondary-button" type="button" onClick={() => navigate("/role-training-plans")}>
+            <Button variant="secondary" type="button" onClick={() => navigate("/role-training-plans")}>
               返回列表
-            </button>
+            </Button>
             {plan ? (
-              <button className="secondary-button" type="button" onClick={() => void handleDownloadMarkdown()}>
+              <Button variant="secondary" type="button" onClick={() => void handleDownloadMarkdown()}>
                 导出 Markdown
-              </button>
+              </Button>
             ) : null}
-            <button className="primary-button compact" type="button" disabled={!editedContent || saving} onClick={() => void savePlan()}>
+            <Button type="button" disabled={!editedContent || saving} onClick={() => void savePlan()}>
               {saving ? "保存中..." : "保存编辑稿"}
-            </button>
+            </Button>
           </div>
         }
       />
@@ -87,9 +89,11 @@ export function RoleTrainingPlanDetailPage() {
       {loading ? <EmptyState title="正在读取训练计划" text="请稍候，系统正在读取训练计划详情。" /> : null}
 
       {editedContent ? (
-        <section className="surface-panel">
-          <RoleTrainingEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
-        </section>
+        <Card asChild className="surface-panel">
+          <section>
+            <RoleTrainingEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
+          </section>
+        </Card>
       ) : !loading ? (
         <EmptyState title="训练计划内容不可用" text="这份训练计划可能尚未生成成功，暂时无法编辑或导出。" />
       ) : null}

@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { StatusItem } from "../components/ui/StatusItem";
@@ -39,11 +41,13 @@ export function HealthPage() {
           <StatusItem label="状态" value={health.status} />
           <StatusItem label="消息" value={health.message} />
           {health.dependencies.map((dependency) => (
-            <article className="dependency-card" key={dependency.name}>
-              <span className={dependency.configured ? "status-badge ok" : "status-badge"}>{dependency.configured ? "已配置" : "缺失"}</span>
-              <h2>{dependency.name}</h2>
-              <p>{dependency.endpoint}</p>
-            </article>
+            <Card asChild className="dependency-card" key={dependency.name}>
+              <article>
+                <Badge variant={dependency.configured ? "default" : "secondary"}>{dependency.configured ? "已配置" : "缺失"}</Badge>
+                <h2>{dependency.name}</h2>
+                <p>{dependency.endpoint}</p>
+              </article>
+            </Card>
           ))}
         </section>
       ) : null}
