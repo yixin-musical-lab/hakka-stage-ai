@@ -13,6 +13,16 @@ from app.schemas.lesson_plan import (
     MovementStep,
     ReasoningLevelOption,
 )
+from app.schemas.movement_guide import (
+    MovementGuideContent,
+    MovementGuideCreateRequest,
+    MovementGuideGeneratePlaceholderResponse,
+    MovementGuideResponse,
+    MovementGuideSummaryResponse,
+    MovementGuideUpdateRequest,
+    MovementMediaAsset,
+    MovementStepDetail,
+)
 from app.schemas.musical import (
     MusicalScriptContent,
     MusicalScriptGenerateRequest,
@@ -50,6 +60,14 @@ __all__ = [
     "LessonPlanSummaryResponse",
     "LessonPlanUpdateRequest",
     "MovementStep",
+    "MovementGuideContent",
+    "MovementGuideCreateRequest",
+    "MovementGuideGeneratePlaceholderResponse",
+    "MovementGuideResponse",
+    "MovementGuideSummaryResponse",
+    "MovementGuideUpdateRequest",
+    "MovementMediaAsset",
+    "MovementStepDetail",
     "MusicalScriptContent",
     "MusicalScriptGenerateRequest",
     "MusicalScriptGenerateResponse",

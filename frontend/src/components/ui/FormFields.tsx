@@ -5,16 +5,18 @@ import { Textarea } from "@/components/ui/textarea";
 export function TextField({
   label,
   value,
+  required = true,
   onChange,
 }: {
   label: string;
   value: string;
+  required?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
     <Field className="field">
       <FieldLabel>{label}</FieldLabel>
-      <Input value={value} onChange={(event) => onChange(event.target.value)} required />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </Field>
   );
 }
@@ -39,16 +41,20 @@ export function NumberField({
 export function TextareaField({
   label,
   value,
+  required = true,
+  rows = 4,
   onChange,
 }: {
   label: string;
   value: string;
+  required?: boolean;
+  rows?: number;
   onChange: (value: string) => void;
 }) {
   return (
     <Field className="field">
       <FieldLabel>{label}</FieldLabel>
-      <Textarea value={value} onChange={(event) => onChange(event.target.value)} required rows={4} />
+      <Textarea value={value} onChange={(event) => onChange(event.target.value)} required={required} rows={rows} />
     </Field>
   );
 }

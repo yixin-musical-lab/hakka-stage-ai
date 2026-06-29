@@ -7,6 +7,10 @@ import type {
   LessonPlanResponse,
   LessonPlanSummary,
   LlmOptionsResponse,
+  MovementGuideContent,
+  MovementGuideForm,
+  MovementGuideResponse,
+  MovementGuideSummary,
   MusicalScriptContent,
   MusicalScriptForm,
   MusicalScriptResponse,
@@ -212,10 +216,77 @@ export async function fetchRoleTrainingMarkdown(roleTrainingPlanId: string) {
   return response.text();
 }
 
+export async function createMovementGuide(form: MovementGuideForm) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MovementGuideResponse;
+}
+
+export async function fetchMovementGuides(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MovementGuideSummary[];
+}
+
+export async function fetchMovementGuide(movementGuideId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides/${movementGuideId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MovementGuideResponse;
+}
+
+export async function updateMovementGuide(movementGuideId: string, editedContent: MovementGuideContent) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides/${movementGuideId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MovementGuideResponse;
+}
+
+export async function deleteMovementGuide(movementGuideId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides/${movementGuideId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchMovementGuideMarkdown(movementGuideId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides/${movementGuideId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function createMovementCandidatePlaceholder(movementGuideId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/movement-guides/${movementGuideId}/generate-candidates`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { movement_guide_id: string; status: "not_implemented"; message: string };
+}
+
 async function readApiError(response: Response) {
   try {
-    const data = (await response.json()) as { detail?: string };
-    return data.detail ?? `请求失败：${response.status}`;
+    const data = (await response.json()) as { detail?: string; message?: string };
+    return data.detail ?? data.message ?? `请求失败：${response.status}`;
   } catch {
     return `请求失败：${response.status}`;
   }

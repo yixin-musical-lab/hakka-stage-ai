@@ -1,4 +1,4 @@
-import type { LessonPlanForm, MusicalScriptForm, RoleTrainingForm } from "../types";
+import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, RoleTrainingForm } from "../types";
 
 export const initialLessonPlanForm: LessonPlanForm = {
   dance_style: "客家山歌舞",
@@ -17,10 +17,21 @@ export const initialLessonPlanForm: LessonPlanForm = {
 
 export const futureModules = [
   "课堂互动",
-  "示范材料",
   "课后练习",
   "排练复盘",
 ];
+
+export const initialMovementGuideForm: MovementGuideForm = {
+  action_name: "双手打开转身",
+  action_description: "双手从胸前打开，同时向右转身一圈，最后回到面向正前方的站位。",
+  course_context: "客家山歌主题舞蹈体验课",
+  beats: "4 拍完成，前 2 拍打开双手，后 2 拍向右转身。",
+  body_direction: "面向正前方开始，向右转身一圈后回到正前方。",
+  difficulty: "适合 8-12 岁零基础学生。",
+  teaching_tips: "提醒学生先站稳重心，转身时眼睛找前方定点。",
+  reference_video_url: "",
+  digital_human_image_url: "",
+};
 
 export const initialMusicalScriptForm: MusicalScriptForm = {
   theme: "客家山歌与乡土美育",

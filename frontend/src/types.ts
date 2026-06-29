@@ -225,6 +225,91 @@ export type RoleTrainingPlanSummary = {
   updated_at: string;
 };
 
+export type MovementAssetType =
+  | "reference_video"
+  | "skeleton_preview"
+  | "confirmed_skeleton"
+  | "digital_human_video"
+  | "courseware_video"
+  | "image";
+
+export type MovementAssetStatus = "draft" | "candidate" | "confirmed" | "rejected";
+
+export type MovementStepDetail = {
+  name: string;
+  beats: string;
+  description: string;
+  teacher_cue: string;
+};
+
+export type MovementMediaAsset = {
+  asset_type: MovementAssetType;
+  title: string;
+  url: string;
+  status: MovementAssetStatus;
+  notes: string;
+};
+
+export type MovementGuideContent = {
+  title: string;
+  action_name: string;
+  action_description: string;
+  course_context: string;
+  beats: string;
+  body_direction: string;
+  difficulty: string;
+  normalized_motion_script: string;
+  breakdown_steps: MovementStepDetail[];
+  rhythm_tips: string[];
+  common_mistakes: string[];
+  correction_cues: string[];
+  teaching_tips: string[];
+  media_assets: MovementMediaAsset[];
+  teacher_review_notes: string;
+};
+
+export type MovementGuideForm = {
+  action_name: string;
+  action_description: string;
+  course_context: string;
+  beats: string;
+  body_direction: string;
+  difficulty: string;
+  teaching_tips: string;
+  reference_video_url: string;
+  digital_human_image_url: string;
+};
+
+export type MovementGuideResponse = {
+  id: string;
+  title: string;
+  action_name: string;
+  action_description: string;
+  course_context: string;
+  beats: string;
+  body_direction: string;
+  difficulty: string;
+  teaching_tips: string;
+  reference_video_url: string;
+  digital_human_image_url: string;
+  status: string;
+  content: MovementGuideContent | null;
+  edited_content: MovementGuideContent | null;
+  raw_pipeline_info: Record<string, unknown> | null;
+};
+
+export type MovementGuideSummary = {
+  id: string;
+  title: string;
+  action_name: string;
+  course_context: string;
+  status: string;
+  asset_count: number;
+  confirmed_asset_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type LlmModelOption = {
   id: string;
   label: string;
