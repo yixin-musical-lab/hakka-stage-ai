@@ -56,11 +56,15 @@ export function LessonPlanGeneratePage() {
   }, [task]);
 
   const canSave = useMemo(() => Boolean(editedContent && lessonPlan), [editedContent, lessonPlan]);
+  const taskInProgress = task?.status === "PENDING" || task?.status === "RUNNING";
   const selectedProvider = llmOptions?.providers.find((provider) => provider.id === form.llm_provider);
   const selectedModelOptions = selectedProvider?.models ?? [];
 
   async function submitLessonPlan(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting || taskInProgress) {
+      return;
+    }
     setSubmitting(true);
     setNotice("");
     setTask(null);
@@ -134,7 +138,7 @@ export function LessonPlanGeneratePage() {
         description="输入课程条件后创建异步任务，生成完成后可直接编辑保存。"
         action={
           <button className="secondary-button" type="button" onClick={() => navigate("/lesson-plans")}>
-            已保存教案
+            已保存的教案
           </button>
         }
       />
@@ -207,8 +211,8 @@ export function LessonPlanGeneratePage() {
           <TextareaField label="教学目标" value={form.teaching_goal} onChange={(value) => updateForm("teaching_goal", value)} />
           <TextareaField label="注意事项" value={form.notes} onChange={(value) => updateForm("notes", value)} />
 
-          <button className="primary-button" type="submit" disabled={submitting || !llmOptions || selectedProvider?.configured === false}>
-            {submitting ? "正在提交任务..." : "生成教案"}
+          <button className="primary-button" type="submit" disabled={submitting || taskInProgress || !llmOptions || selectedProvider?.configured === false}>
+            {submitting ? "正在提交任务..." : taskInProgress ? "教案生成中..." : "生成教案"}
           </button>
         </form>
 

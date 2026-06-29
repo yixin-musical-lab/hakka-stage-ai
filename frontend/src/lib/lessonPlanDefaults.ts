@@ -1,4 +1,4 @@
-import type { LessonPlanForm } from "../types";
+import type { LessonPlanForm, MusicalScriptForm, RoleTrainingForm } from "../types";
 
 export const initialLessonPlanForm: LessonPlanForm = {
   dance_style: "客家山歌舞",
@@ -19,7 +19,29 @@ export const futureModules = [
   "课堂互动",
   "示范材料",
   "课后练习",
-  "剧本创编",
-  "分角色训练",
   "排练复盘",
 ];
+
+export const initialMusicalScriptForm: MusicalScriptForm = {
+  theme: "客家山歌与乡土美育",
+  duration_minutes: 10,
+  actor_count: 12,
+  age_group: "8-12 岁",
+  style_requirements: "温暖、积极、适合校园展示，有客家文化气质但语言要适合小学生。",
+  required_elements: "客家山歌、劳动场景、集体舞、奶奶讲故事、终场齐唱。",
+  forbidden_content: "台词不能太长，动作不能太难，不要设计专业舞台设备才能完成的效果。",
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+};
+
+export const initialRoleTrainingForm = (scriptId: string): RoleTrainingForm => ({
+  script_id: scriptId,
+  rehearsal_days: 7,
+  session_minutes: 60,
+  training_focus: "台词、唱段、舞蹈、走位、群演同步和终场造型。",
+  notes: "训练计划要区分主角、配角、旁白、群演、领舞和独唱；任务要短句、可执行。",
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+});
