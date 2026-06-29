@@ -5,6 +5,9 @@ import { HomePage } from "./pages/HomePage";
 import { LessonPlanDetailPage } from "./pages/LessonPlanDetailPage";
 import { LessonPlanGeneratePage } from "./pages/LessonPlanGeneratePage";
 import { LessonPlanListPage } from "./pages/LessonPlanListPage";
+import { MovementGuideCreatePage } from "./pages/MovementGuideCreatePage";
+import { MovementGuideDetailPage } from "./pages/MovementGuideDetailPage";
+import { MovementGuideListPage } from "./pages/MovementGuideListPage";
 import { MusicalScriptDetailPage } from "./pages/MusicalScriptDetailPage";
 import { MusicalScriptGeneratePage } from "./pages/MusicalScriptGeneratePage";
 import { MusicalScriptListPage } from "./pages/MusicalScriptListPage";
@@ -25,6 +28,9 @@ export function App() {
           <Route path="/musical-scripts/:musicalScriptId" element={<MusicalScriptDetailPage />} />
           <Route path="/role-training-plans" element={<RoleTrainingPlanListPage />} />
           <Route path="/role-training-plans/:roleTrainingPlanId" element={<RoleTrainingPlanDetailPage />} />
+          <Route path="/movement-guides/new" element={<MovementGuideCreatePage />} />
+          <Route path="/movement-guides" element={<MovementGuideListPage />} />
+          <Route path="/movement-guides/:movementGuideId" element={<MovementGuideDetailPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -4,15 +4,16 @@ import { ModuleTile } from "../components/home/ModuleTile";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { StatusItem } from "../components/ui/StatusItem";
-import { fetchHealth, fetchLessonPlans, fetchMusicalScripts, fetchRoleTrainingPlans } from "../lib/api";
+import { fetchHealth, fetchLessonPlans, fetchMovementGuides, fetchMusicalScripts, fetchRoleTrainingPlans } from "../lib/api";
 import { futureModules } from "../lib/lessonPlanDefaults";
-import type { HealthResponse, LessonPlanSummary, MusicalScriptSummary, RoleTrainingPlanSummary } from "../types";
+import type { HealthResponse, LessonPlanSummary, MovementGuideSummary, MusicalScriptSummary, RoleTrainingPlanSummary } from "../types";
 
 export function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [lessonPlans, setLessonPlans] = useState<LessonPlanSummary[]>([]);
   const [musicalScripts, setMusicalScripts] = useState<MusicalScriptSummary[]>([]);
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
+  const [movementGuides, setMovementGuides] = useState<MovementGuideSummary[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -20,11 +21,13 @@ export function HomePage() {
     void fetchLessonPlans(controller.signal).then(setLessonPlans).catch(() => setLessonPlans([]));
     void fetchMusicalScripts(controller.signal).then(setMusicalScripts).catch(() => setMusicalScripts([]));
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
+    void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
     return () => controller.abort();
   }, []);
 
   const latestPlan = lessonPlans[0];
   const latestScript = musicalScripts[0];
+  const latestMovementGuide = movementGuides[0];
   const configuredModelProviders =
     health?.dependencies
       .filter((dependency) => ["deepseek", "qwen"].includes(dependency.name) && dependency.configured)
@@ -57,6 +60,7 @@ export function HomePage() {
           <StatusItem label="LLM" value={configuredModelProviders} />
           <StatusItem label="教案数量" value={`${lessonPlans.length} 份`} />
           <StatusItem label="剧本数量" value={`${musicalScripts.length} 份`} />
+          <StatusItem label="示范材料" value={`${movementGuides.length} 份`} />
         </aside>
       </section>
 
@@ -84,6 +88,12 @@ export function HomePage() {
           status="已接入"
           description="基于已确认剧本生成主角、配角、旁白、群演、领舞等角色训练任务。"
           to="/role-training-plans"
+        />
+        <ModuleTile
+          title="示范材料"
+          status="已接入"
+          description="管理动作描述、步骤拆解、关键提示和示范视频 / 图片材料。"
+          to="/movement-guides"
         />
         {futureModules.map((moduleName) => (
           <ModuleTile
@@ -125,6 +135,26 @@ export function HomePage() {
             <Button asChild variant="secondary">
               <Link to="/role-training-plans">查看</Link>
             </Button>
+          </div>
+        </section>
+      </Card>
+
+      <Card asChild className="content-band">
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">示范材料</p>
+              <h2>{latestMovementGuide ? latestMovementGuide.title : "还没有保存的动作图解"}</h2>
+            </div>
+            {latestMovementGuide ? (
+              <Button asChild variant="secondary">
+                <Link to={`/movement-guides/${latestMovementGuide.id}`}>打开</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="secondary">
+                <Link to="/movement-guides/new">创建第一份</Link>
+              </Button>
+            )}
           </div>
         </section>
       </Card>

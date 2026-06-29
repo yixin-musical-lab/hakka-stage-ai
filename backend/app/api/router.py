@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes.llm_options import router as llm_options_router
 from app.api.routes.lesson_plans import router as lesson_plan_router
+from app.api.routes.movement_guides import router as movement_guide_router
 from app.api.routes.musical import router as musical_router
 from app.api.routes.system import router as system_router
 
@@ -13,3 +14,4 @@ api_router.include_router(system_router)
 api_router.include_router(llm_options_router)
 api_router.include_router(lesson_plan_router)
 api_router.include_router(musical_router)
+api_router.include_router(movement_guide_router)
