@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteMusicalScript, fetchMusicalScripts } from "../lib/api";
@@ -59,9 +62,9 @@ export function MusicalScriptListPage() {
         title="已保存剧本"
         description="重新打开编导确认稿，继续编辑、生成训练计划或导出 Markdown。"
         action={
-          <Link className="primary-button link-button" to="/musical-scripts/generate">
-            新建剧本
-          </Link>
+          <Button asChild>
+            <Link to="/musical-scripts/generate">新建剧本</Link>
+          </Button>
         }
       />
 
@@ -71,28 +74,30 @@ export function MusicalScriptListPage() {
 
       <section className="lesson-list" aria-label="已保存剧本列表">
         {scripts.map((script) => (
-          <article className="lesson-list-item" key={script.id}>
-            <div>
-              <span className="status-badge">{script.status}</span>
-              <h2>{script.title}</h2>
-              <p>
-                更新时间：{formatDateTime(script.updated_at)}
-                {script.model ? ` · ${script.provider ?? "model"} / ${script.model}` : ""}
-                {script.reasoning_level ? ` / ${script.reasoning_level}` : ""}
-              </p>
-            </div>
-            <div className="button-row">
-              <Link className="secondary-button link-button" to={`/musical-scripts/${script.id}`}>
-                查看
-              </Link>
-              <button className="secondary-button" type="button" onClick={() => void handleDownload(script)}>
-                导出 Markdown
-              </button>
-              <button className="danger-button" type="button" disabled={deletingId === script.id} onClick={() => void handleDelete(script)}>
-                {deletingId === script.id ? "删除中" : "删除"}
-              </button>
-            </div>
-          </article>
+          <Card asChild className="lesson-list-item" key={script.id}>
+            <article>
+              <div>
+                <Badge variant="secondary">{script.status}</Badge>
+                <h2>{script.title}</h2>
+                <p>
+                  更新时间：{formatDateTime(script.updated_at)}
+                  {script.model ? ` · ${script.provider ?? "model"} / ${script.model}` : ""}
+                  {script.reasoning_level ? ` / ${script.reasoning_level}` : ""}
+                </p>
+              </div>
+              <div className="button-row">
+                <Button asChild variant="secondary">
+                  <Link to={`/musical-scripts/${script.id}`}>查看</Link>
+                </Button>
+                <Button variant="secondary" type="button" onClick={() => void handleDownload(script)}>
+                  导出 Markdown
+                </Button>
+                <Button variant="destructive" type="button" disabled={deletingId === script.id} onClick={() => void handleDelete(script)}>
+                  {deletingId === script.id ? "删除中" : "删除"}
+                </Button>
+              </div>
+            </article>
+          </Card>
         ))}
       </section>
     </main>

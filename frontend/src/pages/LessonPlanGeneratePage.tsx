@@ -2,8 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { LessonEditor } from "../components/lesson-plans/LessonEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { NumberField, TextareaField, TextField } from "../components/ui/FormFields";
+import { LlmSettings } from "../components/ui/LlmSettings";
 import { PageTitle } from "../components/ui/PageTitle";
 import { createLessonPlanTask, fetchAiTask, fetchLessonPlan, fetchLlmOptions, updateLessonPlan } from "../lib/api";
 import { initialLessonPlanForm } from "../lib/lessonPlanDefaults";
@@ -137,112 +140,89 @@ export function LessonPlanGeneratePage() {
         title="AI 教案生成"
         description="输入课程条件后创建异步任务，生成完成后可直接编辑保存。"
         action={
-          <button className="secondary-button" type="button" onClick={() => navigate("/lesson-plans")}>
+          <Button variant="secondary" type="button" onClick={() => navigate("/lesson-plans")}>
             已保存的教案
-          </button>
+          </Button>
         }
       />
 
       <section className="lesson-layout">
-        <form className="surface-panel input-panel" onSubmit={submitLessonPlan}>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">课程条件</p>
-              <h2>生成一份课堂初稿</h2>
+        <Card asChild className="surface-panel input-panel">
+          <form onSubmit={submitLessonPlan}>
+            <div className="section-heading">
+              <div>
+                <p className="section-kicker">课程条件</p>
+                <h2>生成一份课堂初稿</h2>
+              </div>
+              <Button variant="secondary" type="button" onClick={fillExampleCourse}>
+                填入示例
+              </Button>
             </div>
-            <button className="secondary-button" type="button" onClick={fillExampleCourse}>
-              填入示例
-            </button>
-          </div>
 
-          <div className="field-grid">
-            <TextField label="舞种 / 方向" value={form.dance_style} onChange={(value) => updateForm("dance_style", value)} />
-            <TextField label="课程主题" value={form.theme} onChange={(value) => updateForm("theme", value)} />
-            <TextField label="年龄段" value={form.age_group} onChange={(value) => updateForm("age_group", value)} />
-            <NumberField label="课时分钟" value={form.duration_minutes} onChange={(value) => updateForm("duration_minutes", value)} />
-            <NumberField label="学生人数" value={form.student_count} onChange={(value) => updateForm("student_count", value)} />
-            <TextField label="学员基础" value={form.learning_level} onChange={(value) => updateForm("learning_level", value)} />
-          </div>
-
-          <div className="edit-section model-picker">
-            <h3>模型设置</h3>
             <div className="field-grid">
-              <label className="field">
-                <span>模型供应商</span>
-                <select value={form.llm_provider} onChange={(event) => changeProvider(event.target.value as LessonPlanForm["llm_provider"])}>
-                  {(llmOptions?.providers ?? []).map((provider) => (
-                    <option key={provider.id} value={provider.id} disabled={!provider.configured}>
-                      {provider.label}
-                      {provider.configured ? "" : "（未配置密钥）"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                <span>模型</span>
-                <select value={form.llm_model} onChange={(event) => updateForm("llm_model", event.target.value)}>
-                  {selectedModelOptions.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TextField label="舞种 / 方向" value={form.dance_style} onChange={(value) => updateForm("dance_style", value)} />
+              <TextField label="课程主题" value={form.theme} onChange={(value) => updateForm("theme", value)} />
+              <TextField label="年龄段" value={form.age_group} onChange={(value) => updateForm("age_group", value)} />
+              <NumberField label="课时分钟" value={form.duration_minutes} onChange={(value) => updateForm("duration_minutes", value)} />
+              <NumberField label="学生人数" value={form.student_count} onChange={(value) => updateForm("student_count", value)} />
+              <TextField label="学员基础" value={form.learning_level} onChange={(value) => updateForm("learning_level", value)} />
             </div>
-            <div className="field">
-              <span>推理强度</span>
-              <div className="segmented-control" role="group" aria-label="推理强度">
-                {(llmOptions?.reasoning_levels ?? []).map((level) => (
-                  <button
-                    key={level.id}
-                    className={form.reasoning_level === level.id ? "segment-button active" : "segment-button"}
-                    type="button"
-                    title={level.description}
-                    onClick={() => updateForm("reasoning_level", level.id)}
-                  >
-                    {level.label}
-                  </button>
-                ))}
+
+            <LlmSettings
+              provider={form.llm_provider}
+              model={form.llm_model}
+              reasoningLevel={form.reasoning_level}
+              llmOptions={llmOptions}
+              selectedModelOptions={selectedModelOptions}
+              onProviderChange={(providerId) => changeProvider(providerId as LessonPlanForm["llm_provider"])}
+              onModelChange={(modelId) => updateForm("llm_model", modelId)}
+              onReasoningLevelChange={(level) => updateForm("reasoning_level", level as LessonPlanForm["reasoning_level"])}
+            />
+
+            <TextField label="课程风格" value={form.course_style} onChange={(value) => updateForm("course_style", value)} />
+            <TextareaField label="教学目标" value={form.teaching_goal} onChange={(value) => updateForm("teaching_goal", value)} />
+            <TextareaField label="注意事项" value={form.notes} onChange={(value) => updateForm("notes", value)} />
+
+            <Button
+              className="w-full"
+              type="submit"
+              data-busy={submitting || taskInProgress ? "true" : undefined}
+              disabled={submitting || taskInProgress || !llmOptions || selectedProvider?.configured === false}
+            >
+              {submitting ? "正在提交任务..." : taskInProgress ? "教案生成中..." : "生成教案"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card asChild className="surface-panel result-panel">
+          <section aria-live="polite">
+            <div className="section-heading">
+              <div>
+                <p className="section-kicker">生成结果</p>
+                <h2>{editedContent?.title ?? "等待生成教案"}</h2>
+              </div>
+              <div className="button-row">
+                {lessonPlan ? (
+                  <Button variant="secondary" type="button" onClick={() => navigate(`/lesson-plans/${lessonPlan.id}`)}>
+                    打开详情
+                  </Button>
+                ) : null}
+                <Button variant="secondary" type="button" disabled={!canSave || saving} onClick={() => void saveLessonPlan()}>
+                  {saving ? "保存中..." : "保存编辑稿"}
+                </Button>
               </div>
             </div>
-          </div>
 
-          <TextField label="课程风格" value={form.course_style} onChange={(value) => updateForm("course_style", value)} />
-          <TextareaField label="教学目标" value={form.teaching_goal} onChange={(value) => updateForm("teaching_goal", value)} />
-          <TextareaField label="注意事项" value={form.notes} onChange={(value) => updateForm("notes", value)} />
+            <TaskProgress task={task} />
+            {notice ? <p className="notice">{notice}</p> : null}
 
-          <button className="primary-button" type="submit" disabled={submitting || taskInProgress || !llmOptions || selectedProvider?.configured === false}>
-            {submitting ? "正在提交任务..." : taskInProgress ? "教案生成中..." : "生成教案"}
-          </button>
-        </form>
-
-        <section className="surface-panel result-panel" aria-live="polite">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">生成结果</p>
-              <h2>{editedContent?.title ?? "等待生成教案"}</h2>
-            </div>
-            <div className="button-row">
-              {lessonPlan ? (
-                <button className="secondary-button" type="button" onClick={() => navigate(`/lesson-plans/${lessonPlan.id}`)}>
-                  打开详情
-                </button>
-              ) : null}
-              <button className="secondary-button" type="button" disabled={!canSave || saving} onClick={() => void saveLessonPlan()}>
-                {saving ? "保存中..." : "保存编辑稿"}
-              </button>
-            </div>
-          </div>
-
-          <TaskProgress task={task} />
-          {notice ? <p className="notice">{notice}</p> : null}
-
-          {editedContent ? (
-            <LessonEditor content={editedContent} onChange={setEditedContent} modelInfo={lessonPlan?.raw_model_info ?? null} />
-          ) : (
-            <EmptyState title="还没有教案初稿" text="提交任务后，生成完成的结构化教案会显示在这里。" />
-          )}
-        </section>
+            {editedContent ? (
+              <LessonEditor content={editedContent} onChange={setEditedContent} modelInfo={lessonPlan?.raw_model_info ?? null} />
+            ) : (
+              <EmptyState title="还没有教案初稿" text="提交任务后，生成完成的结构化教案会显示在这里。" />
+            )}
+          </section>
+        </Card>
       </section>
     </main>
   );

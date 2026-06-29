@@ -21,7 +21,7 @@ hakka-stage-ai/
 ├── worker/               # Python Worker 长任务服务，使用 conda 管理依赖
 │   ├── app/              # Worker 入口和健康检查
 │   └── environment.yml   # Worker conda 环境定义，包含 LLM / Redis / PostgreSQL 客户端依赖
-├── frontend/             # React + Vite + TypeScript 前端
+├── frontend/             # React + Vite + TypeScript + shadcn/ui + Tailwind CSS 前端
 │   ├── src/              # 前端源码
 │   └── package-lock.json # 前端依赖锁文件
 ├── docs/                 # 需求文档、技术方案、评审报告等项目文档
@@ -62,7 +62,7 @@ flowchart TB
 协同开发前建议先确认本机有以下工具。只用 Docker Compose 全栈启动时，通常只需要 Docker Desktop；如果要在宿主机本地分别调试 backend、worker、frontend，再安装 Node.js、Miniforge / conda 和 uv。
 
 - Docker Desktop：用于一键启动 PostgreSQL、Redis、MinIO、后端、worker 和前端。
-- Node.js 22+：用于本地启动 Vite 前端。
+- Node.js 22+：用于本地启动 Vite 前端，并安装 shadcn/ui、Tailwind CSS 等前端依赖。
 - Miniforge / conda：用于创建 `worker/` 的 Python Worker 环境。
 - uv：用于创建 `backend/` 的 FastAPI 后端虚拟环境。
 

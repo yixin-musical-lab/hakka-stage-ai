@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { downloadMarkdown } from "../lib/download";
@@ -64,9 +67,9 @@ export function LessonPlanListPage() {
         title="已保存教案"
         description="重新打开老师确认稿，继续编辑或导出 Markdown。"
         action={
-          <Link className="primary-button link-button" to="/lesson-plans/generate">
-            新建教案
-          </Link>
+          <Button asChild>
+            <Link to="/lesson-plans/generate">新建教案</Link>
+          </Button>
         }
       />
 
@@ -79,33 +82,35 @@ export function LessonPlanListPage() {
 
       <section className="lesson-list" aria-label="已保存教案列表">
         {lessonPlans.map((lessonPlan) => (
-          <article className="lesson-list-item" key={lessonPlan.id}>
-            <div>
-              <span className="status-badge">{lessonPlan.status}</span>
-              <h2>{lessonPlan.title}</h2>
-              <p>
-                更新时间：{formatDateTime(lessonPlan.updated_at)}
-                {lessonPlan.model ? ` · ${lessonPlan.provider ?? "model"} / ${lessonPlan.model}` : ""}
-                {lessonPlan.reasoning_level ? ` / ${lessonPlan.reasoning_level}` : ""}
-              </p>
-            </div>
-            <div className="button-row">
-              <Link className="secondary-button link-button" to={`/lesson-plans/${lessonPlan.id}`}>
-                查看
-              </Link>
-              <button className="secondary-button" type="button" onClick={() => void handleDownload(lessonPlan)}>
-                导出 Markdown
-              </button>
-              <button
-                className="danger-button"
-                type="button"
-                disabled={deletingId === lessonPlan.id}
-                onClick={() => void handleDelete(lessonPlan)}
-              >
-                {deletingId === lessonPlan.id ? "删除中" : "删除"}
-              </button>
-            </div>
-          </article>
+          <Card asChild className="lesson-list-item" key={lessonPlan.id}>
+            <article>
+              <div>
+                <Badge variant="secondary">{lessonPlan.status}</Badge>
+                <h2>{lessonPlan.title}</h2>
+                <p>
+                  更新时间：{formatDateTime(lessonPlan.updated_at)}
+                  {lessonPlan.model ? ` · ${lessonPlan.provider ?? "model"} / ${lessonPlan.model}` : ""}
+                  {lessonPlan.reasoning_level ? ` / ${lessonPlan.reasoning_level}` : ""}
+                </p>
+              </div>
+              <div className="button-row">
+                <Button asChild variant="secondary">
+                  <Link to={`/lesson-plans/${lessonPlan.id}`}>查看</Link>
+                </Button>
+                <Button variant="secondary" type="button" onClick={() => void handleDownload(lessonPlan)}>
+                  导出 Markdown
+                </Button>
+                <Button
+                  variant="destructive"
+                  type="button"
+                  disabled={deletingId === lessonPlan.id}
+                  onClick={() => void handleDelete(lessonPlan)}
+                >
+                  {deletingId === lessonPlan.id ? "删除中" : "删除"}
+                </Button>
+              </div>
+            </article>
+          </Card>
         ))}
       </section>
     </main>

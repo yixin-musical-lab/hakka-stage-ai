@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteRoleTrainingPlan, fetchRoleTrainingPlans } from "../lib/api";
@@ -59,9 +62,9 @@ export function RoleTrainingPlanListPage() {
         title="分角色训练计划"
         description="查看、继续编辑并导出已生成的角色训练计划。"
         action={
-          <Link className="primary-button link-button" to="/musical-scripts">
-            从剧本生成
-          </Link>
+          <Button asChild>
+            <Link to="/musical-scripts">从剧本生成</Link>
+          </Button>
         }
       />
 
@@ -73,28 +76,30 @@ export function RoleTrainingPlanListPage() {
 
       <section className="lesson-list" aria-label="分角色训练计划列表">
         {plans.map((plan) => (
-          <article className="lesson-list-item" key={plan.id}>
-            <div>
-              <span className="status-badge">{plan.status}</span>
-              <h2>{plan.title}</h2>
-              <p>
-                更新时间：{formatDateTime(plan.updated_at)}
-                {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
-                {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
-              </p>
-            </div>
-            <div className="button-row">
-              <Link className="secondary-button link-button" to={`/role-training-plans/${plan.id}`}>
-                查看
-              </Link>
-              <button className="secondary-button" type="button" onClick={() => void handleDownload(plan)}>
-                导出 Markdown
-              </button>
-              <button className="danger-button" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
-                {deletingId === plan.id ? "删除中" : "删除"}
-              </button>
-            </div>
-          </article>
+          <Card asChild className="lesson-list-item" key={plan.id}>
+            <article>
+              <div>
+                <Badge variant="secondary">{plan.status}</Badge>
+                <h2>{plan.title}</h2>
+                <p>
+                  更新时间：{formatDateTime(plan.updated_at)}
+                  {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
+                  {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
+                </p>
+              </div>
+              <div className="button-row">
+                <Button asChild variant="secondary">
+                  <Link to={`/role-training-plans/${plan.id}`}>查看</Link>
+                </Button>
+                <Button variant="secondary" type="button" onClick={() => void handleDownload(plan)}>
+                  导出 Markdown
+                </Button>
+                <Button variant="destructive" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
+                  {deletingId === plan.id ? "删除中" : "删除"}
+                </Button>
+              </div>
+            </article>
+          </Card>
         ))}
       </section>
     </main>

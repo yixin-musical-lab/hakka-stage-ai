@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ModuleTile } from "../components/home/ModuleTile";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 import { StatusItem } from "../components/ui/StatusItem";
 import { fetchHealth, fetchLessonPlans, fetchMusicalScripts, fetchRoleTrainingPlans } from "../lib/api";
 import { futureModules } from "../lib/lessonPlanDefaults";
@@ -39,15 +41,15 @@ export function HomePage() {
             先从课前教案生成跑通真实 AI 链路，再逐步接入课堂互动、示范材料、课后练习和歌舞剧创编模块。
           </p>
           <div className="hero-actions">
-            <Link className="primary-button link-button" to="/lesson-plans/generate">
-              新建教案
-            </Link>
-            <Link className="secondary-button link-button" to="/lesson-plans">
-              查看已保存
-            </Link>
-            <Link className="secondary-button link-button" to="/musical-scripts/generate">
-              新建剧本
-            </Link>
+            <Button asChild>
+              <Link to="/lesson-plans/generate">新建教案</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/lesson-plans">查看已保存</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link to="/musical-scripts/generate">新建剧本</Link>
+            </Button>
           </div>
         </div>
         <aside className="hero-status" aria-label="系统概况">
@@ -93,53 +95,59 @@ export function HomePage() {
         ))}
       </section>
 
-      <section className="content-band">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">最近剧本</p>
-            <h2>{latestScript ? latestScript.title : "还没有保存的剧本"}</h2>
+      <Card asChild className="content-band">
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">最近剧本</p>
+              <h2>{latestScript ? latestScript.title : "还没有保存的剧本"}</h2>
+            </div>
+            {latestScript ? (
+              <Button asChild variant="secondary">
+                <Link to={`/musical-scripts/${latestScript.id}`}>打开</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="secondary">
+                <Link to="/musical-scripts/generate">创建第一份</Link>
+              </Button>
+            )}
           </div>
-          {latestScript ? (
-            <Link className="secondary-button link-button" to={`/musical-scripts/${latestScript.id}`}>
-              打开
-            </Link>
-          ) : (
-            <Link className="secondary-button link-button" to="/musical-scripts/generate">
-              创建第一份
-            </Link>
-          )}
-        </div>
-      </section>
+        </section>
+      </Card>
 
-      <section className="content-band">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">训练计划</p>
-            <h2>已保存 {roleTrainingPlans.length} 份分角色训练计划</h2>
+      <Card asChild className="content-band">
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">训练计划</p>
+              <h2>已保存 {roleTrainingPlans.length} 份分角色训练计划</h2>
+            </div>
+            <Button asChild variant="secondary">
+              <Link to="/role-training-plans">查看</Link>
+            </Button>
           </div>
-          <Link className="secondary-button link-button" to="/role-training-plans">
-            查看
-          </Link>
-        </div>
-      </section>
+        </section>
+      </Card>
 
-      <section className="content-band">
-        <div className="section-heading">
-          <div>
-            <p className="section-kicker">最近教案</p>
-            <h2>{latestPlan ? latestPlan.title : "还没有保存的教案"}</h2>
+      <Card asChild className="content-band">
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">最近教案</p>
+              <h2>{latestPlan ? latestPlan.title : "还没有保存的教案"}</h2>
+            </div>
+            {latestPlan ? (
+              <Button asChild variant="secondary">
+                <Link to={`/lesson-plans/${latestPlan.id}`}>打开</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="secondary">
+                <Link to="/lesson-plans/generate">创建第一份</Link>
+              </Button>
+            )}
           </div>
-          {latestPlan ? (
-            <Link className="secondary-button link-button" to={`/lesson-plans/${latestPlan.id}`}>
-              打开
-            </Link>
-          ) : (
-            <Link className="secondary-button link-button" to="/lesson-plans/generate">
-              创建第一份
-            </Link>
-          )}
-        </div>
-      </section>
+        </section>
+      </Card>
     </main>
   );
 }

@@ -1,3 +1,7 @@
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
 export function TextField({
   label,
   value,
@@ -8,10 +12,10 @@ export function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="field">
-      <span>{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} required />
-    </label>
+    <Field className="field">
+      <FieldLabel>{label}</FieldLabel>
+      <Input value={value} onChange={(event) => onChange(event.target.value)} required />
+    </Field>
   );
 }
 
@@ -25,10 +29,10 @@ export function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="field">
-      <span>{label}</span>
-      <input min={1} type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} required />
-    </label>
+    <Field className="field">
+      <FieldLabel>{label}</FieldLabel>
+      <Input min={1} type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} required />
+    </Field>
   );
 }
 
@@ -42,9 +46,9 @@ export function TextareaField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="field">
-      <span>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} required rows={4} />
-    </label>
+    <Field className="field">
+      <FieldLabel>{label}</FieldLabel>
+      <Textarea value={value} onChange={(event) => onChange(event.target.value)} required rows={4} />
+    </Field>
   );
 }
