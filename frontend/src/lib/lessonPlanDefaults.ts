@@ -18,6 +18,8 @@ export const initialLessonPlanForm: LessonPlanForm = {
 export const futureModules = [
   "课堂互动",
   "课后练习",
+  "歌舞融合建议",
+  "曲目队形编排",
   "排练复盘",
 ];
 
