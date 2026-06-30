@@ -1,4 +1,4 @@
-import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, RoleTrainingForm } from "../types";
+import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, RoleTrainingForm, SongAdaptationForm } from "../types";
 
 export const initialLessonPlanForm: LessonPlanForm = {
   dance_style: "客家山歌舞",
@@ -52,6 +52,20 @@ export const initialRoleTrainingForm = (scriptId: string): RoleTrainingForm => (
   session_minutes: 60,
   training_focus: "台词、唱段、舞蹈、走位、群演同步和终场造型。",
   notes: "训练计划要区分主角、配角、旁白、群演、领舞和独唱；任务要短句、可执行。",
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+});
+
+export const initialSongAdaptationForm = (scriptId: string): SongAdaptationForm => ({
+  script_id: scriptId,
+  related_scene: "第二幕：一起排练",
+  source_song: "客家山歌类曲目",
+  lyrics_text: "山歌唱出家乡路，清清风里有回声。\n大家一起唱，山歌响满堂。",
+  music_structure: "0:00-0:18 前奏：旁白铺垫，动作轻。\n0:18-0:55 主歌一：独唱或主角领唱。\n0:55-1:25 副歌一：适合齐唱和群舞。\n1:25-1:45 间奏：适合队形变化。",
+  adaptation_goal: "让唱段承接剧情，表现孩子们从好奇到一起唱响客家山歌的过程。",
+  singing_roles: "主角、奶奶、旁白、全体、领舞",
+  rewrite_intensity: "light_rewrite",
   llm_provider: "deepseek",
   llm_model: "deepseek-v4-flash",
   reasoning_level: "standard",

@@ -10,14 +10,16 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import WorkerSettings
 from app.llm_options import REASONING_LEVELS, provider_models
-from app.schemas import LessonPlanContent, MusicalScriptContent, RoleTrainingContent
+from app.schemas import LessonPlanContent, MusicalScriptContent, RoleTrainingContent, SongAdaptationContent
 
 LESSON_PLAN_PROMPT_VERSION = "lesson_plan_v1"
 MUSICAL_SCRIPT_PROMPT_VERSION = "musical_script_v1"
+SONG_ADAPTATION_PROMPT_VERSION = "song_adaptation_v1"
 ROLE_TRAINING_PROMPT_VERSION = "role_training_v1"
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 LESSON_PLAN_PROMPT_PATH = PROMPT_DIR / "lesson_plan_v1.md"
 MUSICAL_SCRIPT_PROMPT_PATH = PROMPT_DIR / "musical_script_v1.md"
+SONG_ADAPTATION_PROMPT_PATH = PROMPT_DIR / "song_adaptation_v1.md"
 ROLE_TRAINING_PROMPT_PATH = PROMPT_DIR / "role_training_v1.md"
 LLM_RETRY_ATTEMPTS = 4
 LESSON_PLAN_REPAIR_PROMPT = """你是严格的 JSON 修复器。
@@ -39,6 +41,16 @@ MUSICAL_SCRIPT_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 2. 不要新增与剧本无关的信息，尽量保留原始语义。
 3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
 4. JSON 必须符合剧本字段结构：title、synopsis、acts、characters、performance_slots、director_notes。
+"""
+SONG_ADAPTATION_REPAIR_PROMPT = """你是严格的 JSON 修复器。
+
+请把用户提供的模型原文修复为一个合法 JSON 对象。
+
+规则：
+1. 只能输出 JSON，不要 Markdown、代码块或解释。
+2. 不要新增与唱段适配无关的信息，尽量保留原始语义。
+3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
+4. JSON 必须符合唱段适配字段结构：title、source_song、related_scene、adaptation_goal、sections、dance_interludes、review_notes。
 """
 ROLE_TRAINING_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 
@@ -132,6 +144,35 @@ class LLMClient:
             truncated_message="LLM 输出被截断，无法生成完整剧本 JSON，请调高 LLM_TIMEOUT_SECONDS 或降低推理强度后重试。",
             parse_error_label="剧本 JSON",
             temperature=0.45,
+        )
+
+    def generate_song_adaptation(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """调用 LLM 生成结构化唱段适配与歌词改写建议。"""
+
+        provider = str(input_snapshot.get("llm_provider") or self.settings.llm_default_provider)
+        model = str(input_snapshot.get("llm_model") or self.settings.llm_default_model)
+        reasoning_level = str(input_snapshot.get("reasoning_level") or self.settings.llm_default_reasoning_level)
+        if model not in provider_models(provider):
+            raise RuntimeError(f"{provider} 不支持模型 {model}。")
+        extra_body = self._reasoning_extra_body(provider, reasoning_level)
+
+        if self.settings.llm_mock_mode:
+            return self._mock_song_adaptation(input_snapshot, provider, model, reasoning_level, extra_body)
+
+        return self._generate_structured_json(
+            input_snapshot=input_snapshot,
+            provider=provider,
+            model=model,
+            reasoning_level=reasoning_level,
+            extra_body=extra_body,
+            prompt_path=SONG_ADAPTATION_PROMPT_PATH,
+            prompt_version=SONG_ADAPTATION_PROMPT_VERSION,
+            schema_model=SongAdaptationContent,
+            repair_prompt=SONG_ADAPTATION_REPAIR_PROMPT,
+            empty_message="LLM 返回内容为空。",
+            truncated_message="LLM 输出被截断，无法生成完整唱段适配 JSON，请调高 LLM_TIMEOUT_SECONDS 或降低推理强度后重试。",
+            parse_error_label="唱段适配 JSON",
+            temperature=0.35,
         )
 
     def generate_role_training(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -601,6 +642,74 @@ class LLMClient:
             director_notes=["这是 mock 演示剧本，正式排练前需要编导复核。", "台词、时长和队形应按真实演员能力调整。"],
         ).model_dump()
         model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, MUSICAL_SCRIPT_PROMPT_VERSION)
+        return content, model_info
+
+    def _mock_song_adaptation(
+        self,
+        input_snapshot: dict[str, Any],
+        provider: str,
+        model: str,
+        reasoning_level: str,
+        extra_body: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """生成本地演示唱段适配建议。"""
+
+        script_title = input_snapshot.get("script_title") or "客家山歌小剧场"
+        source_song = input_snapshot.get("source_song") or "客家山歌类曲目"
+        related_scene = input_snapshot.get("related_scene") or "第二幕：一起排练"
+        adaptation_goal = input_snapshot.get("adaptation_goal") or "表现孩子们从陌生到喜欢客家山歌的过程"
+        content = SongAdaptationContent(
+            title=f"{script_title} · {related_scene}唱段适配建议",
+            source_song=str(source_song),
+            related_scene=str(related_scene),
+            adaptation_goal=str(adaptation_goal),
+            sections=[
+                {
+                    "section_no": "A1",
+                    "music_position": "0:00-0:18 前奏",
+                    "original_lyrics": "前奏无歌词",
+                    "adapted_lyrics": "保留前奏，由旁白引入山歌主题。",
+                    "singing_mode": "旁白衔接",
+                    "suggested_roles": ["旁白", "奶奶"],
+                    "emotion": "温柔、铺垫",
+                    "dance_opportunity": "群演用拍手和轻踏步建立节奏，不做复杂队形变化。",
+                    "transition_note": "旁白结束后，主角从舞台左侧进入，听见第一句山歌。",
+                },
+                {
+                    "section_no": "B1",
+                    "music_position": "0:18-0:55 主歌一",
+                    "original_lyrics": "山歌唱出家乡路，清清风里有回声",
+                    "adapted_lyrics": "山歌唱出家乡路，小小脚步跟着风",
+                    "singing_mode": "独唱",
+                    "suggested_roles": ["阿月"],
+                    "emotion": "好奇、明亮",
+                    "dance_opportunity": "主角以站位表演和小幅手位为主，群演保持背景律动。",
+                    "transition_note": "主歌结束后由奶奶回应，引出孩子们一起学习。",
+                },
+                {
+                    "section_no": "C1",
+                    "music_position": "0:55-1:25 副歌一",
+                    "original_lyrics": "大家一起唱，山歌响满堂",
+                    "adapted_lyrics": "大家一起唱，山歌亮课堂",
+                    "singing_mode": "齐唱",
+                    "suggested_roles": ["全体"],
+                    "emotion": "热烈、团结",
+                    "dance_opportunity": "适合加入群舞高潮，完成半圆到两排的队形变化。",
+                    "transition_note": "齐唱收束后进入间奏，领舞带队形转场。",
+                },
+            ],
+            dance_interludes=[
+                {
+                    "music_position": "1:25-1:45 间奏",
+                    "suggestion": "安排 8 人做左右错落踏步，主角和奶奶在中区完成对望与递进动作。",
+                }
+            ],
+            review_notes=[
+                "这是 mock 演示数据，正式排练前需要音乐负责人确认歌词押韵和节拍。",
+                "如使用已有曲目，应确认授权或改为原创填词。",
+            ],
+        ).model_dump()
+        model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, SONG_ADAPTATION_PROMPT_VERSION)
         return content, model_info
 
     def _mock_role_training(

@@ -2,16 +2,22 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ModuleTile } from "../components/home/ModuleTile";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
-import { StatusItem } from "../components/ui/StatusItem";
-import { fetchHealth, fetchLessonPlans, fetchMovementGuides, fetchMusicalScripts, fetchRoleTrainingPlans } from "../lib/api";
+import { fetchHealth, fetchLessonPlans, fetchMovementGuides, fetchMusicalScripts, fetchRoleTrainingPlans, fetchSongAdaptations } from "../lib/api";
 import { futureModules } from "../lib/lessonPlanDefaults";
-import type { HealthResponse, LessonPlanSummary, MovementGuideSummary, MusicalScriptSummary, RoleTrainingPlanSummary } from "../types";
+import type {
+  HealthResponse,
+  LessonPlanSummary,
+  MovementGuideSummary,
+  MusicalScriptSummary,
+  RoleTrainingPlanSummary,
+  SongAdaptationSummary,
+} from "../types";
 
 export function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [lessonPlans, setLessonPlans] = useState<LessonPlanSummary[]>([]);
   const [musicalScripts, setMusicalScripts] = useState<MusicalScriptSummary[]>([]);
+  const [songAdaptations, setSongAdaptations] = useState<SongAdaptationSummary[]>([]);
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
   const [movementGuides, setMovementGuides] = useState<MovementGuideSummary[]>([]);
 
@@ -20,6 +26,7 @@ export function HomePage() {
     void fetchHealth(controller.signal).then(setHealth).catch(() => setHealth(null));
     void fetchLessonPlans(controller.signal).then(setLessonPlans).catch(() => setLessonPlans([]));
     void fetchMusicalScripts(controller.signal).then(setMusicalScripts).catch(() => setMusicalScripts([]));
+    void fetchSongAdaptations(controller.signal).then(setSongAdaptations).catch(() => setSongAdaptations([]));
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
     void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
     return () => controller.abort();
@@ -27,40 +34,131 @@ export function HomePage() {
 
   const latestPlan = lessonPlans[0];
   const latestScript = musicalScripts[0];
+  const latestSongAdaptation = songAdaptations[0];
   const latestMovementGuide = movementGuides[0];
   const configuredModelProviders =
     health?.dependencies
       .filter((dependency) => ["deepseek", "qwen"].includes(dependency.name) && dependency.configured)
       .map((dependency) => dependency.name)
       .join(" / ") || "配置待检查";
+  const workbenchItems = [
+    {
+      label: "最近剧本",
+      title: latestScript ? latestScript.title : "还没有保存的剧本",
+      to: latestScript ? `/musical-scripts/${latestScript.id}` : "/musical-scripts/generate",
+      action: latestScript ? "打开" : "创建",
+    },
+    {
+      label: "唱段适配",
+      title: latestSongAdaptation ? latestSongAdaptation.title : "还没有保存的唱段适配",
+      to: latestSongAdaptation ? `/song-adaptations/${latestSongAdaptation.id}` : "/musical-scripts",
+      action: latestSongAdaptation ? "打开" : "生成",
+    },
+    {
+      label: "训练计划",
+      title: `已保存 ${roleTrainingPlans.length} 份分角色训练计划`,
+      to: "/role-training-plans",
+      action: "查看",
+    },
+    {
+      label: "示范材料",
+      title: latestMovementGuide ? latestMovementGuide.title : "还没有保存的动作图解",
+      to: latestMovementGuide ? `/movement-guides/${latestMovementGuide.id}` : "/movement-guides/new",
+      action: latestMovementGuide ? "打开" : "创建",
+    },
+    {
+      label: "最近教案",
+      title: latestPlan ? latestPlan.title : "还没有保存的教案",
+      to: latestPlan ? `/lesson-plans/${latestPlan.id}` : "/lesson-plans/generate",
+      action: latestPlan ? "打开" : "创建",
+    },
+  ];
+  const overviewItems = [
+    { label: "教案", count: lessonPlans.length, to: "/lesson-plans" },
+    { label: "剧本", count: musicalScripts.length, to: "/musical-scripts" },
+    { label: "唱段", count: songAdaptations.length, to: "/song-adaptations" },
+    { label: "训练", count: roleTrainingPlans.length, to: "/role-training-plans" },
+    { label: "示范", count: movementGuides.length, to: "/movement-guides" },
+  ];
+  const totalAssets = lessonPlans.length + musicalScripts.length + songAdaptations.length + roleTrainingPlans.length + movementGuides.length;
 
   return (
     <main className="page-frame">
       <section className="home-hero">
-        <div>
-          <p className="eyebrow">教学闭环 / 创编闭环</p>
-          <h1>把备课、排练与复盘收进一个清楚的工作台</h1>
-          <p className="intro">
-            先从课前教案生成跑通真实 AI 链路，再逐步接入课堂互动、示范材料、课后练习和歌舞剧创编模块。
-          </p>
-          <div className="hero-actions">
-            <Button asChild>
-              <Link to="/lesson-plans/generate">新建教案</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to="/lesson-plans">查看已保存</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link to="/musical-scripts/generate">新建剧本</Link>
-            </Button>
+        <div className="home-hero-main">
+          <div className="hero-copy">
+            <p className="eyebrow">教学闭环 / 创编闭环</p>
+            <h1>把备课、排练与复盘收进一个清楚的工作台</h1>
+            <p className="intro">
+              先从课前教案生成跑通真实 AI 链路，再逐步接入课堂互动、示范材料、课后练习和歌舞剧创编模块。
+            </p>
+            <div className="hero-actions">
+              <Button asChild>
+                <Link to="/lesson-plans/generate">新建教案</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/lesson-plans">查看已保存</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/musical-scripts/generate">新建剧本</Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="hero-workbench" aria-label="最近工作">
+            <div className="hero-workbench-header">
+              <div>
+                <p className="section-kicker">最近工作</p>
+                <h2>继续推进</h2>
+              </div>
+              <Button asChild variant="secondary" size="sm">
+                <Link to="/musical-scripts">剧本库</Link>
+              </Button>
+            </div>
+            <div className="hero-workbench-grid">
+              {workbenchItems.map((item) => (
+                <Link className="hero-workbench-card" key={item.label} to={item.to}>
+                  <span>
+                    <small>{item.label}</small>
+                    <strong>{item.title}</strong>
+                  </span>
+                  <em>{item.action}</em>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
-        <aside className="hero-status" aria-label="系统概况">
-          <StatusItem label="API" value={health?.status === "ok" ? "运行中" : "等待连接"} />
-          <StatusItem label="LLM" value={configuredModelProviders} />
-          <StatusItem label="教案数量" value={`${lessonPlans.length} 份`} />
-          <StatusItem label="剧本数量" value={`${musicalScripts.length} 份`} />
-          <StatusItem label="示范材料" value={`${movementGuides.length} 份`} />
+        <aside className="hero-overview" aria-label="工作台概览">
+          <div className="hero-overview-panel">
+            <div className="hero-overview-heading">
+              <p>工作台概览</p>
+              <strong>{totalAssets} 份资产</strong>
+              <span>系统连接与生成资产集中看这一处。</span>
+            </div>
+
+            <div className="hero-overview-status">
+              <div>
+                <span>API</span>
+                <strong>{health?.status === "ok" ? "运行中" : "等待连接"}</strong>
+              </div>
+              <div>
+                <span>LLM</span>
+                <strong>{configuredModelProviders}</strong>
+              </div>
+            </div>
+
+            <ol className="hero-overview-list">
+              {overviewItems.map((item, index) => (
+                <li key={item.label}>
+                  <Link to={item.to}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{item.label}</strong>
+                    <em>{item.count} 份</em>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </div>
         </aside>
       </section>
 
@@ -84,6 +182,12 @@ export function HomePage() {
           to="/musical-scripts/generate"
         />
         <ModuleTile
+          title="唱段适配"
+          status="已接入"
+          description="基于剧本、歌词和人工音乐段落表生成演唱分配、改词建议和间奏留白。"
+          to="/song-adaptations"
+        />
+        <ModuleTile
           title="分角色训练"
           status="已接入"
           description="基于已确认剧本生成主角、配角、旁白、群演、领舞等角色训练任务。"
@@ -104,80 +208,6 @@ export function HomePage() {
           />
         ))}
       </section>
-
-      <Card asChild className="content-band">
-        <section>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">最近剧本</p>
-              <h2>{latestScript ? latestScript.title : "还没有保存的剧本"}</h2>
-            </div>
-            {latestScript ? (
-              <Button asChild variant="secondary">
-                <Link to={`/musical-scripts/${latestScript.id}`}>打开</Link>
-              </Button>
-            ) : (
-              <Button asChild variant="secondary">
-                <Link to="/musical-scripts/generate">创建第一份</Link>
-              </Button>
-            )}
-          </div>
-        </section>
-      </Card>
-
-      <Card asChild className="content-band">
-        <section>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">训练计划</p>
-              <h2>已保存 {roleTrainingPlans.length} 份分角色训练计划</h2>
-            </div>
-            <Button asChild variant="secondary">
-              <Link to="/role-training-plans">查看</Link>
-            </Button>
-          </div>
-        </section>
-      </Card>
-
-      <Card asChild className="content-band">
-        <section>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">示范材料</p>
-              <h2>{latestMovementGuide ? latestMovementGuide.title : "还没有保存的动作图解"}</h2>
-            </div>
-            {latestMovementGuide ? (
-              <Button asChild variant="secondary">
-                <Link to={`/movement-guides/${latestMovementGuide.id}`}>打开</Link>
-              </Button>
-            ) : (
-              <Button asChild variant="secondary">
-                <Link to="/movement-guides/new">创建第一份</Link>
-              </Button>
-            )}
-          </div>
-        </section>
-      </Card>
-
-      <Card asChild className="content-band">
-        <section>
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">最近教案</p>
-              <h2>{latestPlan ? latestPlan.title : "还没有保存的教案"}</h2>
-            </div>
-            {latestPlan ? (
-              <Button asChild variant="secondary">
-                <Link to={`/lesson-plans/${latestPlan.id}`}>打开</Link>
-              </Button>
-            ) : (
-              <Button asChild variant="secondary">
-                <Link to="/lesson-plans/generate">创建第一份</Link>
-              </Button>
-            )}
-          </div>
-        </section>
-      </Card>
     </main>
   );
 }

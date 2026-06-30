@@ -10,13 +10,14 @@ import redis
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.llm_client import LLMClient
-from app.models import AiTask, LessonPlan, MusicalScript, RoleTrainingPlan
+from app.models import AiTask, LessonPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
 
 running = True
 LESSON_PLAN_QUEUE = "ai:lesson_plan"
 MUSICAL_SCRIPT_QUEUE = "ai:musical_script"
+SONG_ADAPTATION_QUEUE = "ai:song_adaptation"
 ROLE_TRAINING_QUEUE = "ai:role_training"
-AI_QUEUES = [LESSON_PLAN_QUEUE, MUSICAL_SCRIPT_QUEUE, ROLE_TRAINING_QUEUE]
+AI_QUEUES = [LESSON_PLAN_QUEUE, MUSICAL_SCRIPT_QUEUE, SONG_ADAPTATION_QUEUE, ROLE_TRAINING_QUEUE]
 
 
 def _handle_shutdown(signum: int, _frame: object) -> None:
@@ -73,6 +74,9 @@ def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
         return
     if task_type == "musical_script.generate":
         _process_musical_script_task(payload, llm_client)
+        return
+    if task_type == "song_adaptation.generate":
+        _process_song_adaptation_task(payload, llm_client)
         return
     if task_type == "role_training.generate":
         _process_role_training_task(payload, llm_client)
@@ -172,6 +176,54 @@ def _process_musical_script_task(payload: dict, llm_client: LLMClient) -> None:
             if musical_script is not None:
                 musical_script.status = "failed"
                 musical_script.updated_at = datetime.utcnow()
+            db.commit()
+            raise
+
+
+def _process_song_adaptation_task(payload: dict, llm_client: LLMClient) -> None:
+    """处理单个唱段适配生成任务。"""
+
+    task_id = UUID(payload["task_id"])
+    song_adaptation_id = UUID(payload["song_adaptation_id"])
+
+    with SessionLocal() as db:
+        task = db.get(AiTask, task_id)
+        song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+        if task is None or song_adaptation is None:
+            raise RuntimeError("任务或唱段适配记录不存在，无法继续处理。")
+
+        task.status = "RUNNING"
+        task.progress = 20
+        task.started_at = datetime.utcnow()
+        song_adaptation.status = "generating"
+        db.commit()
+
+        try:
+            content, model_info = llm_client.generate_song_adaptation(task.input_snapshot)
+            song_adaptation.content = content
+            song_adaptation.title = content["title"]
+            song_adaptation.raw_model_info = model_info
+            song_adaptation.status = "generated"
+            song_adaptation.updated_at = datetime.utcnow()
+            task.status = "SUCCESS"
+            task.progress = 100
+            task.result_id = song_adaptation.id
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            print(f"唱段适配任务完成：task={task_id} song_adaptation={song_adaptation_id}", flush=True)
+        except Exception as exc:
+            db.rollback()
+            task = db.get(AiTask, task_id)
+            song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+            if task is not None:
+                task.status = "FAILED"
+                task.progress = 100
+                task.error_code = type(exc).__name__
+                task.error_message = _safe_error_message(exc)
+                task.finished_at = datetime.utcnow()
+            if song_adaptation is not None:
+                song_adaptation.status = "failed"
+                song_adaptation.updated_at = datetime.utcnow()
             db.commit()
             raise
 

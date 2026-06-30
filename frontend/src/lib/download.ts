@@ -1,4 +1,10 @@
-import { fetchLessonPlanMarkdown, fetchMovementGuideMarkdown, fetchMusicalScriptMarkdown, fetchRoleTrainingMarkdown } from "./api";
+import {
+  fetchLessonPlanMarkdown,
+  fetchMovementGuideMarkdown,
+  fetchMusicalScriptMarkdown,
+  fetchRoleTrainingMarkdown,
+  fetchSongAdaptationMarkdown,
+} from "./api";
 
 export async function downloadMarkdown(lessonPlanId: string, title: string) {
   const markdown = await fetchLessonPlanMarkdown(lessonPlanId);
@@ -13,6 +19,11 @@ export async function downloadMusicalScriptMarkdown(musicalScriptId: string, tit
 export async function downloadRoleTrainingMarkdown(roleTrainingPlanId: string, title: string) {
   const markdown = await fetchRoleTrainingMarkdown(roleTrainingPlanId);
   saveMarkdown(markdown, title, "role-training-plan");
+}
+
+export async function downloadSongAdaptationMarkdown(songAdaptationId: string, title: string) {
+  const markdown = await fetchSongAdaptationMarkdown(songAdaptationId);
+  saveMarkdown(markdown, title, "song-adaptation");
 }
 
 export async function downloadMovementGuideMarkdown(movementGuideId: string, title: string) {

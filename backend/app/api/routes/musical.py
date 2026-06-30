@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.llm_options import is_supported_model, is_supported_reasoning_level, models_for_provider
-from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan
+from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.schemas import (
     MusicalScriptGenerateRequest,
     MusicalScriptGenerateResponse,
@@ -21,20 +21,29 @@ from app.schemas import (
     RoleTrainingPlanResponse,
     RoleTrainingPlanSummaryResponse,
     RoleTrainingPlanUpdateRequest,
+    SongAdaptationGenerateRequest,
+    SongAdaptationGenerateResponse,
+    SongAdaptationResponse,
+    SongAdaptationSummaryResponse,
+    SongAdaptationUpdateRequest,
 )
 from app.services.musical_queue import (
     QueueUnavailableError,
     enqueue_musical_script_task,
     enqueue_role_training_task,
+    enqueue_song_adaptation_task,
 )
 from app.services.musical_service import (
     build_project_title,
     delete_musical_script_with_related_data,
     delete_role_training_with_related_data,
+    delete_song_adaptation_with_related_data,
     musical_script_summary,
     render_musical_script_markdown,
     render_role_training_markdown,
+    render_song_adaptation_markdown,
     role_training_summary,
+    song_adaptation_summary,
 )
 
 router = APIRouter(prefix="/api", tags=["musical"])
@@ -187,6 +196,180 @@ def delete_musical_script(musical_script_id: UUID, db: Session = Depends(get_db)
     deleted = delete_musical_script_with_related_data(db, musical_script_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="剧本不存在。")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/song-adaptations/generate",
+    response_model=SongAdaptationGenerateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="创建唱段适配和歌词改写建议任务",
+)
+def generate_song_adaptation(
+    request: SongAdaptationGenerateRequest,
+    db: Session = Depends(get_db),
+) -> SongAdaptationGenerateResponse:
+    """基于已生成剧本创建 M03-lite 唱段适配任务。"""
+
+    musical_script = db.get(MusicalScript, request.script_id)
+    if musical_script is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="剧本不存在。")
+    script_content = musical_script.edited_content or musical_script.content
+    if not script_content:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="剧本内容尚未生成，无法生成唱段适配建议。")
+
+    llm_provider, llm_model, reasoning_level = _resolve_llm_options(
+        request.llm_provider,
+        request.llm_model,
+        request.reasoning_level,
+    )
+
+    song_adaptation = SongAdaptation(
+        project_id=musical_script.project_id,
+        script_id=musical_script.id,
+        title=f"{musical_script.title} · 唱段适配建议",
+        status="generating",
+        source_song=request.source_song,
+        related_scene=request.related_scene,
+        lyrics_text=request.lyrics_text,
+        music_structure=request.music_structure,
+        adaptation_goal=request.adaptation_goal,
+        singing_roles=request.singing_roles,
+        rewrite_intensity=request.rewrite_intensity,
+    )
+    db.add(song_adaptation)
+    db.flush()
+
+    # 把剧本确认稿一并写入任务快照，Worker 无需再次猜测当前剧本上下文。
+    input_snapshot = request.model_dump(mode="json")
+    input_snapshot["llm_provider"] = llm_provider
+    input_snapshot["llm_model"] = llm_model
+    input_snapshot["reasoning_level"] = reasoning_level
+    input_snapshot["script_title"] = musical_script.title
+    input_snapshot["script_content"] = script_content
+    task = AiTask(
+        task_type="song_adaptation.generate",
+        status="PENDING",
+        progress=5,
+        business_id=song_adaptation.id,
+        input_snapshot=input_snapshot,
+    )
+    db.add(task)
+    db.commit()
+
+    try:
+        enqueue_song_adaptation_task(
+            {
+                "task_id": task.id,
+                "song_adaptation_id": song_adaptation.id,
+                "musical_script_id": musical_script.id,
+                "project_id": musical_script.project_id,
+                "task_type": task.task_type,
+            }
+        )
+    except QueueUnavailableError as exc:
+        task.status = "FAILED"
+        task.progress = 100
+        task.error_code = "QUEUE_UNAVAILABLE"
+        task.error_message = str(exc)
+        task.finished_at = datetime.utcnow()
+        song_adaptation.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+    return SongAdaptationGenerateResponse(
+        task_id=task.id,
+        song_adaptation_id=song_adaptation.id,
+        status=task.status,
+        message="唱段适配任务已创建，前端可以通过 task_id 轮询进度。",
+    )
+
+
+@router.get(
+    "/song-adaptations",
+    response_model=list[SongAdaptationSummaryResponse],
+    summary="查询已保存唱段适配列表",
+)
+def list_song_adaptations(db: Session = Depends(get_db)) -> list[SongAdaptationSummaryResponse]:
+    """按更新时间倒序返回唱段适配摘要列表。"""
+
+    song_adaptations = db.query(SongAdaptation).order_by(desc(SongAdaptation.updated_at)).all()
+    return [song_adaptation_summary(song_adaptation) for song_adaptation in song_adaptations]
+
+
+@router.get(
+    "/song-adaptations/{song_adaptation_id}",
+    response_model=SongAdaptationResponse,
+    summary="读取唱段适配详情",
+)
+def get_song_adaptation(song_adaptation_id: UUID, db: Session = Depends(get_db)) -> SongAdaptationResponse:
+    """返回唱段适配 AI 初稿和音乐负责人编辑稿。"""
+
+    song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+    if song_adaptation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="唱段适配不存在。")
+    return song_adaptation
+
+
+@router.put(
+    "/song-adaptations/{song_adaptation_id}",
+    response_model=SongAdaptationResponse,
+    summary="保存编辑后的唱段适配",
+)
+def update_song_adaptation(
+    song_adaptation_id: UUID,
+    request: SongAdaptationUpdateRequest,
+    db: Session = Depends(get_db),
+) -> SongAdaptationResponse:
+    """保存音乐负责人或编导确认后的唱段适配版本。"""
+
+    song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+    if song_adaptation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="唱段适配不存在。")
+
+    edited_content = request.edited_content.model_dump()
+    song_adaptation.edited_content = edited_content
+    song_adaptation.content = song_adaptation.content or edited_content
+    song_adaptation.title = request.edited_content.title
+    song_adaptation.source_song = request.edited_content.source_song
+    song_adaptation.related_scene = request.edited_content.related_scene
+    song_adaptation.adaptation_goal = request.edited_content.adaptation_goal
+    song_adaptation.status = "reviewed"
+    song_adaptation.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(song_adaptation)
+    return song_adaptation
+
+
+@router.get(
+    "/song-adaptations/{song_adaptation_id}/markdown",
+    response_class=PlainTextResponse,
+    summary="导出唱段适配 Markdown",
+)
+def export_song_adaptation_markdown(song_adaptation_id: UUID, db: Session = Depends(get_db)) -> PlainTextResponse:
+    """导出 Markdown 文本，优先使用编辑确认稿。"""
+
+    song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+    if song_adaptation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="唱段适配不存在。")
+
+    markdown = render_song_adaptation_markdown(song_adaptation)
+    if markdown is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="唱段适配内容尚未生成，无法导出。")
+    return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
+
+
+@router.delete(
+    "/song-adaptations/{song_adaptation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除已保存唱段适配",
+)
+def delete_song_adaptation(song_adaptation_id: UUID, db: Session = Depends(get_db)) -> Response:
+    """删除唱段适配和关联 AI 任务，不删除原始剧本。"""
+
+    deleted = delete_song_adaptation_with_related_data(db, song_adaptation_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="唱段适配不存在。")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

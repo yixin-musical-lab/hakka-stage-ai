@@ -19,6 +19,10 @@ import type {
   RoleTrainingForm,
   RoleTrainingPlanResponse,
   RoleTrainingPlanSummary,
+  SongAdaptationContent,
+  SongAdaptationForm,
+  SongAdaptationResponse,
+  SongAdaptationSummary,
 } from "../types";
 
 export async function fetchHealth(signal?: AbortSignal) {
@@ -153,6 +157,63 @@ export async function deleteMusicalScript(musicalScriptId: string) {
 
 export async function fetchMusicalScriptMarkdown(musicalScriptId: string) {
   const response = await fetch(`${apiBaseUrl}/api/musical-scripts/${musicalScriptId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function createSongAdaptationTask(form: SongAdaptationForm) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; song_adaptation_id: string; status: string };
+}
+
+export async function fetchSongAdaptations(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as SongAdaptationSummary[];
+}
+
+export async function fetchSongAdaptation(songAdaptationId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations/${songAdaptationId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as SongAdaptationResponse;
+}
+
+export async function updateSongAdaptation(songAdaptationId: string, editedContent: SongAdaptationContent) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations/${songAdaptationId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as SongAdaptationResponse;
+}
+
+export async function deleteSongAdaptation(songAdaptationId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations/${songAdaptationId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchSongAdaptationMarkdown(songAdaptationId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/song-adaptations/${songAdaptationId}/markdown`);
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }
