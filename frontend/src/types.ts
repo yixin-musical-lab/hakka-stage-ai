@@ -388,6 +388,109 @@ export type MovementGuideSummary = {
   updated_at: string;
 };
 
+export type PracticeSubmissionForm = {
+  course_title: string;
+  task_title: string;
+  task_description: string;
+  student_name: string;
+  student_group: string;
+  video_url: string;
+  video_file_name: string;
+  video_duration_seconds: number | null;
+  video_notes: string;
+  reference_action_name: string;
+  reference_video_url: string;
+  evaluation_focus: string[];
+};
+
+export type PracticeVideoUploadResponse = {
+  url: string;
+  original_file_name: string;
+  stored_file_name: string;
+  content_type: string;
+  size_bytes: number;
+  storage_mode: "local_dev";
+};
+
+export type PracticeSubmissionSummary = {
+  id: string;
+  course_title: string;
+  task_title: string;
+  student_name: string;
+  student_group: string;
+  status: string;
+  report_status: string | null;
+  analysis_mode: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PracticeIssuePoint = {
+  category: string;
+  description: string;
+  suggestion: string;
+};
+
+export type PracticeReportContent = {
+  title: string;
+  observation_mode: "basic_observation" | "reference_comparison_pending" | "reference_comparison";
+  summary: string;
+  video_basic_info: string[];
+  shooting_quality_feedback: string[];
+  rhythm_and_completion_observations: string[];
+  posture_and_stability_observations: string[];
+  structured_issue_points: PracticeIssuePoint[];
+  ai_suggestions: string[];
+  teacher_review_points: string[];
+  next_practice_tasks: string[];
+  teacher_final_comment: string;
+  boundary_note: string;
+};
+
+export type PracticeReportResponse = {
+  id: string;
+  submission_id: string;
+  title: string;
+  status: string;
+  analysis_mode: string;
+  content: PracticeReportContent | null;
+  edited_content: PracticeReportContent | null;
+  teacher_feedback: string;
+  reviewed_by: string;
+  reviewed_at: string | null;
+  raw_analysis_info: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PracticeSubmissionDetail = {
+  id: string;
+  course_title: string;
+  task_title: string;
+  task_description: string;
+  student_name: string;
+  student_group: string;
+  video_url: string;
+  video_file_name: string;
+  video_duration_seconds: number | null;
+  video_notes: string;
+  reference_action_name: string;
+  reference_video_url: string;
+  evaluation_focus: string[];
+  status: string;
+  report: PracticeReportResponse | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PracticeAnalyzeResponse = {
+  task_id: string;
+  submission_id: string;
+  report_id: string;
+  status: "SUCCESS";
+  message: string;
+};
+
 export type LlmModelOption = {
   id: string;
   label: string;

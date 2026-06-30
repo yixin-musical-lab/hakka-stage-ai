@@ -23,6 +23,8 @@ class Settings(BaseModel):
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "hakka-stage-ai"
+    practice_upload_dir: str = "uploads"
+    practice_max_upload_mb: int = 200
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://api.deepseek.com"
     qwen_api_key: str = ""
@@ -48,6 +50,12 @@ class Settings(BaseModel):
 
         return f"redis://{self.redis_host}:{self.redis_port}/0"
 
+    @property
+    def practice_max_upload_bytes(self) -> int:
+        """练习视频上传大小上限，统一由 MB 转成字节。"""
+
+        return self.practice_max_upload_mb * 1024 * 1024
+
 
 def get_settings() -> Settings:
     """从环境变量读取配置，提供本地开发默认值。"""
@@ -66,6 +74,8 @@ def get_settings() -> Settings:
         minio_access_key=getenv("MINIO_ACCESS_KEY", "minioadmin"),
         minio_secret_key=getenv("MINIO_SECRET_KEY", "minioadmin"),
         minio_bucket=getenv("MINIO_BUCKET", "hakka-stage-ai"),
+        practice_upload_dir=getenv("PRACTICE_UPLOAD_DIR", "uploads"),
+        practice_max_upload_mb=int(getenv("PRACTICE_MAX_UPLOAD_MB", "200")),
         deepseek_api_key=getenv("DEEPSEEK_API_KEY", ""),
         deepseek_base_url=getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         qwen_api_key=getenv("QWEN_API_KEY", ""),

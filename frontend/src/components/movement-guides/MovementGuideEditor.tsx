@@ -1,3 +1,4 @@
+import { Button } from "../ui/button";
 import { TextareaField, TextField } from "../ui/FormFields";
 import type {
   MovementAssetStatus,
@@ -102,18 +103,18 @@ function StepList({ values, onChange }: { values: MovementStepDetail[]; onChange
           <p className="section-kicker">动作图解</p>
           <h3>动作步骤拆解</h3>
         </div>
-        <button className="secondary-button" type="button" onClick={addStep}>
+        <Button variant="secondary" type="button" onClick={addStep}>
           添加步骤
-        </button>
+        </Button>
       </div>
       {values.map((step, index) => (
         <div className="nested-editor" key={`movement-step-${index}`}>
           <div className="activity-row">
             <input value={step.name} onChange={(event) => updateStep(index, { ...step, name: event.target.value })} aria-label="步骤名称" />
             <input value={step.beats} onChange={(event) => updateStep(index, { ...step, beats: event.target.value })} aria-label="对应节拍" />
-            <button className="danger-button" type="button" onClick={() => removeStep(index)}>
+            <Button variant="destructive" type="button" onClick={() => removeStep(index)}>
               删除
-            </button>
+            </Button>
           </div>
           <textarea
             value={step.description}
@@ -153,9 +154,9 @@ function EditableTextList({ title, values, onChange }: { title: string; values: 
           <p className="section-kicker">教学说明</p>
           <h3>{title}</h3>
         </div>
-        <button className="secondary-button" type="button" onClick={() => onChange([...values, ""])}>
+        <Button variant="secondary" type="button" onClick={() => onChange([...values, ""])}>
           添加
-        </button>
+        </Button>
       </div>
       {values.map((value, index) => (
         <div className="inline-edit-row" key={`${title}-${index}`}>
@@ -164,9 +165,9 @@ function EditableTextList({ title, values, onChange }: { title: string; values: 
             rows={2}
             onChange={(event) => onChange(values.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
           />
-          <button className="danger-button" type="button" onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}>
+          <Button variant="destructive" type="button" onClick={() => onChange(values.filter((_, itemIndex) => itemIndex !== index))}>
             删除
-          </button>
+          </Button>
         </div>
       ))}
     </section>
@@ -181,9 +182,9 @@ function MediaAssetList({ values, onChange }: { values: MovementMediaAsset[]; on
           <p className="section-kicker">示范材料</p>
           <h3>视频 / 图片材料</h3>
         </div>
-        <button className="secondary-button" type="button" onClick={addAsset}>
+        <Button variant="secondary" type="button" onClick={addAsset}>
           添加材料
-        </button>
+        </Button>
       </div>
       {values.map((asset, index) => (
         <div className="nested-editor" key={`movement-asset-${index}`}>
@@ -219,9 +220,9 @@ function MediaAssetList({ values, onChange }: { values: MovementMediaAsset[]; on
             onChange={(event) => updateAsset(index, { ...asset, notes: event.target.value })}
             aria-label="材料备注"
           />
-          <button className="danger-button" type="button" onClick={() => removeAsset(index)}>
+          <Button variant="destructive" type="button" onClick={() => removeAsset(index)}>
             删除材料
-          </button>
+          </Button>
         </div>
       ))}
     </section>

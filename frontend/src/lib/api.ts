@@ -15,6 +15,13 @@ import type {
   MusicalScriptForm,
   MusicalScriptResponse,
   MusicalScriptSummary,
+  PracticeAnalyzeResponse,
+  PracticeReportContent,
+  PracticeReportResponse,
+  PracticeSubmissionDetail,
+  PracticeSubmissionForm,
+  PracticeSubmissionSummary,
+  PracticeVideoUploadResponse,
   RoleTrainingContent,
   RoleTrainingForm,
   RoleTrainingPlanResponse,
@@ -342,6 +349,91 @@ export async function createMovementCandidatePlaceholder(movementGuideId: string
     throw new Error(await readApiError(response));
   }
   return (await response.json()) as { movement_guide_id: string; status: "not_implemented"; message: string };
+}
+
+export async function createPracticeSubmission(form: PracticeSubmissionForm) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeSubmissionDetail;
+}
+
+export async function uploadPracticeVideo(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions/upload`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeVideoUploadResponse;
+}
+
+export async function fetchPracticeSubmissions(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeSubmissionSummary[];
+}
+
+export async function fetchPracticeSubmission(submissionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions/${submissionId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeSubmissionDetail;
+}
+
+export async function analyzePracticeSubmission(submissionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions/${submissionId}/analyze`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeAnalyzeResponse;
+}
+
+export async function updatePracticeReport(reportId: string, editedContent: PracticeReportContent, teacherFeedback: string) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-reports/${reportId}/review`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      edited_content: editedContent,
+      teacher_feedback: teacherFeedback,
+      reviewed_by: "demo-teacher",
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as PracticeReportResponse;
+}
+
+export async function deletePracticeSubmission(submissionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-submissions/${submissionId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchPracticeReportMarkdown(reportId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/practice-reports/${reportId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
 }
 
 async function readApiError(response: Response) {

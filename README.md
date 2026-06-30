@@ -1,11 +1,11 @@
 # 客韵智演 / hakka-stage-ai
 
-AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生成、歌舞剧剧本创编、唱段适配和分角色训练计划。系统通过 FastAPI 创建 AI 生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化初稿，前端提供可编辑、可保存、可导出的工作台。
+AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生成、歌舞剧剧本创编、唱段适配、分角色训练计划和课后练习提交复核。系统通过 FastAPI 创建 AI 生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化初稿，前端提供可编辑、可保存、可导出的工作台。
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、歌舞剧剧本生成 API、唱段适配 API、分角色训练计划 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案 / 剧本 / 唱段 / 训练计划生成与编辑页、Markdown 导出、基础环境变量示例。
-- 暂不包含：登录鉴权、复杂权限、课堂互动脚本、音频自动分析、曲谱解析、视频分析、AI 练习报告、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、歌舞剧剧本生成 API、唱段适配 API、分角色训练计划 API、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案 / 剧本 / 唱段 / 训练计划 / 课后练习生成与编辑页、Markdown 导出、基础环境变量示例。
+- 暂不包含：登录鉴权、复杂权限、课堂互动脚本、音频自动分析、曲谱解析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 ## 项目目录结构

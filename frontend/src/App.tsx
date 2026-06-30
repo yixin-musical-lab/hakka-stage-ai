@@ -11,6 +11,9 @@ import { MovementGuideListPage } from "./pages/MovementGuideListPage";
 import { MusicalScriptDetailPage } from "./pages/MusicalScriptDetailPage";
 import { MusicalScriptGeneratePage } from "./pages/MusicalScriptGeneratePage";
 import { MusicalScriptListPage } from "./pages/MusicalScriptListPage";
+import { PracticeSubmissionCreatePage } from "./pages/PracticeSubmissionCreatePage";
+import { PracticeSubmissionDetailPage } from "./pages/PracticeSubmissionDetailPage";
+import { PracticeSubmissionListPage } from "./pages/PracticeSubmissionListPage";
 import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
 import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
 import { SongAdaptationDetailPage } from "./pages/SongAdaptationDetailPage";
@@ -35,6 +38,9 @@ export function App() {
           <Route path="/movement-guides/new" element={<MovementGuideCreatePage />} />
           <Route path="/movement-guides" element={<MovementGuideListPage />} />
           <Route path="/movement-guides/:movementGuideId" element={<MovementGuideDetailPage />} />
+          <Route path="/practice-submissions/new" element={<PracticeSubmissionCreatePage />} />
+          <Route path="/practice-submissions" element={<PracticeSubmissionListPage />} />
+          <Route path="/practice-submissions/:submissionId" element={<PracticeSubmissionDetailPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

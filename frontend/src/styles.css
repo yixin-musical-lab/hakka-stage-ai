@@ -609,6 +609,23 @@ h3 {
   border-top: 1px solid rgba(38, 69, 65, 0.12);
 }
 
+.upload-box {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px dashed rgba(38, 69, 65, 0.24);
+  border-radius: 8px;
+  background: rgba(247, 250, 248, 0.82);
+}
+
+.upload-box p {
+  margin: 0;
+  color: #64716e;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .field {
   display: grid;
   gap: 7px;
@@ -1190,6 +1207,15 @@ textarea:focus {
   color: #1d433e;
   font-size: 13px;
   font-weight: 950;
+}
+
+.practice-video-preview {
+  display: block;
+  width: min(720px, 100%);
+  margin-top: 14px;
+  border: 1px solid rgba(38, 69, 65, 0.14);
+  border-radius: 8px;
+  background: #17211f;
 }
 
 .lesson-list {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { Button } from "../components/ui/button";
 import { TextareaField, TextField } from "../components/ui/FormFields";
 import { PageTitle } from "../components/ui/PageTitle";
 import { createMovementGuide } from "../lib/api";
@@ -37,9 +38,9 @@ export function MovementGuideCreatePage() {
         title="新建动作图解"
         description="先录入动作描述、节拍、方向和教学提示，生成一份可编辑的动作拆解材料。"
         action={
-          <button className="secondary-button" type="button" onClick={() => navigate("/movement-guides")}>
+          <Button variant="secondary" type="button" onClick={() => navigate("/movement-guides")}>
             已保存材料
-          </button>
+          </Button>
         }
       />
 
@@ -50,9 +51,9 @@ export function MovementGuideCreatePage() {
               <p className="section-kicker">T03</p>
               <h2>动作说明</h2>
             </div>
-            <button className="secondary-button" type="button" onClick={fillExample}>
+            <Button variant="secondary" type="button" onClick={fillExample}>
               填入示例
-            </button>
+            </Button>
           </div>
 
           <div className="field-grid">
@@ -85,9 +86,9 @@ export function MovementGuideCreatePage() {
           />
 
           {notice ? <p className="notice">{notice}</p> : null}
-          <button className="primary-button" type="submit" disabled={submitting}>
+          <Button className="w-full" type="submit" disabled={submitting}>
             {submitting ? "创建中..." : "创建动作图解"}
-          </button>
+          </Button>
         </form>
 
         <aside className="surface-panel result-panel">

@@ -51,6 +51,17 @@ from app.schemas.musical import (
     SongAdaptationUpdateRequest,
     SongSection,
 )
+from app.schemas.practice import (
+    PracticeAnalyzeResponse,
+    PracticeIssuePoint,
+    PracticeReportContent,
+    PracticeReportResponse,
+    PracticeReportReviewRequest,
+    PracticeSubmissionCreateRequest,
+    PracticeSubmissionDetailResponse,
+    PracticeSubmissionSummaryResponse,
+    PracticeVideoUploadResponse,
+)
 from app.schemas.system import DependencyConfig, HealthResponse
 
 __all__ = [
@@ -83,6 +94,15 @@ __all__ = [
     "MusicalScriptSummaryResponse",
     "MusicalScriptUpdateRequest",
     "PerformanceSlot",
+    "PracticeAnalyzeResponse",
+    "PracticeIssuePoint",
+    "PracticeReportContent",
+    "PracticeReportResponse",
+    "PracticeReportReviewRequest",
+    "PracticeSubmissionCreateRequest",
+    "PracticeSubmissionDetailResponse",
+    "PracticeSubmissionSummaryResponse",
+    "PracticeVideoUploadResponse",
     "ReasoningLevelOption",
     "RoleDailyPlan",
     "RoleTrainingContent",

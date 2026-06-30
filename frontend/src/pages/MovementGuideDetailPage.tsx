@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { MovementGuideEditor } from "../components/movement-guides/MovementGuideEditor";
+import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { createMovementCandidatePlaceholder, fetchMovementGuide, updateMovementGuide } from "../lib/api";
@@ -85,22 +86,22 @@ export function MovementGuideDetailPage() {
         description="查看、继续修改并导出老师确认稿；真实视频生成后续由 Worker 和云端 GPU 接入。"
         action={
           <div className="button-row">
-            <button className="secondary-button" type="button" onClick={() => navigate("/movement-guides")}>
+            <Button variant="secondary" type="button" onClick={() => navigate("/movement-guides")}>
               返回列表
-            </button>
+            </Button>
             {movementGuide ? (
-              <button className="secondary-button" type="button" onClick={() => void handleDownloadMarkdown()}>
+              <Button variant="secondary" type="button" onClick={() => void handleDownloadMarkdown()}>
                 导出 Markdown
-              </button>
+              </Button>
             ) : null}
             {movementGuide ? (
-              <button className="secondary-button" type="button" disabled={generating} onClick={() => void handleGenerateCandidates()}>
+              <Button variant="secondary" type="button" disabled={generating} onClick={() => void handleGenerateCandidates()}>
                 {generating ? "提交中..." : "生成骨骼候选"}
-              </button>
+              </Button>
             ) : null}
-            <button className="primary-button compact" type="button" disabled={!editedContent || saving} onClick={() => void saveMovementGuide()}>
+            <Button type="button" disabled={!editedContent || saving} onClick={() => void saveMovementGuide()}>
               {saving ? "保存中..." : "保存编辑稿"}
-            </button>
+            </Button>
           </div>
         }
       />

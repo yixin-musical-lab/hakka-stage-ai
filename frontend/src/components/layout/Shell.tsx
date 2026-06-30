@@ -21,6 +21,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <NavLink to="/song-adaptations">唱段适配</NavLink>
           <NavLink to="/role-training-plans">分角色训练</NavLink>
           <NavLink to="/movement-guides">示范材料</NavLink>
+          <NavLink to="/practice-submissions">课后练习</NavLink>
           <NavLink to="/health">系统状态</NavLink>
         </nav>
       </header>

@@ -1,4 +1,4 @@
-import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, RoleTrainingForm, SongAdaptationForm } from "../types";
+import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, PracticeSubmissionForm, RoleTrainingForm, SongAdaptationForm } from "../types";
 
 export const initialLessonPlanForm: LessonPlanForm = {
   dance_style: "客家山歌舞",
@@ -17,7 +17,6 @@ export const initialLessonPlanForm: LessonPlanForm = {
 
 export const futureModules = [
   "课堂互动",
-  "课后练习",
   "歌舞融合建议",
   "曲目队形编排",
   "排练复盘",
@@ -33,6 +32,21 @@ export const initialMovementGuideForm: MovementGuideForm = {
   teaching_tips: "提醒学生先站稳重心，转身时眼睛找前方定点。",
   reference_video_url: "",
   digital_human_image_url: "",
+};
+
+export const initialPracticeSubmissionForm: PracticeSubmissionForm = {
+  course_title: "客家山歌主题舞蹈体验课",
+  task_title: "30 秒客家山歌律动打卡",
+  task_description: "跟随课堂练习音乐完成一段 30 秒短组合，重点保持全身入镜和节奏稳定。",
+  student_name: "演示学生",
+  student_group: "第一组",
+  video_url: "https://example.com/practice-demo.mp4",
+  video_file_name: "演示学生_客家山歌律动_第1次.mp4",
+  video_duration_seconds: 30,
+  video_notes: "手机固定在桌面上拍摄，练习了两遍后提交。",
+  reference_action_name: "双手打开转身",
+  reference_video_url: "",
+  evaluation_focus: ["拍摄质量", "节奏", "动作完整度", "动作稳定"],
 };
 
 export const initialMusicalScriptForm: MusicalScriptForm = {

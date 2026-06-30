@@ -19,9 +19,13 @@ deepseek-apikey.txt
 # Docker / runtime data
 *.log
 outputs/
+backend/uploads/
+uploads/
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+
+AGENTS.md

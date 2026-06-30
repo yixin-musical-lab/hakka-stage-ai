@@ -2,13 +2,22 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ModuleTile } from "../components/home/ModuleTile";
 import { Button } from "../components/ui/button";
-import { fetchHealth, fetchLessonPlans, fetchMovementGuides, fetchMusicalScripts, fetchRoleTrainingPlans, fetchSongAdaptations } from "../lib/api";
+import {
+  fetchHealth,
+  fetchLessonPlans,
+  fetchMovementGuides,
+  fetchMusicalScripts,
+  fetchPracticeSubmissions,
+  fetchRoleTrainingPlans,
+  fetchSongAdaptations,
+} from "../lib/api";
 import { futureModules } from "../lib/lessonPlanDefaults";
 import type {
   HealthResponse,
   LessonPlanSummary,
   MovementGuideSummary,
   MusicalScriptSummary,
+  PracticeSubmissionSummary,
   RoleTrainingPlanSummary,
   SongAdaptationSummary,
 } from "../types";
@@ -20,6 +29,7 @@ export function HomePage() {
   const [songAdaptations, setSongAdaptations] = useState<SongAdaptationSummary[]>([]);
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
   const [movementGuides, setMovementGuides] = useState<MovementGuideSummary[]>([]);
+  const [practiceSubmissions, setPracticeSubmissions] = useState<PracticeSubmissionSummary[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,6 +39,7 @@ export function HomePage() {
     void fetchSongAdaptations(controller.signal).then(setSongAdaptations).catch(() => setSongAdaptations([]));
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
     void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
+    void fetchPracticeSubmissions(controller.signal).then(setPracticeSubmissions).catch(() => setPracticeSubmissions([]));
     return () => controller.abort();
   }, []);
 
@@ -36,6 +47,7 @@ export function HomePage() {
   const latestScript = musicalScripts[0];
   const latestSongAdaptation = songAdaptations[0];
   const latestMovementGuide = movementGuides[0];
+  const latestPracticeSubmission = practiceSubmissions[0];
   const configuredModelProviders =
     health?.dependencies
       .filter((dependency) => ["deepseek", "qwen"].includes(dependency.name) && dependency.configured)
@@ -67,6 +79,12 @@ export function HomePage() {
       action: latestMovementGuide ? "打开" : "创建",
     },
     {
+      label: "课后练习",
+      title: latestPracticeSubmission ? latestPracticeSubmission.task_title : "还没有练习视频提交",
+      to: latestPracticeSubmission ? `/practice-submissions/${latestPracticeSubmission.id}` : "/practice-submissions/new",
+      action: latestPracticeSubmission ? "打开" : "创建",
+    },
+    {
       label: "最近教案",
       title: latestPlan ? latestPlan.title : "还没有保存的教案",
       to: latestPlan ? `/lesson-plans/${latestPlan.id}` : "/lesson-plans/generate",
@@ -79,8 +97,15 @@ export function HomePage() {
     { label: "唱段", count: songAdaptations.length, to: "/song-adaptations" },
     { label: "训练", count: roleTrainingPlans.length, to: "/role-training-plans" },
     { label: "示范", count: movementGuides.length, to: "/movement-guides" },
+    { label: "练习", count: practiceSubmissions.length, to: "/practice-submissions" },
   ];
-  const totalAssets = lessonPlans.length + musicalScripts.length + songAdaptations.length + roleTrainingPlans.length + movementGuides.length;
+  const totalAssets =
+    lessonPlans.length +
+    musicalScripts.length +
+    songAdaptations.length +
+    roleTrainingPlans.length +
+    movementGuides.length +
+    practiceSubmissions.length;
 
   return (
     <main className="page-frame">
@@ -198,6 +223,12 @@ export function HomePage() {
           status="已接入"
           description="管理动作描述、步骤拆解、关键提示和示范视频 / 图片材料。"
           to="/movement-guides"
+        />
+        <ModuleTile
+          title="课后练习"
+          status="已接入"
+          description="记录学生练习视频，生成基础观察报告，并保存老师复核后的反馈。"
+          to="/practice-submissions"
         />
         {futureModules.map((moduleName) => (
           <ModuleTile
