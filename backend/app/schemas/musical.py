@@ -114,6 +114,112 @@ class MusicalScriptUpdateRequest(BaseModel):
     edited_content: MusicalScriptContent
 
 
+class SongAdaptationGenerateRequest(BaseModel):
+    """M03-lite 唱段适配生成请求。"""
+
+    script_id: UUID = Field(..., description="要引用的剧本 ID")
+    related_scene: str = Field(..., min_length=1, max_length=240, description="关联剧情段落，例如：第二幕：一起排练")
+    source_song: str = Field("", max_length=200, description="原曲名称或音乐来源，例如：客家山歌类曲目")
+    lyrics_text: str = Field(..., min_length=1, max_length=8000, description="原歌词或待改写歌词文本")
+    music_structure: str = Field(..., min_length=1, max_length=4000, description="人工整理的音乐段落表，例如：0:00-0:18 前奏")
+    adaptation_goal: str = Field(..., min_length=1, max_length=1200, description="唱段要服务的剧情表达目标")
+    singing_roles: str = Field("", max_length=1200, description="建议参与演唱的角色，可从剧本角色中整理")
+    rewrite_intensity: Literal["structure_only", "light_rewrite", "strong_rewrite"] = Field(
+        "light_rewrite",
+        description="改写强度：只做结构标注、轻微改词或明显改编",
+    )
+    llm_provider: Literal["deepseek", "qwen"] | None = Field(None, description="大模型供应商")
+    llm_model: str | None = Field(None, min_length=1, max_length=120, description="本次生成使用的模型")
+    reasoning_level: Literal["off", "standard", "enhanced"] | None = Field(None, description="本次生成使用的推理强度")
+
+
+class SongAdaptationGenerateResponse(BaseModel):
+    """创建唱段适配任务后的响应。"""
+
+    task_id: UUID
+    song_adaptation_id: UUID
+    status: str
+    message: str
+
+
+class SongSection(BaseModel):
+    """唱段适配中的一个音乐 / 歌词段落。"""
+
+    section_no: str
+    music_position: str
+    original_lyrics: str
+    adapted_lyrics: str
+    singing_mode: str
+    suggested_roles: list[str]
+    emotion: str
+    dance_opportunity: str
+    transition_note: str
+
+
+class DanceInterlude(BaseModel):
+    """间奏或歌词留白处的舞蹈安排建议。"""
+
+    music_position: str
+    suggestion: str
+
+
+class SongAdaptationContent(BaseModel):
+    """M03-lite 结构化唱段适配正文。"""
+
+    title: str
+    source_song: str
+    related_scene: str
+    adaptation_goal: str
+    sections: list[SongSection]
+    dance_interludes: list[DanceInterlude]
+    review_notes: list[str]
+
+
+class SongAdaptationResponse(BaseModel):
+    """唱段适配详情响应。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    title: str
+    status: str
+    source_song: str
+    related_scene: str
+    lyrics_text: str
+    music_structure: str
+    adaptation_goal: str
+    singing_roles: str
+    rewrite_intensity: str
+    content: SongAdaptationContent | None
+    edited_content: SongAdaptationContent | None
+    raw_model_info: dict | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SongAdaptationSummaryResponse(BaseModel):
+    """唱段适配列表摘要响应。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    title: str
+    status: str
+    related_scene: str
+    source_song: str
+    provider: str | None
+    model: str | None
+    reasoning_level: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SongAdaptationUpdateRequest(BaseModel):
+    """保存音乐负责人或编导编辑后的唱段适配。"""
+
+    edited_content: SongAdaptationContent
+
+
 class RoleTrainingGenerateRequest(BaseModel):
     """M05 分角色训练计划生成请求。"""
 

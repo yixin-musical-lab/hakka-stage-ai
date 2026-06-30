@@ -92,6 +92,30 @@ class MusicalScript(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
+class SongAdaptation(Base):
+    """M03 唱段适配与歌词改写建议。"""
+
+    __tablename__ = "song_adaptations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("musical_projects.id"))
+    script_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("musical_scripts.id"))
+    title: Mapped[str] = mapped_column(String(200), default="待生成唱段适配建议")
+    status: Mapped[str] = mapped_column(String(40), default="draft")
+    source_song: Mapped[str] = mapped_column(String(200), default="")
+    related_scene: Mapped[str] = mapped_column(String(240), default="")
+    lyrics_text: Mapped[str] = mapped_column(Text)
+    music_structure: Mapped[str] = mapped_column(Text)
+    adaptation_goal: Mapped[str] = mapped_column(Text)
+    singing_roles: Mapped[str] = mapped_column(Text, default="")
+    rewrite_intensity: Mapped[str] = mapped_column(String(80), default="light_rewrite")
+    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    edited_content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    raw_model_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
 class RoleTrainingPlan(Base):
     """M05 分角色训练计划生成结果。"""
 

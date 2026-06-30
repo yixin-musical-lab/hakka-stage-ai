@@ -160,6 +160,84 @@ export type MusicalScriptSummary = {
   updated_at: string;
 };
 
+export type SongAdaptationRewriteIntensity = "structure_only" | "light_rewrite" | "strong_rewrite";
+
+export type SongSection = {
+  section_no: string;
+  music_position: string;
+  original_lyrics: string;
+  adapted_lyrics: string;
+  singing_mode: string;
+  suggested_roles: string[];
+  emotion: string;
+  dance_opportunity: string;
+  transition_note: string;
+};
+
+export type DanceInterlude = {
+  music_position: string;
+  suggestion: string;
+};
+
+export type SongAdaptationContent = {
+  title: string;
+  source_song: string;
+  related_scene: string;
+  adaptation_goal: string;
+  sections: SongSection[];
+  dance_interludes: DanceInterlude[];
+  review_notes: string[];
+};
+
+export type SongAdaptationForm = {
+  script_id: string;
+  related_scene: string;
+  source_song: string;
+  lyrics_text: string;
+  music_structure: string;
+  adaptation_goal: string;
+  singing_roles: string;
+  rewrite_intensity: SongAdaptationRewriteIntensity;
+  llm_provider: "deepseek" | "qwen";
+  llm_model: string;
+  reasoning_level: "off" | "standard" | "enhanced";
+};
+
+export type SongAdaptationResponse = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  title: string;
+  status: string;
+  source_song: string;
+  related_scene: string;
+  lyrics_text: string;
+  music_structure: string;
+  adaptation_goal: string;
+  singing_roles: string;
+  rewrite_intensity: SongAdaptationRewriteIntensity;
+  content: SongAdaptationContent | null;
+  edited_content: SongAdaptationContent | null;
+  raw_model_info: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SongAdaptationSummary = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  title: string;
+  status: string;
+  related_scene: string;
+  source_song: string;
+  provider: string | null;
+  model: string | null;
+  reasoning_level: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type RoleDailyPlan = {
   day: string;
   focus: string;

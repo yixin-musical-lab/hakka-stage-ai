@@ -13,6 +13,8 @@ import { MusicalScriptGeneratePage } from "./pages/MusicalScriptGeneratePage";
 import { MusicalScriptListPage } from "./pages/MusicalScriptListPage";
 import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
 import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
+import { SongAdaptationDetailPage } from "./pages/SongAdaptationDetailPage";
+import { SongAdaptationListPage } from "./pages/SongAdaptationListPage";
 
 export function App() {
   return (
@@ -26,6 +28,8 @@ export function App() {
           <Route path="/musical-scripts/generate" element={<MusicalScriptGeneratePage />} />
           <Route path="/musical-scripts" element={<MusicalScriptListPage />} />
           <Route path="/musical-scripts/:musicalScriptId" element={<MusicalScriptDetailPage />} />
+          <Route path="/song-adaptations" element={<SongAdaptationListPage />} />
+          <Route path="/song-adaptations/:songAdaptationId" element={<SongAdaptationDetailPage />} />
           <Route path="/role-training-plans" element={<RoleTrainingPlanListPage />} />
           <Route path="/role-training-plans/:roleTrainingPlanId" element={<RoleTrainingPlanDetailPage />} />
           <Route path="/movement-guides/new" element={<MovementGuideCreatePage />} />

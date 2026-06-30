@@ -79,7 +79,7 @@ export function RoleTrainingPlanDetailPage() {
               </Button>
             ) : null}
             <Button type="button" disabled={!editedContent || saving} onClick={() => void savePlan()}>
-              {saving ? "保存中..." : "保存编辑稿"}
+              {saving ? "保存中..." : "保存全部修改"}
             </Button>
           </div>
         }

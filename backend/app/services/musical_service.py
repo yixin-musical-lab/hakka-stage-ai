@@ -2,11 +2,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan
+from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.schemas import (
     MusicalScriptGenerateRequest,
     MusicalScriptSummaryResponse,
     RoleTrainingPlanSummaryResponse,
+    SongAdaptationSummaryResponse,
 )
 
 
@@ -16,7 +17,7 @@ def build_project_title(request: MusicalScriptGenerateRequest) -> str:
     return f"{request.theme} · {request.duration_minutes}分钟歌舞剧"
 
 
-def model_info(record: MusicalScript | RoleTrainingPlan) -> tuple[str | None, str | None]:
+def model_info(record: MusicalScript | RoleTrainingPlan | SongAdaptation) -> tuple[str | None, str | None]:
     """从模型信息里提取供应商和模型名。"""
 
     raw_model_info = record.raw_model_info or {}
@@ -28,7 +29,7 @@ def model_info(record: MusicalScript | RoleTrainingPlan) -> tuple[str | None, st
     )
 
 
-def reasoning_level(record: MusicalScript | RoleTrainingPlan) -> str | None:
+def reasoning_level(record: MusicalScript | RoleTrainingPlan | SongAdaptation) -> str | None:
     """从模型信息里提取本次生成的推理强度。"""
 
     raw_model_info = record.raw_model_info or {}
@@ -71,6 +72,26 @@ def role_training_summary(role_training_plan: RoleTrainingPlan) -> RoleTrainingP
     )
 
 
+def song_adaptation_summary(song_adaptation: SongAdaptation) -> SongAdaptationSummaryResponse:
+    """把 ORM 唱段适配记录转成列表摘要。"""
+
+    provider, model = model_info(song_adaptation)
+    return SongAdaptationSummaryResponse(
+        id=song_adaptation.id,
+        project_id=song_adaptation.project_id,
+        script_id=song_adaptation.script_id,
+        title=song_adaptation.title,
+        status=song_adaptation.status,
+        related_scene=song_adaptation.related_scene,
+        source_song=song_adaptation.source_song,
+        provider=provider,
+        model=model,
+        reasoning_level=reasoning_level(song_adaptation),
+        created_at=song_adaptation.created_at,
+        updated_at=song_adaptation.updated_at,
+    )
+
+
 def render_musical_script_markdown(musical_script: MusicalScript) -> str | None:
     """把结构化剧本渲染成 Markdown 文本。"""
 
@@ -91,6 +112,30 @@ def render_musical_script_markdown(musical_script: MusicalScript) -> str | None:
             "## 人物设定\n" + _characters_markdown(content.get("characters", [])),
             "## 表演留白段落\n" + _performance_slots_markdown(content.get("performance_slots", [])),
             "## 编导确认提醒\n" + _markdown_list(content.get("director_notes", [])),
+            f"---\n\n模型信息：{provider} / {model} / {generated_at}",
+        ]
+    )
+
+
+def render_song_adaptation_markdown(song_adaptation: SongAdaptation) -> str | None:
+    """把结构化唱段适配建议渲染成 Markdown 文本。"""
+
+    content = song_adaptation.edited_content or song_adaptation.content
+    if not content:
+        return None
+
+    raw_model_info = song_adaptation.raw_model_info or {}
+    provider = raw_model_info.get("provider", "unknown")
+    model = raw_model_info.get("model", "unknown")
+    generated_at = raw_model_info.get("generated_at", "unknown")
+
+    return "\n\n".join(
+        [
+            f"# {content.get('title', song_adaptation.title)}",
+            "## 基础信息\n" + _song_adaptation_overview_markdown(song_adaptation, content),
+            "## 唱段结构与歌词建议\n" + _song_sections_markdown(content.get("sections", [])),
+            "## 间奏舞蹈与留白\n" + _dance_interludes_markdown(content.get("dance_interludes", [])),
+            "## 复核提醒\n" + _markdown_list(content.get("review_notes", [])),
             f"---\n\n模型信息：{provider} / {model} / {generated_at}",
         ]
     )
@@ -121,7 +166,7 @@ def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str |
 
 
 def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID) -> bool:
-    """删除剧本、基于该剧本的训练计划和关联任务，并清理无人引用的剧目。"""
+    """删除剧本、基于该剧本的唱段和训练计划，并清理无人引用的剧目。"""
 
     musical_script = db.get(MusicalScript, musical_script_id)
     if musical_script is None:
@@ -129,6 +174,12 @@ def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID
 
     project_id = musical_script.project_id
     db.query(AiTask).filter(AiTask.business_id == musical_script.id).delete(synchronize_session=False)
+    related_song_adaptation_ids = [
+        row[0] for row in db.query(SongAdaptation.id).filter(SongAdaptation.script_id == musical_script.id).all()
+    ]
+    if related_song_adaptation_ids:
+        db.query(AiTask).filter(AiTask.business_id.in_(related_song_adaptation_ids)).delete(synchronize_session=False)
+        db.query(SongAdaptation).filter(SongAdaptation.id.in_(related_song_adaptation_ids)).delete(synchronize_session=False)
     related_training_ids = [
         row[0] for row in db.query(RoleTrainingPlan.id).filter(RoleTrainingPlan.script_id == musical_script.id).all()
     ]
@@ -136,6 +187,22 @@ def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID
         db.query(AiTask).filter(AiTask.business_id.in_(related_training_ids)).delete(synchronize_session=False)
         db.query(RoleTrainingPlan).filter(RoleTrainingPlan.id.in_(related_training_ids)).delete(synchronize_session=False)
     db.query(MusicalScript).filter(MusicalScript.id == musical_script_id).delete(synchronize_session=False)
+    db.flush()
+    _delete_project_if_unused(db, project_id)
+    db.commit()
+    return True
+
+
+def delete_song_adaptation_with_related_data(db: Session, song_adaptation_id: UUID) -> bool:
+    """删除唱段适配和关联 AI 任务，不删除原始剧本。"""
+
+    song_adaptation = db.get(SongAdaptation, song_adaptation_id)
+    if song_adaptation is None:
+        return False
+
+    project_id = song_adaptation.project_id
+    db.query(AiTask).filter(AiTask.business_id == song_adaptation.id).delete(synchronize_session=False)
+    db.query(SongAdaptation).filter(SongAdaptation.id == song_adaptation_id).delete(synchronize_session=False)
     db.flush()
     _delete_project_if_unused(db, project_id)
     db.commit()
@@ -159,11 +226,12 @@ def delete_role_training_with_related_data(db: Session, role_training_plan_id: U
 
 
 def _delete_project_if_unused(db: Session, project_id: UUID) -> None:
-    """当剧目没有剧本和训练计划引用时清理剧目草稿。"""
+    """当剧目没有剧本、唱段和训练计划引用时清理剧目草稿。"""
 
     script_count = db.query(MusicalScript).filter(MusicalScript.project_id == project_id).count()
+    song_adaptation_count = db.query(SongAdaptation).filter(SongAdaptation.project_id == project_id).count()
     training_count = db.query(RoleTrainingPlan).filter(RoleTrainingPlan.project_id == project_id).count()
-    if script_count == 0 and training_count == 0:
+    if script_count == 0 and song_adaptation_count == 0 and training_count == 0:
         project = db.get(MusicalProject, project_id)
         if project is not None:
             db.query(MusicalProject).filter(MusicalProject.id == project_id).delete(synchronize_session=False)
@@ -228,6 +296,48 @@ def _performance_slots_markdown(items: list[dict]) -> str:
         lines.append(f"  - 建议时长：{item.get('suggested_duration', '')}")
         lines.append(f"  - 提醒：{item.get('notes', '')}")
     return "\n".join(lines)
+
+
+def _song_adaptation_overview_markdown(song_adaptation: SongAdaptation, content: dict) -> str:
+    """渲染唱段适配基础信息。"""
+
+    return "\n".join(
+        [
+            f"- 原曲 / 音乐来源：{content.get('source_song') or song_adaptation.source_song or '未填写'}",
+            f"- 关联剧情段落：{content.get('related_scene') or song_adaptation.related_scene}",
+            f"- 改写目标：{content.get('adaptation_goal') or song_adaptation.adaptation_goal}",
+            f"- 改写强度：{song_adaptation.rewrite_intensity}",
+            f"- 演唱角色：{song_adaptation.singing_roles or '未单独填写'}",
+        ]
+    )
+
+
+def _song_sections_markdown(items: list[dict]) -> str:
+    """渲染每个唱段的歌词、演唱方式和舞蹈留白。"""
+
+    if not items:
+        return "- 暂无"
+    lines: list[str] = []
+    for item in items:
+        lines.append(f"### {item.get('section_no', '未编号')} / {item.get('music_position', '未标注位置')}")
+        lines.append(f"- 原歌词：{item.get('original_lyrics', '')}")
+        lines.append(f"- 改写建议：{item.get('adapted_lyrics', '')}")
+        lines.append(f"- 演唱方式：{item.get('singing_mode', '')}")
+        lines.append(f"- 建议角色：{'、'.join(item.get('suggested_roles', [])) or '未指定'}")
+        lines.append(f"- 情绪：{item.get('emotion', '')}")
+        lines.append(f"- 舞蹈留白：{item.get('dance_opportunity', '')}")
+        lines.append(f"- 衔接说明：{item.get('transition_note', '')}")
+    return "\n".join(lines)
+
+
+def _dance_interludes_markdown(items: list[dict]) -> str:
+    """渲染间奏、过门或歌词留白处的舞蹈建议。"""
+
+    if not items:
+        return "- 暂无"
+    return "\n".join(
+        f"- **{item.get('music_position', '未标注位置')}**：{item.get('suggestion', '')}" for item in items
+    )
 
 
 def _role_tasks_markdown(items: list[dict]) -> str:

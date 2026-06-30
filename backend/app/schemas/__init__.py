@@ -42,6 +42,14 @@ from app.schemas.musical import (
     ScriptAct,
     ScriptCharacter,
     ScriptDialogueLine,
+    DanceInterlude,
+    SongAdaptationContent,
+    SongAdaptationGenerateRequest,
+    SongAdaptationGenerateResponse,
+    SongAdaptationResponse,
+    SongAdaptationSummaryResponse,
+    SongAdaptationUpdateRequest,
+    SongSection,
 )
 from app.schemas.system import DependencyConfig, HealthResponse
 
@@ -87,4 +95,12 @@ __all__ = [
     "ScriptAct",
     "ScriptCharacter",
     "ScriptDialogueLine",
+    "DanceInterlude",
+    "SongAdaptationContent",
+    "SongAdaptationGenerateRequest",
+    "SongAdaptationGenerateResponse",
+    "SongAdaptationResponse",
+    "SongAdaptationSummaryResponse",
+    "SongAdaptationUpdateRequest",
+    "SongSection",
 ]

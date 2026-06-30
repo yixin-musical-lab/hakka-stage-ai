@@ -84,6 +84,39 @@ class MusicalScriptContent(BaseModel):
     director_notes: list[str]
 
 
+class SongSection(BaseModel):
+    """唱段适配中的一个音乐 / 歌词段落。"""
+
+    section_no: str
+    music_position: str
+    original_lyrics: str
+    adapted_lyrics: str
+    singing_mode: str
+    suggested_roles: list[str]
+    emotion: str
+    dance_opportunity: str
+    transition_note: str
+
+
+class DanceInterlude(BaseModel):
+    """间奏或歌词留白处的舞蹈安排建议。"""
+
+    music_position: str
+    suggestion: str
+
+
+class SongAdaptationContent(BaseModel):
+    """M03-lite 大模型必须返回的结构化唱段适配正文。"""
+
+    title: str
+    source_song: str
+    related_scene: str
+    adaptation_goal: str
+    sections: list[SongSection]
+    dance_interludes: list[DanceInterlude]
+    review_notes: list[str]
+
+
 class RoleDailyPlan(BaseModel):
     """某一天的排练安排。"""
 

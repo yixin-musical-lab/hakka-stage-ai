@@ -82,7 +82,7 @@ export function LessonPlanDetailPage() {
               </Button>
             ) : null}
             <Button type="button" disabled={!editedContent || saving} onClick={() => void saveLessonPlan()}>
-              {saving ? "保存中..." : "保存编辑稿"}
+              {saving ? "保存中..." : "保存全部修改"}
             </Button>
           </div>
         }
