@@ -1,4 +1,12 @@
-import type { LessonPlanForm, MovementGuideForm, MusicalScriptForm, PracticeSubmissionForm, RoleTrainingForm, SongAdaptationForm } from "../types";
+import type {
+  ClassInteractionForm,
+  LessonPlanForm,
+  MovementGuideForm,
+  MusicalScriptForm,
+  PracticeSubmissionForm,
+  RoleTrainingForm,
+  SongAdaptationForm,
+} from "../types";
 
 export const initialLessonPlanForm: LessonPlanForm = {
   dance_style: "客家山歌舞",
@@ -16,11 +24,26 @@ export const initialLessonPlanForm: LessonPlanForm = {
 };
 
 export const futureModules = [
-  "课堂互动",
   "歌舞融合建议",
   "曲目队形编排",
   "排练复盘",
 ];
+
+export const initialClassInteractionForm: ClassInteractionForm = {
+  course_theme: "客家山歌节奏体验",
+  age_group: "8-12 岁",
+  teaching_phase: "热身",
+  interaction_goal: "帮助学生快速进入节奏状态，并通过动作接龙建立合作意识。",
+  class_style: "活泼、协作、口令清楚",
+  duration_minutes: 8,
+  student_count: 24,
+  space_materials: "清空教室中间区域，不使用额外道具；学生之间保持一臂距离。",
+  lesson_context: "",
+  source_lesson_plan_id: null,
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+};
 
 export const initialMovementGuideForm: MovementGuideForm = {
   action_name: "双手打开转身",

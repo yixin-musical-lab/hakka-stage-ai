@@ -77,6 +77,11 @@ export function LessonPlanDetailPage() {
               返回列表
             </Button>
             {lessonPlan ? (
+              <Button variant="secondary" type="button" onClick={() => navigate(`/interactions/generate?lessonPlanId=${lessonPlan.id}`)}>
+                生成课堂互动
+              </Button>
+            ) : null}
+            {lessonPlan ? (
               <Button variant="secondary" type="button" onClick={() => void handleDownloadMarkdown()}>
                 导出 Markdown
               </Button>

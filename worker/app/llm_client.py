@@ -10,17 +10,25 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import WorkerSettings
 from app.llm_options import REASONING_LEVELS, provider_models
-from app.schemas import LessonPlanContent, MusicalScriptContent, RoleTrainingContent, SongAdaptationContent
+from app.schemas import (
+    ClassInteractionContent,
+    LessonPlanContent,
+    MusicalScriptContent,
+    RoleTrainingContent,
+    SongAdaptationContent,
+)
 
 LESSON_PLAN_PROMPT_VERSION = "lesson_plan_v1"
 MUSICAL_SCRIPT_PROMPT_VERSION = "musical_script_v1"
 SONG_ADAPTATION_PROMPT_VERSION = "song_adaptation_v1"
 ROLE_TRAINING_PROMPT_VERSION = "role_training_v1"
+CLASS_INTERACTION_PROMPT_VERSION = "class_interaction_v1"
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 LESSON_PLAN_PROMPT_PATH = PROMPT_DIR / "lesson_plan_v1.md"
 MUSICAL_SCRIPT_PROMPT_PATH = PROMPT_DIR / "musical_script_v1.md"
 SONG_ADAPTATION_PROMPT_PATH = PROMPT_DIR / "song_adaptation_v1.md"
 ROLE_TRAINING_PROMPT_PATH = PROMPT_DIR / "role_training_v1.md"
+CLASS_INTERACTION_PROMPT_PATH = PROMPT_DIR / "class_interaction_v1.md"
 LLM_RETRY_ATTEMPTS = 4
 LESSON_PLAN_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 
@@ -61,6 +69,17 @@ ROLE_TRAINING_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 2. 不要新增与训练计划无关的信息，尽量保留原始语义。
 3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
 4. JSON 必须符合训练计划字段结构：title、project_overview、role_tasks、daily_plan、teacher_checkpoints。
+"""
+CLASS_INTERACTION_REPAIR_PROMPT = """你是严格的 JSON 修复器。
+
+请把用户提供的模型原文修复为一个合法 JSON 对象。
+
+规则：
+1. 只能输出 JSON，不要 Markdown、代码块或解释。
+2. 不要新增与课堂互动方案无关的信息，尽量保留原始语义。
+3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
+4. JSON 必须符合课堂互动字段结构：title、teaching_phase、interaction_goal、duration_minutes、space_materials、game_rules、teacher_script、command_phrases、student_actions、grouping_method、encouragement_phrases、safety_notes、variations、teacher_check_notes。
+5. teaching_phase 只能是「开场」「热身」「动作学习」「分组展示」「收束」之一。
 """
 
 
@@ -202,6 +221,35 @@ class LLMClient:
             truncated_message="LLM 输出被截断，无法生成完整训练计划 JSON，请调高 LLM_TIMEOUT_SECONDS 或降低推理强度后重试。",
             parse_error_label="训练计划 JSON",
             temperature=0.35,
+        )
+
+    def generate_class_interaction(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """调用 LLM 生成老师可现场执行的结构化课堂互动方案。"""
+
+        provider = str(input_snapshot.get("llm_provider") or self.settings.llm_default_provider)
+        model = str(input_snapshot.get("llm_model") or self.settings.llm_default_model)
+        reasoning_level = str(input_snapshot.get("reasoning_level") or self.settings.llm_default_reasoning_level)
+        if model not in provider_models(provider):
+            raise RuntimeError(f"{provider} 不支持模型 {model}。")
+        extra_body = self._reasoning_extra_body(provider, reasoning_level)
+
+        if self.settings.llm_mock_mode:
+            return self._mock_class_interaction(input_snapshot, provider, model, reasoning_level, extra_body)
+
+        return self._generate_structured_json(
+            input_snapshot=input_snapshot,
+            provider=provider,
+            model=model,
+            reasoning_level=reasoning_level,
+            extra_body=extra_body,
+            prompt_path=CLASS_INTERACTION_PROMPT_PATH,
+            prompt_version=CLASS_INTERACTION_PROMPT_VERSION,
+            schema_model=ClassInteractionContent,
+            repair_prompt=CLASS_INTERACTION_REPAIR_PROMPT,
+            empty_message="LLM 返回内容为空。",
+            truncated_message="LLM 输出被截断，无法生成完整课堂互动方案 JSON，请降低时长或推理强度后重试。",
+            parse_error_label="课堂互动方案 JSON",
+            temperature=0.4,
         )
 
     def _generate_structured_json(
@@ -784,6 +832,73 @@ class LLMClient:
             teacher_checkpoints=["不同角色任务是否有区分。", "群演和旁白是否都有明确任务。", "正式排练前需要老师确认动作难度。"],
         ).model_dump()
         model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, ROLE_TRAINING_PROMPT_VERSION)
+        return content, model_info
+
+    def _mock_class_interaction(
+        self,
+        input_snapshot: dict[str, Any],
+        provider: str,
+        model: str,
+        reasoning_level: str,
+        extra_body: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """生成完全离线、可用于前后端联调的课堂互动方案。"""
+
+        theme = str(input_snapshot["course_theme"])
+        duration = int(input_snapshot["duration_minutes"])
+        teaching_phase = str(input_snapshot["teaching_phase"])
+        goal = str(input_snapshot["interaction_goal"])
+        space_materials = str(input_snapshot.get("space_materials") or "清空教室中间区域，无需额外材料").strip()
+        if "保持一臂距离" not in space_materials:
+            space_materials = space_materials.rstrip("；。") + "；学生之间保持一臂距离。"
+        content = ClassInteractionContent(
+            title=f"{theme} · 节奏动作接龙",
+            teaching_phase=teaching_phase,
+            interaction_goal=goal,
+            duration_minutes=duration,
+            space_materials=space_materials,
+            game_rules=[
+                "老师先示范一组四拍动作，学生观察后同步完成。",
+                "第二轮由每组补充一个简单动作，全班按顺序接成动作链。",
+            ],
+            teacher_script=[
+                {
+                    "step_no": 1,
+                    "name": "说明规则并示范",
+                    "duration_hint": "2 分钟",
+                    "teacher_action": "站在全班都能看见的位置，慢速示范拍手、踏步、打开双手四拍动作。",
+                    "teacher_cue": "先看我一次，听到「开始」再一起做。",
+                    "student_action": "保持原位观察，听到开始后同步完成四拍动作。",
+                },
+                {
+                    "step_no": 2,
+                    "name": "分组动作接龙",
+                    "duration_hint": f"{max(duration - 4, 2)} 分钟",
+                    "teacher_action": "按小组依次点名，每组在前一组动作后补充一个简单动作。",
+                    "teacher_cue": "接住前一组的四拍，再加上你们的一拍动作！",
+                    "student_action": "先重复已有动作，再补充一个原地拍手、踏步或手位动作。",
+                },
+                {
+                    "step_no": 3,
+                    "name": "全班完成并收束",
+                    "duration_hint": "2 分钟",
+                    "teacher_action": "用稳定口令带全班完成完整动作链，并请学生用手势反馈难度。",
+                    "teacher_cue": "最后一次，眼睛看前方，四拍一起完成！",
+                    "student_action": "全班同步完成动作链，并用大拇指手势反馈是否能跟上。",
+                },
+            ],
+            command_phrases=["准备，眼睛看老师。", "四拍开始，一、二、三、四！", "停在原位，给同伴一点掌声。"],
+            student_actions=["观察并复现老师的四拍动作。", "小组补充一个安全、简单的原地动作。", "全班同步完成动作链。"],
+            grouping_method=(
+                f"全班 {input_snapshot['student_count']} 人按现有座位或站位分成 4 至 6 人小组，"
+                "空间不足时不移动队形。"
+            ),
+            encouragement_phrases=["这一组节奏接得很稳！", "动作简单清楚，大家一下就跟上了。", "谢谢你给同伴留出了空间。"],
+            safety_notes=["开始前确认地面没有水渍、书包和线缆。", "学生之间保持一臂距离，不追逐、不碰撞、不快速转圈。"],
+            variations=["时间不足时取消小组创编，只完成老师示范和全班复现。", "空间不足时全部改为原地拍手、点头和小幅手位动作。"],
+            teacher_check_notes=["确认场地和学生间距安全。", "确认动作难度适合当前年龄段和课堂状态。", "正式执行前复核口令、分组和总时长。"],
+        ).model_dump()
+        model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, CLASS_INTERACTION_PROMPT_VERSION)
         return content, model_info
 
     def _mock_model_info(

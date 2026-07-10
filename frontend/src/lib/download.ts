@@ -1,4 +1,5 @@
 import {
+  fetchClassInteractionMarkdown,
   fetchLessonPlanMarkdown,
   fetchMovementGuideMarkdown,
   fetchMusicalScriptMarkdown,
@@ -6,6 +7,11 @@ import {
   fetchRoleTrainingMarkdown,
   fetchSongAdaptationMarkdown,
 } from "./api";
+
+export async function downloadClassInteractionMarkdown(classInteractionId: string, title: string) {
+  const markdown = await fetchClassInteractionMarkdown(classInteractionId);
+  saveMarkdown(markdown, title, "class-interaction");
+}
 
 export async function downloadMarkdown(lessonPlanId: string, title: string) {
   const markdown = await fetchLessonPlanMarkdown(lessonPlanId);

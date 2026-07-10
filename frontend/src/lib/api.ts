@@ -1,7 +1,12 @@
 import { apiBaseUrl } from "./config";
 import type {
   AiTaskResponse,
+  ClassInteractionContent,
+  ClassInteractionForm,
+  ClassInteractionResponse,
+  ClassInteractionSummary,
   HealthResponse,
+  LessonInteractionPrefill,
   LessonPlanContent,
   LessonPlanForm,
   LessonPlanResponse,
@@ -111,6 +116,69 @@ export async function fetchLessonPlanMarkdown(lessonPlanId: string) {
     throw new Error(await readApiError(response));
   }
   return response.text();
+}
+
+export async function createClassInteractionTask(form: ClassInteractionForm) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; class_interaction_id: string; status: string };
+}
+
+export async function fetchClassInteractions(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as ClassInteractionSummary[];
+}
+
+export async function fetchClassInteraction(classInteractionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/${classInteractionId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as ClassInteractionResponse;
+}
+
+export async function updateClassInteraction(classInteractionId: string, editedContent: ClassInteractionContent) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/${classInteractionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as ClassInteractionResponse;
+}
+
+export async function deleteClassInteraction(classInteractionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/${classInteractionId}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchClassInteractionMarkdown(classInteractionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/${classInteractionId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function fetchLessonInteractionPrefill(lessonPlanId: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/interactions/prefill-from-lesson/${lessonPlanId}`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as LessonInteractionPrefill;
 }
 
 export async function createMusicalScriptTask(form: MusicalScriptForm) {

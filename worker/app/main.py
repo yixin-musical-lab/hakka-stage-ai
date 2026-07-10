@@ -10,14 +10,21 @@ import redis
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.llm_client import LLMClient
-from app.models import AiTask, LessonPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import AiTask, ClassInteraction, LessonPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
 
 running = True
 LESSON_PLAN_QUEUE = "ai:lesson_plan"
 MUSICAL_SCRIPT_QUEUE = "ai:musical_script"
 SONG_ADAPTATION_QUEUE = "ai:song_adaptation"
 ROLE_TRAINING_QUEUE = "ai:role_training"
-AI_QUEUES = [LESSON_PLAN_QUEUE, MUSICAL_SCRIPT_QUEUE, SONG_ADAPTATION_QUEUE, ROLE_TRAINING_QUEUE]
+CLASS_INTERACTION_QUEUE = "ai:class_interaction"
+AI_QUEUES = [
+    LESSON_PLAN_QUEUE,
+    MUSICAL_SCRIPT_QUEUE,
+    SONG_ADAPTATION_QUEUE,
+    ROLE_TRAINING_QUEUE,
+    CLASS_INTERACTION_QUEUE,
+]
 
 
 def _handle_shutdown(signum: int, _frame: object) -> None:
@@ -80,6 +87,9 @@ def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
         return
     if task_type == "role_training.generate":
         _process_role_training_task(payload, llm_client)
+        return
+    if task_type == "class_interaction.generate":
+        _process_class_interaction_task(payload, llm_client)
         return
     raise RuntimeError(f"未知任务类型：{task_type}")
 
@@ -272,6 +282,54 @@ def _process_role_training_task(payload: dict, llm_client: LLMClient) -> None:
             if role_training_plan is not None:
                 role_training_plan.status = "failed"
                 role_training_plan.updated_at = datetime.utcnow()
+            db.commit()
+            raise
+
+
+def _process_class_interaction_task(payload: dict, llm_client: LLMClient) -> None:
+    """处理单个课堂互动方案生成任务。"""
+
+    task_id = UUID(payload["task_id"])
+    class_interaction_id = UUID(payload["class_interaction_id"])
+
+    with SessionLocal() as db:
+        task = db.get(AiTask, task_id)
+        class_interaction = db.get(ClassInteraction, class_interaction_id)
+        if task is None or class_interaction is None:
+            raise RuntimeError("任务或课堂互动方案记录不存在，无法继续处理。")
+
+        task.status = "RUNNING"
+        task.progress = 20
+        task.started_at = datetime.utcnow()
+        class_interaction.status = "generating"
+        db.commit()
+
+        try:
+            content, model_info = llm_client.generate_class_interaction(task.input_snapshot)
+            class_interaction.content = content
+            class_interaction.title = content["title"]
+            class_interaction.raw_model_info = model_info
+            class_interaction.status = "generated"
+            class_interaction.updated_at = datetime.utcnow()
+            task.status = "SUCCESS"
+            task.progress = 100
+            task.result_id = class_interaction.id
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            print(f"课堂互动任务完成：task={task_id} class_interaction={class_interaction_id}", flush=True)
+        except Exception as exc:
+            db.rollback()
+            task = db.get(AiTask, task_id)
+            class_interaction = db.get(ClassInteraction, class_interaction_id)
+            if task is not None:
+                task.status = "FAILED"
+                task.progress = 100
+                task.error_code = type(exc).__name__
+                task.error_message = _safe_error_message(exc)
+                task.finished_at = datetime.utcnow()
+            if class_interaction is not None:
+                class_interaction.status = "failed"
+                class_interaction.updated_at = datetime.utcnow()
             db.commit()
             raise
 

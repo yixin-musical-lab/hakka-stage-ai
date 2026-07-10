@@ -1,4 +1,9 @@
-from pydantic import BaseModel, Field
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field, StringConstraints
+
+
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1200)]
 
 
 class LessonActivity(BaseModel):
@@ -147,3 +152,33 @@ class RoleTrainingContent(BaseModel):
     role_tasks: list[RoleTrainingItem]
     daily_plan: list[RoleDailyPlan]
     teacher_checkpoints: list[str]
+
+
+class TeacherScriptStep(BaseModel):
+    """老师可以在课堂现场逐项照着执行的一个步骤。"""
+
+    step_no: int = Field(ge=1)
+    name: str = Field(min_length=1)
+    duration_hint: str = Field(min_length=1)
+    teacher_action: str = Field(min_length=1)
+    teacher_cue: str = Field(min_length=1)
+    student_action: str = Field(min_length=1)
+
+
+class ClassInteractionContent(BaseModel):
+    """T05 大模型必须返回的结构化课堂互动方案。"""
+
+    title: str = Field(min_length=1)
+    teaching_phase: Literal["开场", "热身", "动作学习", "分组展示", "收束"]
+    interaction_goal: str = Field(min_length=2)
+    duration_minutes: int = Field(ge=1, le=45)
+    space_materials: str = Field(min_length=1)
+    game_rules: list[NonEmptyText] = Field(min_length=1)
+    teacher_script: list[TeacherScriptStep] = Field(min_length=1)
+    command_phrases: list[NonEmptyText] = Field(min_length=1)
+    student_actions: list[NonEmptyText] = Field(min_length=1)
+    grouping_method: str = Field(min_length=1)
+    encouragement_phrases: list[NonEmptyText] = Field(min_length=1)
+    safety_notes: list[NonEmptyText] = Field(min_length=1)
+    variations: list[NonEmptyText] = Field(min_length=1)
+    teacher_check_notes: list[NonEmptyText] = Field(min_length=1)

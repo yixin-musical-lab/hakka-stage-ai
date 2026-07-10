@@ -1,5 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { Shell } from "./components/layout/Shell";
+import { ClassInteractionDetailPage } from "./pages/ClassInteractionDetailPage";
+import { ClassInteractionGeneratePage } from "./pages/ClassInteractionGeneratePage";
+import { ClassInteractionListPage } from "./pages/ClassInteractionListPage";
 import { HealthPage } from "./pages/HealthPage";
 import { HomePage } from "./pages/HomePage";
 import { LessonPlanDetailPage } from "./pages/LessonPlanDetailPage";
@@ -28,6 +31,9 @@ export function App() {
           <Route path="/lesson-plans/generate" element={<LessonPlanGeneratePage />} />
           <Route path="/lesson-plans" element={<LessonPlanListPage />} />
           <Route path="/lesson-plans/:lessonPlanId" element={<LessonPlanDetailPage />} />
+          <Route path="/interactions/generate" element={<ClassInteractionGeneratePage />} />
+          <Route path="/interactions" element={<ClassInteractionListPage />} />
+          <Route path="/interactions/:classInteractionId" element={<ClassInteractionDetailPage />} />
           <Route path="/musical-scripts/generate" element={<MusicalScriptGeneratePage />} />
           <Route path="/musical-scripts" element={<MusicalScriptListPage />} />
           <Route path="/musical-scripts/:musicalScriptId" element={<MusicalScriptDetailPage />} />
