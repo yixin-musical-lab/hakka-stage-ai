@@ -1,3 +1,13 @@
+from app.schemas.class_interaction import (
+    ClassInteractionContent,
+    ClassInteractionGenerateRequest,
+    ClassInteractionGenerateResponse,
+    ClassInteractionResponse,
+    ClassInteractionSummaryResponse,
+    ClassInteractionUpdateRequest,
+    LessonInteractionPrefillResponse,
+    TeacherScriptStep,
+)
 from app.schemas.lesson_plan import (
     AiTaskResponse,
     LessonActivity,
@@ -66,9 +76,16 @@ from app.schemas.system import DependencyConfig, HealthResponse
 
 __all__ = [
     "AiTaskResponse",
+    "ClassInteractionContent",
+    "ClassInteractionGenerateRequest",
+    "ClassInteractionGenerateResponse",
+    "ClassInteractionResponse",
+    "ClassInteractionSummaryResponse",
+    "ClassInteractionUpdateRequest",
     "DependencyConfig",
     "HealthResponse",
     "LessonActivity",
+    "LessonInteractionPrefillResponse",
     "LlmModelOption",
     "LlmOptionsResponse",
     "LlmProviderOption",
@@ -123,4 +140,5 @@ __all__ = [
     "SongAdaptationSummaryResponse",
     "SongAdaptationUpdateRequest",
     "SongSection",
+    "TeacherScriptStep",
 ]

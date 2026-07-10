@@ -4,6 +4,7 @@ import { ModuleTile } from "../components/home/ModuleTile";
 import { Button } from "../components/ui/button";
 import {
   fetchHealth,
+  fetchClassInteractions,
   fetchLessonPlans,
   fetchMovementGuides,
   fetchMusicalScripts,
@@ -13,6 +14,7 @@ import {
 } from "../lib/api";
 import { futureModules } from "../lib/lessonPlanDefaults";
 import type {
+  ClassInteractionSummary,
   HealthResponse,
   LessonPlanSummary,
   MovementGuideSummary,
@@ -25,6 +27,7 @@ import type {
 export function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [lessonPlans, setLessonPlans] = useState<LessonPlanSummary[]>([]);
+  const [classInteractions, setClassInteractions] = useState<ClassInteractionSummary[]>([]);
   const [musicalScripts, setMusicalScripts] = useState<MusicalScriptSummary[]>([]);
   const [songAdaptations, setSongAdaptations] = useState<SongAdaptationSummary[]>([]);
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
@@ -35,6 +38,7 @@ export function HomePage() {
     const controller = new AbortController();
     void fetchHealth(controller.signal).then(setHealth).catch(() => setHealth(null));
     void fetchLessonPlans(controller.signal).then(setLessonPlans).catch(() => setLessonPlans([]));
+    void fetchClassInteractions(controller.signal).then(setClassInteractions).catch(() => setClassInteractions([]));
     void fetchMusicalScripts(controller.signal).then(setMusicalScripts).catch(() => setMusicalScripts([]));
     void fetchSongAdaptations(controller.signal).then(setSongAdaptations).catch(() => setSongAdaptations([]));
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
@@ -44,6 +48,7 @@ export function HomePage() {
   }, []);
 
   const latestPlan = lessonPlans[0];
+  const latestInteraction = classInteractions[0];
   const latestScript = musicalScripts[0];
   const latestSongAdaptation = songAdaptations[0];
   const latestMovementGuide = movementGuides[0];
@@ -54,6 +59,12 @@ export function HomePage() {
       .map((dependency) => dependency.name)
       .join(" / ") || "配置待检查";
   const workbenchItems = [
+    {
+      label: "课堂互动",
+      title: latestInteraction ? latestInteraction.title : "还没有保存的课堂互动方案",
+      to: latestInteraction ? `/interactions/${latestInteraction.id}` : "/interactions/generate",
+      action: latestInteraction ? "打开" : "创建",
+    },
     {
       label: "最近剧本",
       title: latestScript ? latestScript.title : "还没有保存的剧本",
@@ -93,6 +104,7 @@ export function HomePage() {
   ];
   const overviewItems = [
     { label: "教案", count: lessonPlans.length, to: "/lesson-plans" },
+    { label: "互动", count: classInteractions.length, to: "/interactions" },
     { label: "剧本", count: musicalScripts.length, to: "/musical-scripts" },
     { label: "唱段", count: songAdaptations.length, to: "/song-adaptations" },
     { label: "训练", count: roleTrainingPlans.length, to: "/role-training-plans" },
@@ -101,6 +113,7 @@ export function HomePage() {
   ];
   const totalAssets =
     lessonPlans.length +
+    classInteractions.length +
     musicalScripts.length +
     songAdaptations.length +
     roleTrainingPlans.length +
@@ -115,7 +128,7 @@ export function HomePage() {
             <p className="eyebrow">教学闭环 / 创编闭环</p>
             <h1>把备课、排练与复盘收进一个清楚的工作台</h1>
             <p className="intro">
-              先从课前教案生成跑通真实 AI 链路，再逐步接入课堂互动、示范材料、课后练习和歌舞剧创编模块。
+              从课前教案到课堂互动、示范材料、课后练习和歌舞剧创编，按老师的实际工作顺序集中管理。
             </p>
             <div className="hero-actions">
               <Button asChild>
@@ -193,6 +206,12 @@ export function HomePage() {
           status="已接入"
           description="填写课程条件，选择 DeepSeek 或百炼 Qwen 生成结构化教案，支持编辑保存和导出。"
           to="/lesson-plans/generate"
+        />
+        <ModuleTile
+          title="课堂互动"
+          status="已接入"
+          description="生成老师可现场照着执行的互动规则、逐步脚本、口令、学生动作、安全提醒和备用方案。"
+          to="/interactions/generate"
         />
         <ModuleTile
           title="教案资料库"

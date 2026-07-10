@@ -40,7 +40,7 @@ def _local_dev_cors_regex() -> str:
 
 app = FastAPI(
     title="客韵智演 API",
-    description="AI 歌舞剧教学与排演辅助系统的 FastAPI 服务，提供健康检查、教案生成、示范材料和课后练习等接口。",
+    description="AI 歌舞剧教学与排演辅助系统的 FastAPI 服务，提供教案生成、课堂互动、创编排练、示范材料和课后练习等接口。",
     version="0.1.0",
 )
 

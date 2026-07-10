@@ -137,6 +137,32 @@ class RoleTrainingPlan(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
+class ClassInteraction(Base):
+    """T05 老师可现场执行的课堂互动方案。"""
+
+    __tablename__ = "class_interactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    source_lesson_plan_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    title: Mapped[str] = mapped_column(String(200), default="待生成课堂互动方案")
+    status: Mapped[str] = mapped_column(String(40), default="draft")
+    course_theme: Mapped[str] = mapped_column(String(200))
+    age_group: Mapped[str] = mapped_column(String(80))
+    teaching_phase: Mapped[str] = mapped_column(String(40))
+    interaction_goal: Mapped[str] = mapped_column(Text)
+    class_style: Mapped[str] = mapped_column(String(120))
+    duration_minutes: Mapped[int] = mapped_column(Integer)
+    student_count: Mapped[int] = mapped_column(Integer)
+    space_materials: Mapped[str] = mapped_column(Text, default="")
+    lesson_context: Mapped[str] = mapped_column(Text, default="")
+    lesson_context_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    edited_content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    raw_model_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
 class AiTask(Base):
     """AI 异步任务状态。"""
 

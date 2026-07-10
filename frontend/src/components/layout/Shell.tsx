@@ -17,6 +17,7 @@ export function Shell({ children }: { children: ReactNode }) {
             首页
           </NavLink>
           <NavLink to="/lesson-plans/generate">教案生成</NavLink>
+          <NavLink to="/interactions">课堂互动</NavLink>
           <NavLink to="/musical-scripts/generate">剧本创编</NavLink>
           <NavLink to="/song-adaptations">唱段适配</NavLink>
           <NavLink to="/role-training-plans">分角色训练</NavLink>

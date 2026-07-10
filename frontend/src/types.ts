@@ -84,6 +84,96 @@ export type LessonPlanForm = {
   reasoning_level: "off" | "standard" | "enhanced";
 };
 
+export type TeachingPhase = "开场" | "热身" | "动作学习" | "分组展示" | "收束";
+
+export type TeacherScriptStep = {
+  step_no: number;
+  name: string;
+  duration_hint: string;
+  teacher_action: string;
+  teacher_cue: string;
+  student_action: string;
+};
+
+export type ClassInteractionContent = {
+  title: string;
+  teaching_phase: TeachingPhase;
+  interaction_goal: string;
+  duration_minutes: number;
+  space_materials: string;
+  game_rules: string[];
+  teacher_script: TeacherScriptStep[];
+  command_phrases: string[];
+  student_actions: string[];
+  grouping_method: string;
+  encouragement_phrases: string[];
+  safety_notes: string[];
+  variations: string[];
+  teacher_check_notes: string[];
+};
+
+export type ClassInteractionForm = {
+  course_theme: string;
+  age_group: string;
+  teaching_phase: TeachingPhase;
+  interaction_goal: string;
+  class_style: string;
+  duration_minutes: number;
+  student_count: number;
+  space_materials: string;
+  lesson_context: string;
+  source_lesson_plan_id: string | null;
+  llm_provider: "deepseek" | "qwen";
+  llm_model: string;
+  reasoning_level: "off" | "standard" | "enhanced";
+};
+
+export type ClassInteractionResponse = {
+  id: string;
+  source_lesson_plan_id: string | null;
+  title: string;
+  status: string;
+  course_theme: string;
+  age_group: string;
+  teaching_phase: TeachingPhase;
+  interaction_goal: string;
+  class_style: string;
+  duration_minutes: number;
+  student_count: number;
+  space_materials: string;
+  lesson_context: string;
+  content: ClassInteractionContent | null;
+  edited_content: ClassInteractionContent | null;
+  raw_model_info: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassInteractionSummary = {
+  id: string;
+  source_lesson_plan_id: string | null;
+  title: string;
+  status: string;
+  course_theme: string;
+  teaching_phase: TeachingPhase;
+  duration_minutes: number;
+  provider: string | null;
+  model: string | null;
+  reasoning_level: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LessonInteractionPrefill = {
+  source_lesson_plan_id: string;
+  course_theme: string;
+  age_group: string;
+  student_count: number;
+  class_style: string;
+  space_materials: string;
+  lesson_context: string;
+};
+
 export type ScriptDialogueLine = {
   role_name: string;
   line: string;
