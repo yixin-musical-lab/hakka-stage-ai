@@ -88,6 +88,41 @@ class SongAdaptation(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
+class MusicalFusionPlan(Base):
+    """M04 歌舞融合结构设计结果。
+
+    第一版只保存文本层面的唱、跳、队形和排练建议。引用 M03 时保留可空外键，
+    同时由 AiTask 保存生成快照，避免来源内容后续修改或删除后影响已确认结果。
+    """
+
+    __tablename__ = "musical_fusion_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("musical_projects.id"))
+    script_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("musical_scripts.id"))
+    song_adaptation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("song_adaptations.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(String(200), default="待生成歌舞融合建议")
+    status: Mapped[str] = mapped_column(String(40), default="draft")
+    source_mode: Mapped[str] = mapped_column(String(40), default="manual")
+    music_title: Mapped[str] = mapped_column(String(200), default="")
+    related_scene: Mapped[str] = mapped_column(String(240))
+    manual_music_structure: Mapped[str] = mapped_column(Text, default="")
+    manual_lyrics_summary: Mapped[str] = mapped_column(Text, default="")
+    actor_count: Mapped[int] = mapped_column(Integer)
+    stage_space: Mapped[str] = mapped_column(Text)
+    fusion_goal: Mapped[str] = mapped_column(Text)
+    additional_constraints: Mapped[str] = mapped_column(Text, default="")
+    content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    edited_content: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    raw_model_info: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
 class RoleTrainingPlan(Base):
     """M05 分角色训练计划生成结果。"""
 

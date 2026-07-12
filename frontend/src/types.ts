@@ -328,6 +328,94 @@ export type SongAdaptationSummary = {
   updated_at: string;
 };
 
+export type MusicalFusionSourceMode = "song_adaptation" | "manual";
+
+export type MusicalFusionSegment = {
+  segment_no: string;
+  story_content: string;
+  music_position: string;
+  singing_mode: string;
+  singing_roles: string[];
+  dance_form: string;
+  formation_suggestion: string;
+  emotion: string;
+  song_dance_relationship: string;
+  transition_note: string;
+  rehearsal_tip: string;
+  safety_note: string;
+  is_highlight: boolean;
+};
+
+export type MusicalFusionContent = {
+  title: string;
+  related_scene: string;
+  fusion_goal: string;
+  stage_space: string;
+  actor_count: number;
+  overall_design: string;
+  segments: MusicalFusionSegment[];
+  highlight_summary: string;
+  rehearsal_notes: string[];
+  director_review_notes: string[];
+};
+
+export type MusicalFusionForm = {
+  script_id: string;
+  source_mode: MusicalFusionSourceMode;
+  song_adaptation_id: string | null;
+  related_scene: string;
+  manual_music_title: string;
+  manual_music_structure: string;
+  manual_lyrics_summary: string;
+  actor_count: number;
+  stage_space: string;
+  fusion_goal: string;
+  additional_constraints: string;
+  llm_provider: "deepseek" | "qwen";
+  llm_model: string;
+  reasoning_level: "off" | "standard" | "enhanced";
+};
+
+export type MusicalFusionPlanResponse = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  song_adaptation_id: string | null;
+  title: string;
+  status: string;
+  source_mode: MusicalFusionSourceMode;
+  music_title: string;
+  related_scene: string;
+  manual_music_structure: string;
+  manual_lyrics_summary: string;
+  actor_count: number;
+  stage_space: string;
+  fusion_goal: string;
+  additional_constraints: string;
+  content: MusicalFusionContent | null;
+  edited_content: MusicalFusionContent | null;
+  raw_model_info: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MusicalFusionPlanSummary = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  song_adaptation_id: string | null;
+  title: string;
+  status: string;
+  source_mode: MusicalFusionSourceMode;
+  music_title: string;
+  related_scene: string;
+  provider: string | null;
+  model: string | null;
+  reasoning_level: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type RoleDailyPlan = {
   day: string;
   focus: string;
@@ -356,6 +444,7 @@ export type RoleTrainingContent = {
 
 export type RoleTrainingForm = {
   script_id: string;
+  fusion_plan_id: string | null;
   rehearsal_days: number;
   session_minutes: number;
   training_focus: string;

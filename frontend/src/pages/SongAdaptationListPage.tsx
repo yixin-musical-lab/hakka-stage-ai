@@ -63,7 +63,7 @@ export function SongAdaptationListPage() {
         description="查看、继续编辑并导出已生成的唱段结构和歌词改写建议。"
         action={
           <Button asChild>
-            <Link to="/musical-scripts">从剧本生成</Link>
+            <Link to="/song-adaptations/generate">新建唱段适配</Link>
           </Button>
         }
       />
@@ -71,7 +71,7 @@ export function SongAdaptationListPage() {
       {notice ? <p className="notice">{notice}</p> : null}
       {loading ? <EmptyState title="正在读取唱段适配" text="请稍候，系统正在从后端加载已保存内容。" /> : null}
       {!loading && songAdaptations.length === 0 ? (
-        <EmptyState title="还没有保存的唱段适配" text="先打开一份剧本，再基于剧本生成唱段适配建议。" />
+        <EmptyState title="还没有保存的唱段适配" text="进入独立生成页选择一份剧本，再创建唱段结构和歌词改写建议。" />
       ) : null}
 
       <section className="lesson-list" aria-label="唱段适配列表">

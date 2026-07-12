@@ -11,6 +11,9 @@ import { LessonPlanListPage } from "./pages/LessonPlanListPage";
 import { MovementGuideCreatePage } from "./pages/MovementGuideCreatePage";
 import { MovementGuideDetailPage } from "./pages/MovementGuideDetailPage";
 import { MovementGuideListPage } from "./pages/MovementGuideListPage";
+import { MusicalFusionGeneratePage } from "./pages/MusicalFusionGeneratePage";
+import { MusicalFusionPlanDetailPage } from "./pages/MusicalFusionPlanDetailPage";
+import { MusicalFusionPlanListPage } from "./pages/MusicalFusionPlanListPage";
 import { MusicalScriptDetailPage } from "./pages/MusicalScriptDetailPage";
 import { MusicalScriptGeneratePage } from "./pages/MusicalScriptGeneratePage";
 import { MusicalScriptListPage } from "./pages/MusicalScriptListPage";
@@ -18,8 +21,10 @@ import { PracticeSubmissionCreatePage } from "./pages/PracticeSubmissionCreatePa
 import { PracticeSubmissionDetailPage } from "./pages/PracticeSubmissionDetailPage";
 import { PracticeSubmissionListPage } from "./pages/PracticeSubmissionListPage";
 import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
+import { RoleTrainingGeneratePage } from "./pages/RoleTrainingGeneratePage";
 import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
 import { SongAdaptationDetailPage } from "./pages/SongAdaptationDetailPage";
+import { SongAdaptationGeneratePage } from "./pages/SongAdaptationGeneratePage";
 import { SongAdaptationListPage } from "./pages/SongAdaptationListPage";
 
 export function App() {
@@ -37,8 +42,13 @@ export function App() {
           <Route path="/musical-scripts/generate" element={<MusicalScriptGeneratePage />} />
           <Route path="/musical-scripts" element={<MusicalScriptListPage />} />
           <Route path="/musical-scripts/:musicalScriptId" element={<MusicalScriptDetailPage />} />
+          <Route path="/song-adaptations/generate" element={<SongAdaptationGeneratePage />} />
           <Route path="/song-adaptations" element={<SongAdaptationListPage />} />
           <Route path="/song-adaptations/:songAdaptationId" element={<SongAdaptationDetailPage />} />
+          <Route path="/musical-fusion-plans/generate" element={<MusicalFusionGeneratePage />} />
+          <Route path="/musical-fusion-plans" element={<MusicalFusionPlanListPage />} />
+          <Route path="/musical-fusion-plans/:musicalFusionPlanId" element={<MusicalFusionPlanDetailPage />} />
+          <Route path="/role-training-plans/generate" element={<RoleTrainingGeneratePage />} />
           <Route path="/role-training-plans" element={<RoleTrainingPlanListPage />} />
           <Route path="/role-training-plans/:roleTrainingPlanId" element={<RoleTrainingPlanDetailPage />} />
           <Route path="/movement-guides/new" element={<MovementGuideCreatePage />} />

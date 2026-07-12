@@ -1,8 +1,11 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints, model_validator
+
+
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1600)]
 
 
 class MusicalScriptGenerateRequest(BaseModel):
@@ -220,10 +223,150 @@ class SongAdaptationUpdateRequest(BaseModel):
     edited_content: SongAdaptationContent
 
 
+class MusicalFusionGenerateRequest(BaseModel):
+    """M04 歌舞融合结构建议生成请求。"""
+
+    script_id: UUID = Field(..., description="要引用的歌舞剧剧本 ID")
+    source_mode: Literal["song_adaptation", "manual"] = Field(
+        "song_adaptation",
+        description="唱段来源：引用已保存 M03，或手工填写音乐段落",
+    )
+    song_adaptation_id: UUID | None = Field(None, description="引用的 M03 唱段适配 ID")
+    related_scene: str = Field(..., min_length=1, max_length=240, description="本次歌舞融合覆盖的剧情段落")
+    manual_music_title: str = Field("", max_length=200, description="手工模式下的音乐名称或来源")
+    manual_music_structure: str = Field("", max_length=5000, description="手工整理的音乐段落表")
+    manual_lyrics_summary: str = Field("", max_length=4000, description="手工模式下的歌词或唱段摘要")
+    actor_count: int = Field(..., ge=1, le=120, description="参与本段排演的演员人数")
+    stage_space: str = Field(..., min_length=1, max_length=1200, description="教室、小舞台等实际场地条件")
+    fusion_goal: str = Field(..., min_length=2, max_length=1200, description="剧情、演唱和舞蹈的融合目标")
+    additional_constraints: str = Field("", max_length=1600, description="年龄、安全、道具和排练时长等限制")
+    llm_provider: Literal["deepseek", "qwen"] | None = Field(None, description="大模型供应商")
+    llm_model: str | None = Field(None, min_length=1, max_length=120, description="本次生成使用的模型")
+    reasoning_level: Literal["off", "standard", "enhanced"] | None = Field(None, description="本次生成使用的推理强度")
+
+    @model_validator(mode="after")
+    def validate_source_fields(self) -> Self:
+        """确保 M03 和手工来源互斥，避免生成快照来源不明确。"""
+
+        manual_values = [self.manual_music_title, self.manual_music_structure, self.manual_lyrics_summary]
+        if self.source_mode == "song_adaptation":
+            if self.song_adaptation_id is None:
+                raise ValueError("引用 M03 时必须提供 song_adaptation_id。")
+            if any(value.strip() for value in manual_values):
+                raise ValueError("引用 M03 时不能同时填写手工音乐段落字段。")
+        else:
+            if self.song_adaptation_id is not None:
+                raise ValueError("手工模式不能同时提供 song_adaptation_id。")
+            if not self.manual_music_structure.strip():
+                raise ValueError("手工模式必须填写 manual_music_structure。")
+        return self
+
+
+class MusicalFusionGenerateResponse(BaseModel):
+    """创建 M04 异步任务后的响应。"""
+
+    task_id: UUID
+    musical_fusion_plan_id: UUID
+    status: str
+    message: str
+
+
+class MusicalFusionSegment(BaseModel):
+    """歌舞融合结构表中的一个可排练段落。"""
+
+    segment_no: str = Field(..., min_length=1, max_length=40)
+    story_content: str = Field(..., min_length=1, max_length=1600)
+    music_position: str = Field(..., min_length=1, max_length=240)
+    singing_mode: str = Field(..., min_length=1, max_length=240)
+    singing_roles: list[NonEmptyText] = Field(..., min_length=1)
+    dance_form: str = Field(..., min_length=1, max_length=1200)
+    formation_suggestion: str = Field(..., min_length=1, max_length=1200)
+    emotion: str = Field(..., min_length=1, max_length=240)
+    song_dance_relationship: str = Field(..., min_length=1, max_length=1600)
+    transition_note: str = Field(..., min_length=1, max_length=1600)
+    rehearsal_tip: str = Field(..., min_length=1, max_length=1600)
+    safety_note: str = Field(..., min_length=1, max_length=1200)
+    is_highlight: bool
+
+
+class MusicalFusionContent(BaseModel):
+    """M04 结构化歌舞融合建议正文。"""
+
+    title: str = Field(..., min_length=1, max_length=200)
+    related_scene: str = Field(..., min_length=1, max_length=240)
+    fusion_goal: str = Field(..., min_length=2, max_length=1200)
+    stage_space: str = Field(..., min_length=1, max_length=1200)
+    actor_count: int = Field(..., ge=1, le=120)
+    overall_design: str = Field(..., min_length=1, max_length=2400)
+    segments: list[MusicalFusionSegment] = Field(..., min_length=2)
+    highlight_summary: str = Field(..., min_length=1, max_length=1600)
+    rehearsal_notes: list[NonEmptyText] = Field(..., min_length=1)
+    director_review_notes: list[NonEmptyText] = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def ensure_highlight_segment(self) -> Self:
+        """验收要求至少标记一个高潮或重点段落。"""
+
+        if not any(segment.is_highlight for segment in self.segments):
+            raise ValueError("歌舞融合结果必须至少标记一个高潮段落。")
+        return self
+
+
+class MusicalFusionPlanResponse(BaseModel):
+    """歌舞融合方案详情响应。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    song_adaptation_id: UUID | None
+    title: str
+    status: str
+    source_mode: str
+    music_title: str
+    related_scene: str
+    manual_music_structure: str
+    manual_lyrics_summary: str
+    actor_count: int
+    stage_space: str
+    fusion_goal: str
+    additional_constraints: str
+    content: MusicalFusionContent | None
+    edited_content: MusicalFusionContent | None
+    raw_model_info: dict | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MusicalFusionPlanSummaryResponse(BaseModel):
+    """歌舞融合方案列表摘要。"""
+
+    id: UUID
+    project_id: UUID
+    script_id: UUID
+    song_adaptation_id: UUID | None
+    title: str
+    status: str
+    source_mode: str
+    music_title: str
+    related_scene: str
+    provider: str | None
+    model: str | None
+    reasoning_level: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MusicalFusionPlanUpdateRequest(BaseModel):
+    """保存编导编辑后的歌舞融合方案。"""
+
+    edited_content: MusicalFusionContent
+
+
 class RoleTrainingGenerateRequest(BaseModel):
     """M05 分角色训练计划生成请求。"""
 
     script_id: UUID = Field(..., description="要引用的剧本 ID")
+    fusion_plan_id: UUID | None = Field(None, description="可选的 M04 歌舞融合方案 ID")
     rehearsal_days: int = Field(..., ge=1, le=60, description="排练周期，单位天")
     session_minutes: int = Field(..., ge=10, le=240, description="每次排练时长，单位分钟")
     training_focus: str = Field(..., min_length=1, max_length=1200, description="训练重点，例如：台词、唱段、舞蹈、走位")

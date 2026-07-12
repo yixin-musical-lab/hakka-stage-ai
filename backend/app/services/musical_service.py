@@ -2,8 +2,9 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import AiTask, MusicalFusionPlan, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.schemas import (
+    MusicalFusionPlanSummaryResponse,
     MusicalScriptGenerateRequest,
     MusicalScriptSummaryResponse,
     RoleTrainingPlanSummaryResponse,
@@ -17,7 +18,9 @@ def build_project_title(request: MusicalScriptGenerateRequest) -> str:
     return f"{request.theme} · {request.duration_minutes}分钟歌舞剧"
 
 
-def model_info(record: MusicalScript | RoleTrainingPlan | SongAdaptation) -> tuple[str | None, str | None]:
+def model_info(
+    record: MusicalScript | MusicalFusionPlan | RoleTrainingPlan | SongAdaptation,
+) -> tuple[str | None, str | None]:
     """从模型信息里提取供应商和模型名。"""
 
     raw_model_info = record.raw_model_info or {}
@@ -29,7 +32,7 @@ def model_info(record: MusicalScript | RoleTrainingPlan | SongAdaptation) -> tup
     )
 
 
-def reasoning_level(record: MusicalScript | RoleTrainingPlan | SongAdaptation) -> str | None:
+def reasoning_level(record: MusicalScript | MusicalFusionPlan | RoleTrainingPlan | SongAdaptation) -> str | None:
     """从模型信息里提取本次生成的推理强度。"""
 
     raw_model_info = record.raw_model_info or {}
@@ -92,6 +95,28 @@ def song_adaptation_summary(song_adaptation: SongAdaptation) -> SongAdaptationSu
     )
 
 
+def musical_fusion_summary(musical_fusion_plan: MusicalFusionPlan) -> MusicalFusionPlanSummaryResponse:
+    """把 ORM 歌舞融合方案转换成列表摘要。"""
+
+    provider, model = model_info(musical_fusion_plan)
+    return MusicalFusionPlanSummaryResponse(
+        id=musical_fusion_plan.id,
+        project_id=musical_fusion_plan.project_id,
+        script_id=musical_fusion_plan.script_id,
+        song_adaptation_id=musical_fusion_plan.song_adaptation_id,
+        title=musical_fusion_plan.title,
+        status=musical_fusion_plan.status,
+        source_mode=musical_fusion_plan.source_mode,
+        music_title=musical_fusion_plan.music_title,
+        related_scene=musical_fusion_plan.related_scene,
+        provider=provider,
+        model=model,
+        reasoning_level=reasoning_level(musical_fusion_plan),
+        created_at=musical_fusion_plan.created_at,
+        updated_at=musical_fusion_plan.updated_at,
+    )
+
+
 def render_musical_script_markdown(musical_script: MusicalScript) -> str | None:
     """把结构化剧本渲染成 Markdown 文本。"""
 
@@ -141,6 +166,41 @@ def render_song_adaptation_markdown(song_adaptation: SongAdaptation) -> str | No
     )
 
 
+def render_musical_fusion_markdown(musical_fusion_plan: MusicalFusionPlan) -> str | None:
+    """把结构化歌舞融合方案渲染成编导可复核的 Markdown。"""
+
+    content = musical_fusion_plan.edited_content or musical_fusion_plan.content
+    if not content:
+        return None
+
+    raw_model_info = musical_fusion_plan.raw_model_info or {}
+    provider = raw_model_info.get("provider", "unknown")
+    model = raw_model_info.get("model", "unknown")
+    generated_at = raw_model_info.get("generated_at", "unknown")
+    overview = "\n".join(
+        [
+            f"- 关联剧情：{content.get('related_scene', musical_fusion_plan.related_scene)}",
+            f"- 音乐来源：{musical_fusion_plan.music_title or '手工音乐段落'}",
+            f"- 演员人数：{content.get('actor_count', musical_fusion_plan.actor_count)}",
+            f"- 舞台空间：{content.get('stage_space', musical_fusion_plan.stage_space)}",
+            f"- 融合目标：{content.get('fusion_goal', musical_fusion_plan.fusion_goal)}",
+        ]
+    )
+
+    return "\n\n".join(
+        [
+            f"# {content.get('title', musical_fusion_plan.title)}",
+            "## 基础信息\n" + overview,
+            "## 整体设计\n" + str(content.get("overall_design", "")),
+            "## 歌舞融合结构表\n" + _musical_fusion_segments_markdown(content.get("segments", [])),
+            "## 高潮设计\n" + str(content.get("highlight_summary", "")),
+            "## 排练建议\n" + _markdown_list(content.get("rehearsal_notes", [])),
+            "## 编导复核提醒\n" + _markdown_list(content.get("director_review_notes", [])),
+            f"---\n\n模型信息：{provider} / {model} / {generated_at}",
+        ]
+    )
+
+
 def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str | None:
     """把结构化分角色训练计划渲染成 Markdown 文本。"""
 
@@ -166,7 +226,7 @@ def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str |
 
 
 def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID) -> bool:
-    """删除剧本、基于该剧本的唱段和训练计划，并清理无人引用的剧目。"""
+    """删除剧本及其唱段、歌舞融合、训练计划和关联 AI 任务。"""
 
     musical_script = db.get(MusicalScript, musical_script_id)
     if musical_script is None:
@@ -179,6 +239,13 @@ def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID
     ]
     if related_song_adaptation_ids:
         db.query(AiTask).filter(AiTask.business_id.in_(related_song_adaptation_ids)).delete(synchronize_session=False)
+    related_fusion_ids = [
+        row[0] for row in db.query(MusicalFusionPlan.id).filter(MusicalFusionPlan.script_id == musical_script.id).all()
+    ]
+    if related_fusion_ids:
+        db.query(AiTask).filter(AiTask.business_id.in_(related_fusion_ids)).delete(synchronize_session=False)
+        db.query(MusicalFusionPlan).filter(MusicalFusionPlan.id.in_(related_fusion_ids)).delete(synchronize_session=False)
+    if related_song_adaptation_ids:
         db.query(SongAdaptation).filter(SongAdaptation.id.in_(related_song_adaptation_ids)).delete(synchronize_session=False)
     related_training_ids = [
         row[0] for row in db.query(RoleTrainingPlan.id).filter(RoleTrainingPlan.script_id == musical_script.id).all()
@@ -202,7 +269,28 @@ def delete_song_adaptation_with_related_data(db: Session, song_adaptation_id: UU
 
     project_id = song_adaptation.project_id
     db.query(AiTask).filter(AiTask.business_id == song_adaptation.id).delete(synchronize_session=False)
+    # M04 已保存完整任务快照，删除 M03 时只解除来源关联，不删除已经确认的歌舞融合方案。
+    db.query(MusicalFusionPlan).filter(MusicalFusionPlan.song_adaptation_id == song_adaptation.id).update(
+        {MusicalFusionPlan.song_adaptation_id: None},
+        synchronize_session=False,
+    )
     db.query(SongAdaptation).filter(SongAdaptation.id == song_adaptation_id).delete(synchronize_session=False)
+    db.flush()
+    _delete_project_if_unused(db, project_id)
+    db.commit()
+    return True
+
+
+def delete_musical_fusion_with_related_data(db: Session, musical_fusion_plan_id: UUID) -> bool:
+    """删除歌舞融合方案及关联 AI 任务，不删除剧本或唱段适配。"""
+
+    musical_fusion_plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+    if musical_fusion_plan is None:
+        return False
+
+    project_id = musical_fusion_plan.project_id
+    db.query(AiTask).filter(AiTask.business_id == musical_fusion_plan.id).delete(synchronize_session=False)
+    db.query(MusicalFusionPlan).filter(MusicalFusionPlan.id == musical_fusion_plan_id).delete(synchronize_session=False)
     db.flush()
     _delete_project_if_unused(db, project_id)
     db.commit()
@@ -226,12 +314,13 @@ def delete_role_training_with_related_data(db: Session, role_training_plan_id: U
 
 
 def _delete_project_if_unused(db: Session, project_id: UUID) -> None:
-    """当剧目没有剧本、唱段和训练计划引用时清理剧目草稿。"""
+    """当剧目没有剧本、唱段、歌舞融合和训练计划引用时清理剧目草稿。"""
 
     script_count = db.query(MusicalScript).filter(MusicalScript.project_id == project_id).count()
     song_adaptation_count = db.query(SongAdaptation).filter(SongAdaptation.project_id == project_id).count()
+    fusion_count = db.query(MusicalFusionPlan).filter(MusicalFusionPlan.project_id == project_id).count()
     training_count = db.query(RoleTrainingPlan).filter(RoleTrainingPlan.project_id == project_id).count()
-    if script_count == 0 and song_adaptation_count == 0 and training_count == 0:
+    if script_count == 0 and song_adaptation_count == 0 and fusion_count == 0 and training_count == 0:
         project = db.get(MusicalProject, project_id)
         if project is not None:
             db.query(MusicalProject).filter(MusicalProject.id == project_id).delete(synchronize_session=False)
@@ -338,6 +427,35 @@ def _dance_interludes_markdown(items: list[dict]) -> str:
     return "\n".join(
         f"- **{item.get('music_position', '未标注位置')}**：{item.get('suggestion', '')}" for item in items
     )
+
+
+def _musical_fusion_segments_markdown(items: list[dict]) -> str:
+    """把歌舞融合段落渲染成紧凑的 Markdown 表格。"""
+
+    if not items:
+        return "- 暂无"
+    lines = [
+        "| 段落 | 剧情 / 音乐 | 演唱 | 舞蹈 / 队形 | 衔接与排练 | 重点 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for item in items:
+        story_music = f"{item.get('story_content', '')}<br>{item.get('music_position', '')}"
+        singing = f"{item.get('singing_mode', '')}<br>{'、'.join(item.get('singing_roles', []))}"
+        dance = f"{item.get('dance_form', '')}<br>{item.get('formation_suggestion', '')}"
+        rehearsal = (
+            f"{item.get('song_dance_relationship', '')}<br>{item.get('transition_note', '')}<br>"
+            f"排练：{item.get('rehearsal_tip', '')}<br>安全：{item.get('safety_note', '')}"
+        )
+        highlight = "高潮" if item.get("is_highlight") else "普通段落"
+        cells = [item.get("segment_no", "未编号"), story_music, singing, dance, rehearsal, highlight]
+        lines.append("| " + " | ".join(_escape_markdown_cell(str(cell)) for cell in cells) + " |")
+    return "\n".join(lines)
+
+
+def _escape_markdown_cell(value: str) -> str:
+    """转义 Markdown 表格分隔符并把换行转换成 HTML 换行。"""
+
+    return value.replace("|", "\\|").replace("\r\n", "<br>").replace("\n", "<br>")
 
 
 def _role_tasks_markdown(items: list[dict]) -> str:

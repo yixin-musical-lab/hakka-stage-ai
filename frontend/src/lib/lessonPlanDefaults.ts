@@ -2,6 +2,8 @@ import type {
   ClassInteractionForm,
   LessonPlanForm,
   MovementGuideForm,
+  MusicalFusionForm,
+  MusicalScriptContent,
   MusicalScriptForm,
   PracticeSubmissionForm,
   RoleTrainingForm,
@@ -24,7 +26,6 @@ export const initialLessonPlanForm: LessonPlanForm = {
 };
 
 export const futureModules = [
-  "歌舞融合建议",
   "曲目队形编排",
   "排练复盘",
 ];
@@ -87,6 +88,7 @@ export const initialMusicalScriptForm: MusicalScriptForm = {
 
 export const initialRoleTrainingForm = (scriptId: string): RoleTrainingForm => ({
   script_id: scriptId,
+  fusion_plan_id: null,
   rehearsal_days: 7,
   session_minutes: 60,
   training_focus: "台词、唱段、舞蹈、走位、群演同步和终场造型。",
@@ -105,6 +107,53 @@ export const initialSongAdaptationForm = (scriptId: string): SongAdaptationForm 
   adaptation_goal: "让唱段承接剧情，表现孩子们从好奇到一起唱响客家山歌的过程。",
   singing_roles: "主角、奶奶、旁白、全体、领舞",
   rewrite_intensity: "light_rewrite",
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+});
+
+/**
+ * 使用当前剧本确认稿为 M03 填充剧情和角色信息。
+ * 独立生成页与其他入口共用该规则，避免默认值在不同页面逐渐漂移。
+ */
+export function buildSongAdaptationFormFromScript(
+  scriptId: string,
+  content: MusicalScriptContent | null,
+): SongAdaptationForm {
+  const form = initialSongAdaptationForm(scriptId);
+  if (!content) {
+    return form;
+  }
+
+  const firstAct = content.acts[0];
+  const characterNames = content.characters.map((character) => character.name).join("、");
+  return {
+    ...form,
+    related_scene: firstAct?.name ?? form.related_scene,
+    adaptation_goal: firstAct
+      ? `让唱段承接“${firstAct.name}”的剧情，表达${firstAct.emotion || "角色情绪"}，并为后续舞蹈留出清楚位置。`
+      : form.adaptation_goal,
+    singing_roles: characterNames || form.singing_roles,
+  };
+}
+
+export const initialMusicalFusionForm = (
+  scriptId: string,
+  songAdaptationId: string | null = null,
+): MusicalFusionForm => ({
+  script_id: scriptId,
+  source_mode: songAdaptationId ? "song_adaptation" : "manual",
+  song_adaptation_id: songAdaptationId,
+  related_scene: "第二幕：一起排练",
+  manual_music_title: songAdaptationId ? "" : "客家山歌类曲目",
+  manual_music_structure: songAdaptationId
+    ? ""
+    : "0:00-0:18 前奏：旁白铺垫。\n0:18-0:55 主歌：主角领唱。\n0:55-1:25 副歌：全员齐唱和群舞。\n1:25-1:45 间奏：队形变化。",
+  manual_lyrics_summary: songAdaptationId ? "" : "主角从好奇到理解客家山歌，最后和全体演员一起齐唱。",
+  actor_count: 12,
+  stage_space: "普通教室或小舞台，表演区约 6 米 × 4 米，不使用升降设备。",
+  fusion_goal: "让剧情从旁白铺垫自然进入主角领唱，再推进到全员齐唱和群舞高潮。",
+  additional_constraints: "适合 8-12 岁学生；避免高难度跳跃、快速连续转圈和交叉奔跑。",
   llm_provider: "deepseek",
   llm_model: "deepseek-v4-flash",
   reasoning_level: "standard",

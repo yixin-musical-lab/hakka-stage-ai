@@ -10,18 +10,20 @@ import redis
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.llm_client import LLMClient
-from app.models import AiTask, ClassInteraction, LessonPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import AiTask, ClassInteraction, LessonPlan, MusicalFusionPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
 
 running = True
 LESSON_PLAN_QUEUE = "ai:lesson_plan"
 MUSICAL_SCRIPT_QUEUE = "ai:musical_script"
 SONG_ADAPTATION_QUEUE = "ai:song_adaptation"
+MUSICAL_FUSION_QUEUE = "ai:musical_fusion"
 ROLE_TRAINING_QUEUE = "ai:role_training"
 CLASS_INTERACTION_QUEUE = "ai:class_interaction"
 AI_QUEUES = [
     LESSON_PLAN_QUEUE,
     MUSICAL_SCRIPT_QUEUE,
     SONG_ADAPTATION_QUEUE,
+    MUSICAL_FUSION_QUEUE,
     ROLE_TRAINING_QUEUE,
     CLASS_INTERACTION_QUEUE,
 ]
@@ -84,6 +86,9 @@ def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
         return
     if task_type == "song_adaptation.generate":
         _process_song_adaptation_task(payload, llm_client)
+        return
+    if task_type == "musical_fusion.generate":
+        _process_musical_fusion_task(payload, llm_client)
         return
     if task_type == "role_training.generate":
         _process_role_training_task(payload, llm_client)
@@ -234,6 +239,54 @@ def _process_song_adaptation_task(payload: dict, llm_client: LLMClient) -> None:
             if song_adaptation is not None:
                 song_adaptation.status = "failed"
                 song_adaptation.updated_at = datetime.utcnow()
+            db.commit()
+            raise
+
+
+def _process_musical_fusion_task(payload: dict, llm_client: LLMClient) -> None:
+    """处理单个 M04 歌舞融合结构生成任务。"""
+
+    task_id = UUID(payload["task_id"])
+    musical_fusion_plan_id = UUID(payload["musical_fusion_plan_id"])
+
+    with SessionLocal() as db:
+        task = db.get(AiTask, task_id)
+        musical_fusion_plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+        if task is None or musical_fusion_plan is None:
+            raise RuntimeError("任务或歌舞融合方案记录不存在，无法继续处理。")
+
+        task.status = "RUNNING"
+        task.progress = 20
+        task.started_at = datetime.utcnow()
+        musical_fusion_plan.status = "generating"
+        db.commit()
+
+        try:
+            content, model_info = llm_client.generate_musical_fusion(task.input_snapshot)
+            musical_fusion_plan.content = content
+            musical_fusion_plan.title = content["title"]
+            musical_fusion_plan.raw_model_info = model_info
+            musical_fusion_plan.status = "generated"
+            musical_fusion_plan.updated_at = datetime.utcnow()
+            task.status = "SUCCESS"
+            task.progress = 100
+            task.result_id = musical_fusion_plan.id
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            print(f"歌舞融合任务完成：task={task_id} musical_fusion_plan={musical_fusion_plan_id}", flush=True)
+        except Exception as exc:
+            db.rollback()
+            task = db.get(AiTask, task_id)
+            musical_fusion_plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+            if task is not None:
+                task.status = "FAILED"
+                task.progress = 100
+                task.error_code = type(exc).__name__
+                task.error_message = _safe_error_message(exc)
+                task.finished_at = datetime.utcnow()
+            if musical_fusion_plan is not None:
+                musical_fusion_plan.status = "failed"
+                musical_fusion_plan.updated_at = datetime.utcnow()
             db.commit()
             raise
 

@@ -372,6 +372,7 @@ flowchart LR
 | `musical_projects` | 歌舞剧项目 |
 | `musical_scripts` | 剧本结构、人物、台词 |
 | `song_adaptations` | 唱段结构、歌词改写版本和演唱分配 |
+| `musical_fusion_plans` | M04 歌舞融合结构、队形衔接和排练建议 |
 | `role_training_plans` | 分角色训练计划 |
 | `rehearsal_reviews` | 排练复盘报告 |
 | `ai_tasks` | AI 异步任务状态 |
@@ -394,6 +395,7 @@ flowchart LR
 | `/api/musical-projects` | POST / GET | 创建和查询剧目 |
 | `/api/musical-scripts/generate` | POST | 生成剧本结构 |
 | `/api/song-adaptations/generate` | POST | 生成唱段适配和歌词改写建议 |
+| `/api/musical-fusion-plans/generate` | POST | 生成歌舞融合结构建议 |
 | `/api/role-training/generate` | POST | 生成分角色训练计划 |
 | `/api/rehearsal-reviews/generate` | POST | 生成排练复盘 |
 | `/api/exports/{type}/{id}` | GET | 导出 Markdown 或 Word |
@@ -481,8 +483,8 @@ prompts
 ├── practice_report.md
 ├── musical_script.md
 ├── song_adaptation.md
+├── musical_fusion_v1.md
 ├── role_training.md
-├── dance_music_fusion.md
 └── rehearsal_review.md
 ```
 
@@ -913,8 +915,8 @@ M03 的目标不是让系统自动作曲或自动完成专业编曲，而是帮�
 
 实现方式：
 
-1. 前端在剧本详情页提供“生成唱段适配”入口，默认带入剧名、剧情段落和角色列表。
-2. 用户粘贴歌词，填写音乐段落表和目标表达；第一版不强制上传音频。
+1. 剧本详情页只保留 M03 创编流程入口和已有结果状态；点击后先保存剧本确认稿，再进入独立唱段适配生成页。
+2. 独立生成页通过 `script_id` 默认带入剧名、剧情段落和角色列表；用户粘贴歌词，填写音乐段落表和目标表达，第一版不强制上传音频。
 3. API 服务创建 `song_adaptations` 记录和 `song_adaptation.generate` 异步任务。
 4. Python Worker 使用 `song_adaptation.md` 提示词调用通用文本大模型，输出结构化 JSON。
 5. 后端使用 Pydantic 校验字段，校验失败时可走一次 JSON 修复或返回明确错误。
@@ -964,17 +966,20 @@ M03 的目标不是让系统自动作曲或自动完成专业编曲，而是帮�
 
 实现方式：
 
-API 服务读取剧本结构并创建生成任务，Python Worker 生成角色训练表。前端用表格展示，每个角色一行，支持老师修改。
+剧本详情页只展示 M05 入口、已有计划数量和最新状态，不再内嵌完整训练表单。独立生成页通过 `script_id` 读取剧本，并可通过可选的 `fusion_plan_id` 带入 M04 的演唱角色、舞蹈形式、队形、高潮和排练提示；没有 M04 时仍可仅使用剧本生成基础训练计划。API 服务读取当前输入并创建生成任务，Python Worker 生成角色训练表；前端在详情页按角色展示并支持老师修改。
 
 ### 7.8 歌舞融合建议
+
+M04 的目标是把已经确认的剧情段落、唱段结构和可用舞台条件整理成编导可继续修改的“唱、跳、走位、队形和衔接”结构表。第一版只提供创编与排练建议，不自动生成专业编舞动作，也不分析音频、曲谱或视频。
 
 输入内容：
 
 - 剧本段落。
-- M03 生成的唱段适配结果。
-- 音乐名称、歌词或人工音乐段落表。
+- M03 生成并保存的唱段适配结果，优先读取编导或音乐负责人编辑确认稿。
+- 若未生成 M03，则手工填写音乐名称、歌词摘要和音乐段落表。
 - 表演人数。
 - 舞台空间描述。
+- 本次歌舞融合目标和安全、道具、排练时长等限制。
 
 输出内容：
 
@@ -982,11 +987,53 @@ API 服务读取剧本结构并创建生成任务，Python Worker 生成角色�
 - 哪些地方适合独白加慢动作。
 - 哪些地方适合群舞高潮。
 - 哪些地方适合间奏舞蹈。
-- 每段情绪和动作建议。
+- 每段演唱角色、情绪、队形、衔接、排练和安全建议。
+- 至少一个明确标记的高潮或重点段落。
 
 实现方式：
 
-第一版不做自动编舞，只输出结构化建议表，由编导老师确认。M04 优先读取 M03 保存的唱段结构，若用户尚未生成 M03，也允许手动填写音乐段落和歌词摘要作为降级输入。
+1. 前端提供独立的歌舞融合生成页，可从剧本详情或唱段适配详情带入来源 ID。
+2. 用户选择“引用 M03”或“手工音乐段落”两种互斥来源模式。
+3. API 服务校验剧本和 M03 的归属关系，优先读取 `edited_content`，并创建 `musical_fusion_plans` 记录和 `musical_fusion.generate` 异步任务。
+4. 任务快照保存当前剧本、唱段和排演条件，Worker 不在生成过程中重新读取可能已被修改的来源内容。
+5. Worker 读取 `musical_fusion_v1.md`，调用大模型生成结构化 JSON，并通过 Pydantic 校验段落、高潮、排练提示和复核提醒。
+6. 前端轮询 `AiTask`，生成成功后进入详情页；编导可编辑、保存、再次查看并导出 Markdown。
+7. M04 详情页保存编辑稿后直接进入独立的 M05 生成页，并通过 `fusion_plan_id` 将本方案作为走位、队形和舞蹈训练上下文。
+
+第一版结构化结果建议如下：
+
+```json
+{
+  "title": "第二幕歌舞融合结构建议",
+  "related_scene": "第二幕：孩子们学习客家山歌",
+  "fusion_goal": "从好奇过渡到全员齐唱群舞高潮",
+  "stage_space": "普通教室或小舞台",
+  "actor_count": 12,
+  "overall_design": "先用旁白和轻律动铺垫，再逐步增加齐唱、队形变化和群舞强度。",
+  "segments": [
+    {
+      "segment_no": "A1",
+      "story_content": "旁白介绍山歌来源",
+      "music_position": "0:00-0:18 前奏",
+      "singing_mode": "不演唱，旁白衔接",
+      "singing_roles": ["旁白"],
+      "dance_form": "背景轻律动",
+      "formation_suggestion": "半圆分散站位",
+      "emotion": "温柔、好奇",
+      "song_dance_relationship": "动作只承担氛围铺垫，不抢旁白信息。",
+      "transition_note": "旁白结束后主角进入主歌站位。",
+      "rehearsal_tip": "先无音乐排走位，再加入前奏。",
+      "safety_note": "演员之间保持一臂距离。",
+      "is_highlight": false
+    }
+  ],
+  "highlight_summary": "副歌齐唱时完成全员群舞高潮。",
+  "rehearsal_notes": ["先分段排练，再连接完整音乐。"],
+  "director_review_notes": ["编导需要确认队形是否适合实际场地。"]
+}
+```
+
+保存后的结果必须至少包含两个段落和一个高潮标记。M04 记录可以引用 M03，但生成结果以任务快照为准；后续修改或删除 M03 不应悄悄改变已经确认的 M04 内容。
 
 ### 7.9 排练复盘报告
 

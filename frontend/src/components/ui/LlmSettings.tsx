@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Field, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import {
   Select,
@@ -32,14 +33,18 @@ export function LlmSettings({
   onModelChange: (modelId: string) => void;
   onReasoningLevelChange: (reasoningLevel: ReasoningLevelId) => void;
 }) {
+  const providerId = useId();
+  const modelId = useId();
+  const reasoningLabelId = useId();
+
   return (
     <FieldSet className="edit-section model-picker">
       <FieldLegend>模型设置</FieldLegend>
       <div className="field-grid">
         <Field className="field">
-          <FieldLabel>模型供应商</FieldLabel>
+          <FieldLabel htmlFor={providerId}>模型供应商</FieldLabel>
           <Select value={provider} onValueChange={(value) => onProviderChange(value as LlmProviderId)}>
-            <SelectTrigger className="w-full bg-card">
+            <SelectTrigger id={providerId} className="w-full bg-card">
               <SelectValue placeholder="选择模型供应商" />
             </SelectTrigger>
             <SelectContent>
@@ -56,9 +61,9 @@ export function LlmSettings({
         </Field>
 
         <Field className="field">
-          <FieldLabel>模型</FieldLabel>
+          <FieldLabel htmlFor={modelId}>模型</FieldLabel>
           <Select value={model} onValueChange={onModelChange}>
-            <SelectTrigger className="w-full bg-card">
+            <SelectTrigger id={modelId} className="w-full bg-card">
               <SelectValue placeholder="选择模型" />
             </SelectTrigger>
             <SelectContent>
@@ -75,8 +80,9 @@ export function LlmSettings({
       </div>
 
       <Field className="field">
-        <FieldLabel>推理强度</FieldLabel>
+        <FieldLabel id={reasoningLabelId}>推理强度</FieldLabel>
         <ToggleGroup
+          aria-labelledby={reasoningLabelId}
           className="grid w-full grid-cols-3 rounded-lg border border-border bg-secondary p-1"
           type="single"
           value={reasoningLevel}

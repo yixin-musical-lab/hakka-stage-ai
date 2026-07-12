@@ -8,6 +8,7 @@ from app.core.config import get_settings
 
 MUSICAL_SCRIPT_QUEUE = "ai:musical_script"
 SONG_ADAPTATION_QUEUE = "ai:song_adaptation"
+MUSICAL_FUSION_QUEUE = "ai:musical_fusion"
 ROLE_TRAINING_QUEUE = "ai:role_training"
 
 
@@ -33,6 +34,12 @@ def enqueue_song_adaptation_task(payload: dict) -> None:
     """把唱段适配任务写入 Redis 队列。"""
 
     _enqueue(SONG_ADAPTATION_QUEUE, payload, "唱段适配任务")
+
+
+def enqueue_musical_fusion_task(payload: dict) -> None:
+    """把歌舞融合方案任务写入 Redis 队列。"""
+
+    _enqueue(MUSICAL_FUSION_QUEUE, payload, "歌舞融合方案任务")
 
 
 def enqueue_role_training_task(payload: dict) -> None:
