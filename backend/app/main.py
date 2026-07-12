@@ -53,8 +53,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 第一阶段练习视频先保存在开发期本地目录，并通过 /uploads 暴露给前端预览和回填。
-# 后续接 MinIO / OSS 后，可以保留同一 URL 字段，只把上传服务替换为对象存储实现。
+# T06 练习视频仍保存在开发期本地目录，并通过 /uploads 暴露给前端预览和回填。
+# M08 排练复盘视频已单独使用 MinIO 私有桶和后端代理接口，两条链路暂不混改。
 upload_dir = Path(settings.practice_upload_dir)
 upload_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")

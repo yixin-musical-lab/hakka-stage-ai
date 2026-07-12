@@ -1451,3 +1451,248 @@ textarea:focus {
     min-width: 0;
   }
 }
+
+/* M08 采用“排练记录夹”式布局：左侧承载现场事实，右侧固定生成与任务状态，
+   详情页则把问题、检查点和下一次计划组织成可快速扫读的工作文档。 */
+.review-boundary-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-left: 5px solid var(--primary);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--secondary) 72%, var(--card));
+}
+
+.review-boundary-banner strong {
+  color: var(--primary);
+  font-weight: 950;
+}
+
+.review-boundary-banner span {
+  color: var(--secondary-foreground);
+  line-height: 1.65;
+}
+
+.review-generation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: 18px;
+  align-items: start;
+}
+
+.review-generation-main,
+.review-generation-sidebar {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.review-submit-card {
+  position: sticky;
+  top: 18px;
+}
+
+.review-template-source {
+  border-left: 5px solid #8a6a2e;
+}
+
+.review-template-source ol {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--secondary-foreground);
+  line-height: 1.7;
+}
+
+.review-video-upload {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.review-video-meta {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.review-upload-progress {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+}
+
+.review-video-meta strong {
+  overflow-wrap: anywhere;
+}
+
+.review-video-preview,
+.review-video-player {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #101614;
+}
+
+.review-video-card [data-slot="card-content"] {
+  display: grid;
+  gap: 12px;
+}
+
+.review-video-note {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.review-library-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.review-library-grid [data-slot="card-content"] p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.review-list-date {
+  color: var(--foreground) !important;
+  font-weight: 900;
+}
+
+.review-card-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-source-grid > div {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.review-source-grid span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.review-source-grid strong {
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.review-editor-card > [data-slot="card-content"] {
+  padding: 0;
+}
+
+.readable-three-column,
+.readable-record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.readable-record-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.readable-three-column > div,
+.review-template-card,
+.next-plan-goal,
+.review-boundary-note {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.readable-three-column h5,
+.review-template-card h4,
+.review-template-card h5,
+.next-plan-goal h4 {
+  margin: 0 0 8px;
+}
+
+.review-checkpoint {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-left: 4px solid #8a6a2e;
+  background: color-mix(in srgb, var(--muted) 68%, var(--card));
+}
+
+.review-checkpoint strong {
+  color: #6f5423;
+}
+
+.next-rehearsal-plan,
+.review-template-card,
+.review-boundary-note {
+  display: grid;
+  gap: 14px;
+}
+
+.review-boundary-note {
+  margin-top: 14px;
+  border-left: 4px solid var(--destructive);
+}
+
+.compact-section [data-orientation="horizontal"] > textarea {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 1180px) {
+  .review-generation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .review-submit-card {
+    position: static;
+  }
+
+  .readable-three-column {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .review-boundary-banner,
+  .review-video-upload,
+  .review-library-grid,
+  .review-source-grid,
+  .readable-record-grid,
+  .review-checkpoint {
+    grid-template-columns: 1fr;
+  }
+}

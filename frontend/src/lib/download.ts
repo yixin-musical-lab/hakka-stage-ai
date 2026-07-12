@@ -5,6 +5,7 @@ import {
   fetchMusicalFusionMarkdown,
   fetchMusicalScriptMarkdown,
   fetchPracticeReportMarkdown,
+  fetchRehearsalReviewMarkdown,
   fetchRoleTrainingMarkdown,
   fetchSongAdaptationMarkdown,
 } from "./api";
@@ -47,6 +48,11 @@ export async function downloadMovementGuideMarkdown(movementGuideId: string, tit
 export async function downloadPracticeReportMarkdown(reportId: string, title: string) {
   const markdown = await fetchPracticeReportMarkdown(reportId);
   saveMarkdown(markdown, title, "practice-report");
+}
+
+export async function downloadRehearsalReviewMarkdown(rehearsalReviewId: string, title: string) {
+  const markdown = await fetchRehearsalReviewMarkdown(rehearsalReviewId);
+  saveMarkdown(markdown, title, "rehearsal-review");
 }
 
 function saveMarkdown(markdown: string, title: string, fallbackName: string) {

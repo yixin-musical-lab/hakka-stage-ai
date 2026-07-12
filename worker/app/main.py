@@ -10,7 +10,16 @@ import redis
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.llm_client import LLMClient
-from app.models import AiTask, ClassInteraction, LessonPlan, MusicalFusionPlan, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import (
+    AiTask,
+    ClassInteraction,
+    LessonPlan,
+    MusicalFusionPlan,
+    MusicalScript,
+    RehearsalReview,
+    RoleTrainingPlan,
+    SongAdaptation,
+)
 
 running = True
 LESSON_PLAN_QUEUE = "ai:lesson_plan"
@@ -18,6 +27,7 @@ MUSICAL_SCRIPT_QUEUE = "ai:musical_script"
 SONG_ADAPTATION_QUEUE = "ai:song_adaptation"
 MUSICAL_FUSION_QUEUE = "ai:musical_fusion"
 ROLE_TRAINING_QUEUE = "ai:role_training"
+REHEARSAL_REVIEW_QUEUE = "ai:rehearsal_review"
 CLASS_INTERACTION_QUEUE = "ai:class_interaction"
 AI_QUEUES = [
     LESSON_PLAN_QUEUE,
@@ -25,6 +35,7 @@ AI_QUEUES = [
     SONG_ADAPTATION_QUEUE,
     MUSICAL_FUSION_QUEUE,
     ROLE_TRAINING_QUEUE,
+    REHEARSAL_REVIEW_QUEUE,
     CLASS_INTERACTION_QUEUE,
 ]
 
@@ -92,6 +103,9 @@ def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
         return
     if task_type == "role_training.generate":
         _process_role_training_task(payload, llm_client)
+        return
+    if task_type == "rehearsal_review.generate":
+        _process_rehearsal_review_task(payload, llm_client)
         return
     if task_type == "class_interaction.generate":
         _process_class_interaction_task(payload, llm_client)
@@ -335,6 +349,54 @@ def _process_role_training_task(payload: dict, llm_client: LLMClient) -> None:
             if role_training_plan is not None:
                 role_training_plan.status = "failed"
                 role_training_plan.updated_at = datetime.utcnow()
+            db.commit()
+            raise
+
+
+def _process_rehearsal_review_task(payload: dict, llm_client: LLMClient) -> None:
+    """处理单个 M08 排练 / 演出复盘报告生成任务。"""
+
+    task_id = UUID(payload["task_id"])
+    rehearsal_review_id = UUID(payload["rehearsal_review_id"])
+
+    with SessionLocal() as db:
+        task = db.get(AiTask, task_id)
+        review = db.get(RehearsalReview, rehearsal_review_id)
+        if task is None or review is None:
+            raise RuntimeError("任务或排练复盘记录不存在，无法继续处理。")
+
+        task.status = "RUNNING"
+        task.progress = 20
+        task.started_at = datetime.utcnow()
+        review.status = "generating"
+        db.commit()
+
+        try:
+            content, model_info = llm_client.generate_rehearsal_review(task.input_snapshot)
+            review.content = content
+            review.title = content["title"]
+            review.raw_model_info = model_info
+            review.status = "generated"
+            review.updated_at = datetime.utcnow()
+            task.status = "SUCCESS"
+            task.progress = 100
+            task.result_id = review.id
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            print(f"排练复盘任务完成：task={task_id} rehearsal_review={rehearsal_review_id}", flush=True)
+        except Exception as exc:
+            db.rollback()
+            task = db.get(AiTask, task_id)
+            review = db.get(RehearsalReview, rehearsal_review_id)
+            if task is not None:
+                task.status = "FAILED"
+                task.progress = 100
+                task.error_code = type(exc).__name__
+                task.error_message = _safe_error_message(exc)
+                task.finished_at = datetime.utcnow()
+            if review is not None:
+                review.status = "failed"
+                review.updated_at = datetime.utcnow()
             db.commit()
             raise
 

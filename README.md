@@ -1,11 +1,11 @@
 # 客韵智演 / hakka-stage-ai
 
-AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生成、课堂互动方案、歌舞剧剧本创编、唱段适配、歌舞融合、分角色训练计划和课后练习提交复核。系统通过 FastAPI 创建 AI 生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化初稿，前端提供可编辑、可保存、可导出的工作台。
+AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生成、课堂互动方案、歌舞剧剧本创编、唱段适配、歌舞融合、分角色训练计划、排练 / 演出复盘和课后练习提交复核。系统通过 FastAPI 创建 AI 生成任务，Redis 负责排队，Python Worker 调用 DeepSeek 或百炼 Qwen 生成结构化初稿，前端提供可编辑、可保存、可导出的工作台。
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、课堂互动方案生成与教案预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划 API、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen、React 教案 / 课堂互动 / 剧本 / 唱段 / 歌舞融合 / 训练计划 / 课后练习生成与编辑页、Markdown 导出、基础环境变量示例。
-- 暂不包含：登录鉴权、复杂权限、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、课堂互动方案生成与教案预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
+- 暂不包含：登录鉴权、复杂权限、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 ## 项目目录结构
@@ -98,6 +98,13 @@ flowchart TB
 | `MINIO_ACCESS_KEY` | `minioadmin` | MinIO 本地演示访问账号 |
 | `MINIO_SECRET_KEY` | `minioadmin` | MinIO 本地演示访问密码 |
 | `MINIO_BUCKET` | `hakka-stage-ai` | 默认对象存储桶名 |
+| `M08_VIDEO_MAX_UPLOAD_MB` | `200` | M08 单个排练 / 演出视频附件的上传上限，单位 MB |
+
+### M08 视频存储边界
+
+- 当前只有 M08 排练 / 演出复盘视频使用 MinIO；T06 课后练习继续使用 `/uploads/practice/` 本地开发链路，本次未改造其接口和数据结构。
+- M08 对象保存在私有桶的 `rehearsal-reviews/` 前缀下，浏览器通过后端 `/api/rehearsal-reviews/{id}/video` 代理播放，不获得 MinIO 永久公开地址。
+- AI 仅整理老师填写的观察记录；上传视频仅供人工查看，系统未分析视频内容。当前系统尚无登录鉴权，不应上传真实敏感学生视频。
 
 ## Docker Compose 全栈启动
 
@@ -309,6 +316,6 @@ worker 的基础镜像已固定为 `condaforge/miniforge3:26.3.2-3`，避免继�
 
 1. 增加 Alembic 迁移骨架，替换开发期自动建表。
 2. 增加 mock 登录和三类角色入口。
-3. 实现 M08 排练 / 演出复盘报告首版。
+3. 为 M08 增加鉴权后的附件访问控制，并通过 MinIO 生命周期策略清理未提交表单产生的孤立对象。
 4. 为课堂互动、剧本创编、唱段适配和分角色训练补充接口级 mock 流程和页面手测记录。
 5. 在重要报告模块补 Word 导出。

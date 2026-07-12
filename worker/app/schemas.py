@@ -195,6 +195,62 @@ class RoleTrainingContent(BaseModel):
     teacher_checkpoints: list[str]
 
 
+class RehearsalIssue(BaseModel):
+    """M08 中一个需要改进的问题。"""
+
+    category: str = Field(min_length=1)
+    observation: str = Field(min_length=1)
+    possible_cause: str = Field(min_length=1)
+    improvement_action: str = Field(min_length=1)
+    priority: Literal["high", "medium", "low"]
+    next_check: str = Field(min_length=1)
+
+
+class RehearsalRoleSuggestion(BaseModel):
+    """角色或角色组的复盘建议。"""
+
+    role_name: str = Field(min_length=1)
+    observation: str = Field(min_length=1)
+    suggestion: str = Field(min_length=1)
+    next_tasks: list[NonEmptyText] = Field(min_length=1)
+
+
+class NextRehearsalPlan(BaseModel):
+    """下一次排练的执行计划。"""
+
+    goal: str = Field(min_length=1)
+    focus_items: list[NonEmptyText] = Field(min_length=1)
+    action_steps: list[NonEmptyText] = Field(min_length=1)
+    teacher_checkpoints: list[NonEmptyText] = Field(min_length=1)
+
+
+class ReusableReviewTemplate(BaseModel):
+    """内嵌在报告中的复盘模板。"""
+
+    template_title: str = Field(min_length=1)
+    review_focus: list[NonEmptyText] = Field(min_length=1)
+    observation_prompts: list[NonEmptyText] = Field(min_length=1)
+    closing_checklist: list[NonEmptyText] = Field(min_length=1)
+
+
+class RehearsalReviewContent(BaseModel):
+    """M08 大模型必须返回的结构化复盘报告正文。"""
+
+    title: str = Field(min_length=1)
+    overview: str = Field(min_length=1)
+    highlights: list[NonEmptyText] = Field(min_length=1)
+    issues: list[RehearsalIssue] = Field(min_length=1)
+    role_suggestions: list[RehearsalRoleSuggestion] = Field(min_length=1)
+    singing_and_rhythm_advice: str = Field(min_length=1)
+    dance_and_formation_advice: str = Field(min_length=1)
+    performance_and_blocking_advice: str = Field(min_length=1)
+    next_rehearsal_plan: NextRehearsalPlan
+    teaching_reflection: str = Field(min_length=1)
+    reusable_template: ReusableReviewTemplate
+    reviewer_notes: list[NonEmptyText] = Field(min_length=1)
+    boundary_note: str = Field(min_length=1)
+
+
 class TeacherScriptStep(BaseModel):
     """老师可以在课堂现场逐项照着执行的一个步骤。"""
 

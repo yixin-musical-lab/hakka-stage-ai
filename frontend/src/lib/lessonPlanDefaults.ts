@@ -6,6 +6,7 @@ import type {
   MusicalScriptContent,
   MusicalScriptForm,
   PracticeSubmissionForm,
+  RehearsalReviewForm,
   RoleTrainingForm,
   SongAdaptationForm,
 } from "../types";
@@ -27,7 +28,6 @@ export const initialLessonPlanForm: LessonPlanForm = {
 
 export const futureModules = [
   "曲目队形编排",
-  "排练复盘",
 ];
 
 export const initialClassInteractionForm: ClassInteractionForm = {
@@ -98,6 +98,28 @@ export const initialRoleTrainingForm = (scriptId: string): RoleTrainingForm => (
   reasoning_level: "standard",
 });
 
+export const initialRehearsalReviewForm = (scriptId: string): RehearsalReviewForm => ({
+  script_id: scriptId,
+  fusion_plan_id: null,
+  role_training_plan_id: null,
+  event_type: "rehearsal",
+  event_date: localDateInputValue(),
+  rehearsal_content: "完成剧本主要段落、唱段与队形的第一次完整连接。",
+  observation_notes: "第二幕进入副歌时队形略散，群演转场需要老师提醒；主角台词和情绪表达较稳定。",
+  strengths: "主要角色能够完成台词和唱段，终场齐唱的整体气氛较好。",
+  issues: "副歌队形展开不够整齐，部分演员进入间奏的节拍偏慢。",
+  review_focus: ["唱段与节奏", "舞蹈与队形", "剧情与表演", "舞台调度"],
+  next_goal: "稳定副歌队形和间奏转场，减少老师临时口头提醒。",
+  video_object_key: "",
+  video_original_file_name: "",
+  video_content_type: "",
+  video_size_bytes: null,
+  video_notes: "",
+  llm_provider: "deepseek",
+  llm_model: "deepseek-v4-flash",
+  reasoning_level: "standard",
+});
+
 export const initialSongAdaptationForm = (scriptId: string): SongAdaptationForm => ({
   script_id: scriptId,
   related_scene: "第二幕：一起排练",
@@ -158,3 +180,12 @@ export const initialMusicalFusionForm = (
   llm_model: "deepseek-v4-flash",
   reasoning_level: "standard",
 });
+
+function localDateInputValue() {
+  // 使用本地日期而不是 UTC 日期，避免中国时区午夜附近默认日期偏移一天。
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

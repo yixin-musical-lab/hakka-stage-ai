@@ -2,7 +2,15 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models import AiTask, MusicalFusionPlan, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import (
+    AiTask,
+    MusicalFusionPlan,
+    MusicalProject,
+    MusicalScript,
+    RehearsalReview,
+    RoleTrainingPlan,
+    SongAdaptation,
+)
 from app.schemas import (
     MusicalFusionPlanSummaryResponse,
     MusicalScriptGenerateRequest,
@@ -10,6 +18,7 @@ from app.schemas import (
     RoleTrainingPlanSummaryResponse,
     SongAdaptationSummaryResponse,
 )
+from app.services.rehearsal_storage import remove_rehearsal_video
 
 
 def build_project_title(request: MusicalScriptGenerateRequest) -> str:
@@ -226,7 +235,7 @@ def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str |
 
 
 def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID) -> bool:
-    """删除剧本及其唱段、歌舞融合、训练计划和关联 AI 任务。"""
+    """删除剧本及其唱段、歌舞融合、训练计划、复盘报告和 AI 任务。"""
 
     musical_script = db.get(MusicalScript, musical_script_id)
     if musical_script is None:
@@ -234,6 +243,16 @@ def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID
 
     project_id = musical_script.project_id
     db.query(AiTask).filter(AiTask.business_id == musical_script.id).delete(synchronize_session=False)
+    related_review_rows = db.query(RehearsalReview.id, RehearsalReview.video_object_key).filter(
+        RehearsalReview.script_id == musical_script.id
+    ).all()
+    for _, object_key in related_review_rows:
+        if object_key:
+            remove_rehearsal_video(object_key)
+    related_review_ids = [row[0] for row in related_review_rows]
+    if related_review_ids:
+        db.query(AiTask).filter(AiTask.business_id.in_(related_review_ids)).delete(synchronize_session=False)
+        db.query(RehearsalReview).filter(RehearsalReview.id.in_(related_review_ids)).delete(synchronize_session=False)
     related_song_adaptation_ids = [
         row[0] for row in db.query(SongAdaptation.id).filter(SongAdaptation.script_id == musical_script.id).all()
     ]
@@ -290,6 +309,11 @@ def delete_musical_fusion_with_related_data(db: Session, musical_fusion_plan_id:
 
     project_id = musical_fusion_plan.project_id
     db.query(AiTask).filter(AiTask.business_id == musical_fusion_plan.id).delete(synchronize_session=False)
+    # 复盘任务已保留生成时快照，删除 M04 时只解除来源关联。
+    db.query(RehearsalReview).filter(RehearsalReview.fusion_plan_id == musical_fusion_plan.id).update(
+        {RehearsalReview.fusion_plan_id: None},
+        synchronize_session=False,
+    )
     db.query(MusicalFusionPlan).filter(MusicalFusionPlan.id == musical_fusion_plan_id).delete(synchronize_session=False)
     db.flush()
     _delete_project_if_unused(db, project_id)
@@ -306,6 +330,11 @@ def delete_role_training_with_related_data(db: Session, role_training_plan_id: U
 
     project_id = role_training_plan.project_id
     db.query(AiTask).filter(AiTask.business_id == role_training_plan.id).delete(synchronize_session=False)
+    # 复盘报告引用 M05 仅用于追踪来源，删除训练计划后仍保留复盘正文和快照。
+    db.query(RehearsalReview).filter(RehearsalReview.role_training_plan_id == role_training_plan.id).update(
+        {RehearsalReview.role_training_plan_id: None},
+        synchronize_session=False,
+    )
     db.query(RoleTrainingPlan).filter(RoleTrainingPlan.id == role_training_plan_id).delete(synchronize_session=False)
     db.flush()
     _delete_project_if_unused(db, project_id)
@@ -314,13 +343,20 @@ def delete_role_training_with_related_data(db: Session, role_training_plan_id: U
 
 
 def _delete_project_if_unused(db: Session, project_id: UUID) -> None:
-    """当剧目没有剧本、唱段、歌舞融合和训练计划引用时清理剧目草稿。"""
+    """当剧目没有剧本、唱段、融合、训练或复盘记录时清理剧目草稿。"""
 
     script_count = db.query(MusicalScript).filter(MusicalScript.project_id == project_id).count()
     song_adaptation_count = db.query(SongAdaptation).filter(SongAdaptation.project_id == project_id).count()
     fusion_count = db.query(MusicalFusionPlan).filter(MusicalFusionPlan.project_id == project_id).count()
     training_count = db.query(RoleTrainingPlan).filter(RoleTrainingPlan.project_id == project_id).count()
-    if script_count == 0 and song_adaptation_count == 0 and fusion_count == 0 and training_count == 0:
+    review_count = db.query(RehearsalReview).filter(RehearsalReview.project_id == project_id).count()
+    if (
+        script_count == 0
+        and song_adaptation_count == 0
+        and fusion_count == 0
+        and training_count == 0
+        and review_count == 0
+    ):
         project = db.get(MusicalProject, project_id)
         if project is not None:
             db.query(MusicalProject).filter(MusicalProject.id == project_id).delete(synchronize_session=False)

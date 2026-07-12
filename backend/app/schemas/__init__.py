@@ -79,6 +79,19 @@ from app.schemas.practice import (
     PracticeSubmissionSummaryResponse,
     PracticeVideoUploadResponse,
 )
+from app.schemas.rehearsal_review import (
+    NextRehearsalPlan,
+    RehearsalIssue,
+    RehearsalReviewContent,
+    RehearsalReviewGenerateRequest,
+    RehearsalReviewGenerateResponse,
+    RehearsalReviewResponse,
+    RehearsalReviewSummaryResponse,
+    RehearsalReviewUpdateRequest,
+    RehearsalRoleSuggestion,
+    RehearsalVideoUploadResponse,
+    ReusableReviewTemplate,
+)
 from app.schemas.system import DependencyConfig, HealthResponse
 
 __all__ = [
@@ -134,6 +147,17 @@ __all__ = [
     "PracticeSubmissionDetailResponse",
     "PracticeSubmissionSummaryResponse",
     "PracticeVideoUploadResponse",
+    "NextRehearsalPlan",
+    "RehearsalIssue",
+    "RehearsalReviewContent",
+    "RehearsalReviewGenerateRequest",
+    "RehearsalReviewGenerateResponse",
+    "RehearsalReviewResponse",
+    "RehearsalReviewSummaryResponse",
+    "RehearsalReviewUpdateRequest",
+    "RehearsalRoleSuggestion",
+    "RehearsalVideoUploadResponse",
+    "ReusableReviewTemplate",
     "ReasoningLevelOption",
     "RoleDailyPlan",
     "RoleTrainingContent",

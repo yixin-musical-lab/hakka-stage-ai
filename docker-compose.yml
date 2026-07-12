@@ -72,6 +72,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-hakka-stage-ai}
+      M08_VIDEO_MAX_UPLOAD_MB: ${M08_VIDEO_MAX_UPLOAD_MB:-200}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       QWEN_API_KEY: ${QWEN_API_KEY:-}

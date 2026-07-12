@@ -233,6 +233,7 @@ MINIO_ENDPOINT=http://localhost:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 MINIO_BUCKET=haka-music-ai
+M08_VIDEO_MAX_UPLOAD_MB=200
 
 # 数据库配置
 POSTGRES_HOST=localhost
@@ -374,7 +375,7 @@ flowchart LR
 | `song_adaptations` | 唱段结构、歌词改写版本和演唱分配 |
 | `musical_fusion_plans` | M04 歌舞融合结构、队形衔接和排练建议 |
 | `role_training_plans` | 分角色训练计划 |
-| `rehearsal_reviews` | 排练复盘报告 |
+| `rehearsal_reviews` | M08 排练 / 演出复盘输入、AI 初稿、人工确认稿和 MinIO 视频元数据 |
 | `ai_tasks` | AI 异步任务状态 |
 | `export_files` | 导出文件记录 |
 
@@ -397,7 +398,12 @@ flowchart LR
 | `/api/song-adaptations/generate` | POST | 生成唱段适配和歌词改写建议 |
 | `/api/musical-fusion-plans/generate` | POST | 生成歌舞融合结构建议 |
 | `/api/role-training/generate` | POST | 生成分角色训练计划 |
-| `/api/rehearsal-reviews/generate` | POST | 生成排练复盘 |
+| `/api/rehearsal-reviews/upload` | POST | 校验短视频并上传到 MinIO 私有桶 |
+| `/api/rehearsal-reviews/generate` | POST | 根据人工观察记录创建异步复盘任务 |
+| `/api/rehearsal-reviews` | GET | 查询复盘报告列表 |
+| `/api/rehearsal-reviews/{id}` | GET / PUT / DELETE | 查询、保存人工确认稿或删除复盘报告 |
+| `/api/rehearsal-reviews/{id}/markdown` | GET | 导出当前确认稿 Markdown |
+| `/api/rehearsal-reviews/{id}/video` | GET | 通过后端代理读取私有视频，支持 HTTP Range |
 | `/api/exports/{type}/{id}` | GET | 导出 Markdown 或 Word |
 
 ### 5.5 异步任务设计
@@ -1037,27 +1043,24 @@ M04 的目标是把已经确认的剧情段落、唱段结构和可用舞台条�
 
 ### 7.9 排练复盘报告
 
-输入内容：
+M08-lite 已按“人工观察记录为主、短视频仅供人工查看”的边界实现。每份复盘必须关联一个剧本，可选关联同一剧本下已经生成的 M04 歌舞融合方案和 M05 分角色训练计划。跨剧本关联返回 `422`，选择尚未生成的上游内容返回 `409`。M04 / M05 删除后仅解除可选外键，已生成报告继续保留任务快照；剧本删除时同步清理其复盘记录、AI 任务和视频对象。
 
-- 老师观察记录。
-- 排练日期。
-- 剧目名称。
-- 今日排练内容。
-- 存在问题。
-- 下一次排练目标。
+`rehearsal_reviews` 主要字段如下：
 
-输出内容：
+- 关联字段：`project_id`、`script_id`、`fusion_plan_id`、`role_training_plan_id`。
+- 人工输入：排练 / 演出类型与日期、排练内容、观察记录、亮点、明确问题、复盘重点、下一次目标。
+- 视频元数据：MinIO `object_key`、原始文件名、MIME、字节数和老师备注；数据库不保存本地路径。
+- AI 与编辑数据：`content`、`edited_content`、`raw_model_info`、业务状态和时间字段。
 
-- 今日排练总结。
-- 主要问题归类。
-- 角色层面的改进建议。
-- 队形和节奏层面的建议。
-- 下一次排练计划。
-- 可用于结题或教研材料的文字。
+视频链路采用后端直连 MinIO 的方式：对象键由服务端固定生成为 `rehearsal-reviews/{uuid}.{ext}`，首次上传时自动检查并创建私有桶，默认单文件上限为 200 MB。前端不接触 MinIO 地址和永久公开 URL，而是通过报告 ID 请求后端代理接口；接口校验对象归属并支持完整读取、开放尾段和后缀形式的 HTTP Range 请求。删除报告时同步删除对象，对象已不存在时仍允许数据库删除成功。上传后未形成报告的孤立对象暂由后续 MinIO 生命周期策略处理。
 
-实现方式：
+异步任务类型为 `rehearsal_review.generate`，Redis 队列为 `ai:rehearsal_review`。Worker 优先使用剧本、M04 和 M05 的人工确认稿快照，并输出概况、亮点、问题闭环、角色建议、唱段节奏 / 舞蹈队形 / 情绪调度建议、下一次排练计划、教学反思、编导复核提醒、能力边界和可复用模板。Prompt 只接收“是否存在附件”和老师的视频备注，不接收对象键、文件名或视频内容。
 
-复盘报告不要依赖长视频自动理解，优先依赖老师观察记录。AI 负责把零散记录整理成规范报告。
+详情页支持结构化编辑、保存、Markdown 导出、视频播放、删除和“以此模板新建复盘”。模板复用会保留剧本、M04 / M05 关联、复盘重点和观察清单，同时清空日期、观察事实、问题、下一次目标和视频附件，避免旧事实进入新报告。当前继续使用开发期自动建表，本模块未引入 Alembic。
+
+> AI 仅整理老师填写的观察记录；上传视频仅供人工查看，系统未分析视频内容。
+
+当前只有 M08 视频使用 MinIO；T06 仍保留 `/uploads/practice/` 本地开发上传链路。系统尚未接入登录鉴权，代理接口仅适用于本地演示，不应上传真实敏感学生视频。
 
 ## 8. 6 月 17 日到 7 月 20 日开发计划
 

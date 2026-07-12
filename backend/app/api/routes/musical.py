@@ -54,6 +54,7 @@ from app.services.musical_service import (
     role_training_summary,
     song_adaptation_summary,
 )
+from app.services.rehearsal_storage import RehearsalStorageError
 
 router = APIRouter(prefix="/api", tags=["musical"])
 
@@ -202,7 +203,10 @@ def export_musical_script_markdown(musical_script_id: UUID, db: Session = Depend
 def delete_musical_script(musical_script_id: UUID, db: Session = Depends(get_db)) -> Response:
     """删除剧本、关联 AI 任务，并清理无人引用的剧目草稿。"""
 
-    deleted = delete_musical_script_with_related_data(db, musical_script_id)
+    try:
+        deleted = delete_musical_script_with_related_data(db, musical_script_id)
+    except RehearsalStorageError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="剧本不存在。")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
