@@ -7,6 +7,7 @@ import {
   fetchClassInteractions,
   fetchLessonPlans,
   fetchMovementGuides,
+  fetchMusicalFusionPlans,
   fetchMusicalScripts,
   fetchPracticeSubmissions,
   fetchRoleTrainingPlans,
@@ -18,6 +19,7 @@ import type {
   HealthResponse,
   LessonPlanSummary,
   MovementGuideSummary,
+  MusicalFusionPlanSummary,
   MusicalScriptSummary,
   PracticeSubmissionSummary,
   RoleTrainingPlanSummary,
@@ -30,6 +32,7 @@ export function HomePage() {
   const [classInteractions, setClassInteractions] = useState<ClassInteractionSummary[]>([]);
   const [musicalScripts, setMusicalScripts] = useState<MusicalScriptSummary[]>([]);
   const [songAdaptations, setSongAdaptations] = useState<SongAdaptationSummary[]>([]);
+  const [musicalFusionPlans, setMusicalFusionPlans] = useState<MusicalFusionPlanSummary[]>([]);
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
   const [movementGuides, setMovementGuides] = useState<MovementGuideSummary[]>([]);
   const [practiceSubmissions, setPracticeSubmissions] = useState<PracticeSubmissionSummary[]>([]);
@@ -41,6 +44,7 @@ export function HomePage() {
     void fetchClassInteractions(controller.signal).then(setClassInteractions).catch(() => setClassInteractions([]));
     void fetchMusicalScripts(controller.signal).then(setMusicalScripts).catch(() => setMusicalScripts([]));
     void fetchSongAdaptations(controller.signal).then(setSongAdaptations).catch(() => setSongAdaptations([]));
+    void fetchMusicalFusionPlans(controller.signal).then(setMusicalFusionPlans).catch(() => setMusicalFusionPlans([]));
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
     void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
     void fetchPracticeSubmissions(controller.signal).then(setPracticeSubmissions).catch(() => setPracticeSubmissions([]));
@@ -51,6 +55,7 @@ export function HomePage() {
   const latestInteraction = classInteractions[0];
   const latestScript = musicalScripts[0];
   const latestSongAdaptation = songAdaptations[0];
+  const latestMusicalFusionPlan = musicalFusionPlans[0];
   const latestMovementGuide = movementGuides[0];
   const latestPracticeSubmission = practiceSubmissions[0];
   const configuredModelProviders =
@@ -76,6 +81,12 @@ export function HomePage() {
       title: latestSongAdaptation ? latestSongAdaptation.title : "还没有保存的唱段适配",
       to: latestSongAdaptation ? `/song-adaptations/${latestSongAdaptation.id}` : "/musical-scripts",
       action: latestSongAdaptation ? "打开" : "生成",
+    },
+    {
+      label: "歌舞融合",
+      title: latestMusicalFusionPlan ? latestMusicalFusionPlan.title : "还没有保存的歌舞融合方案",
+      to: latestMusicalFusionPlan ? `/musical-fusion-plans/${latestMusicalFusionPlan.id}` : "/musical-fusion-plans/generate",
+      action: latestMusicalFusionPlan ? "打开" : "生成",
     },
     {
       label: "训练计划",
@@ -107,6 +118,7 @@ export function HomePage() {
     { label: "互动", count: classInteractions.length, to: "/interactions" },
     { label: "剧本", count: musicalScripts.length, to: "/musical-scripts" },
     { label: "唱段", count: songAdaptations.length, to: "/song-adaptations" },
+    { label: "融合", count: musicalFusionPlans.length, to: "/musical-fusion-plans" },
     { label: "训练", count: roleTrainingPlans.length, to: "/role-training-plans" },
     { label: "示范", count: movementGuides.length, to: "/movement-guides" },
     { label: "练习", count: practiceSubmissions.length, to: "/practice-submissions" },
@@ -116,6 +128,7 @@ export function HomePage() {
     classInteractions.length +
     musicalScripts.length +
     songAdaptations.length +
+    musicalFusionPlans.length +
     roleTrainingPlans.length +
     movementGuides.length +
     practiceSubmissions.length;
@@ -230,6 +243,12 @@ export function HomePage() {
           status="已接入"
           description="基于剧本、歌词和人工音乐段落表生成演唱分配、改词建议和间奏留白。"
           to="/song-adaptations"
+        />
+        <ModuleTile
+          title="歌舞融合"
+          status="已接入"
+          description="基于剧本和唱段适配生成唱、跳、队形、衔接及排练结构建议。"
+          to="/musical-fusion-plans"
         />
         <ModuleTile
           title="分角色训练"

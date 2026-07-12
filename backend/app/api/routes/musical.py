@@ -9,8 +9,13 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.llm_options import is_supported_model, is_supported_reasoning_level, models_for_provider
-from app.models import AiTask, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
+from app.models import AiTask, MusicalFusionPlan, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.schemas import (
+    MusicalFusionGenerateRequest,
+    MusicalFusionGenerateResponse,
+    MusicalFusionPlanResponse,
+    MusicalFusionPlanSummaryResponse,
+    MusicalFusionPlanUpdateRequest,
     MusicalScriptGenerateRequest,
     MusicalScriptGenerateResponse,
     MusicalScriptResponse,
@@ -29,16 +34,20 @@ from app.schemas import (
 )
 from app.services.musical_queue import (
     QueueUnavailableError,
+    enqueue_musical_fusion_task,
     enqueue_musical_script_task,
     enqueue_role_training_task,
     enqueue_song_adaptation_task,
 )
 from app.services.musical_service import (
     build_project_title,
+    delete_musical_fusion_with_related_data,
     delete_musical_script_with_related_data,
     delete_role_training_with_related_data,
     delete_song_adaptation_with_related_data,
     musical_script_summary,
+    musical_fusion_summary,
+    render_musical_fusion_markdown,
     render_musical_script_markdown,
     render_role_training_markdown,
     render_song_adaptation_markdown,
@@ -374,6 +383,237 @@ def delete_song_adaptation(song_adaptation_id: UUID, db: Session = Depends(get_d
 
 
 @router.post(
+    "/musical-fusion-plans/generate",
+    response_model=MusicalFusionGenerateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="创建歌舞融合结构建议任务",
+)
+def generate_musical_fusion_plan(
+    request: MusicalFusionGenerateRequest,
+    db: Session = Depends(get_db),
+) -> MusicalFusionGenerateResponse:
+    """基于剧本和 M03 唱段或手工音乐段落创建 M04 异步任务。"""
+
+    musical_script = db.get(MusicalScript, request.script_id)
+    if musical_script is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="剧本不存在。")
+    script_content = musical_script.edited_content or musical_script.content
+    if not script_content:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="剧本内容尚未生成，无法设计歌舞融合结构。")
+
+    musical_project = db.get(MusicalProject, musical_script.project_id)
+    if musical_project is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="剧目基础信息不存在，无法设计歌舞融合结构。")
+
+    song_adaptation: SongAdaptation | None = None
+    song_adaptation_content: dict | None = None
+    source_music_structure = request.manual_music_structure
+    source_lyrics_summary = request.manual_lyrics_summary
+    music_title = request.manual_music_title.strip() or "手工音乐段落"
+    if request.source_mode == "song_adaptation":
+        # Schema 已保证 M03 模式一定提供 ID；这里继续校验数据库归属和生成状态。
+        song_adaptation = db.get(SongAdaptation, request.song_adaptation_id)
+        if song_adaptation is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="唱段适配不存在。")
+        if song_adaptation.script_id != musical_script.id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="唱段适配不属于当前剧本，不能作为本次歌舞融合输入。",
+            )
+        song_adaptation_content = song_adaptation.edited_content or song_adaptation.content
+        if not song_adaptation_content:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="唱段适配内容尚未生成，无法继续。")
+        music_title = (
+            str(song_adaptation_content.get("source_song") or "").strip()
+            or song_adaptation.source_song.strip()
+            or song_adaptation.title
+        )
+        source_music_structure = song_adaptation.music_structure
+        source_lyrics_summary = "\n".join(
+            str(section.get("adapted_lyrics") or section.get("original_lyrics") or "")
+            for section in song_adaptation_content.get("sections", [])
+        ).strip()
+
+    llm_provider, llm_model, reasoning_level = _resolve_llm_options(
+        request.llm_provider,
+        request.llm_model,
+        request.reasoning_level,
+    )
+
+    musical_fusion_plan = MusicalFusionPlan(
+        project_id=musical_script.project_id,
+        script_id=musical_script.id,
+        song_adaptation_id=song_adaptation.id if song_adaptation else None,
+        title=f"{musical_script.title} · 歌舞融合建议",
+        status="generating",
+        source_mode=request.source_mode,
+        music_title=music_title,
+        related_scene=request.related_scene,
+        manual_music_structure=request.manual_music_structure,
+        manual_lyrics_summary=request.manual_lyrics_summary,
+        actor_count=request.actor_count,
+        stage_space=request.stage_space,
+        fusion_goal=request.fusion_goal,
+        additional_constraints=request.additional_constraints,
+    )
+    db.add(musical_fusion_plan)
+    db.flush()
+
+    # 来源内容在创建任务时冻结，确保老师后续修改剧本或唱段不会改变本次生成语义。
+    input_snapshot = request.model_dump(mode="json")
+    input_snapshot.update(
+        {
+            "llm_provider": llm_provider,
+            "llm_model": llm_model,
+            "reasoning_level": reasoning_level,
+            "project_title": musical_project.title,
+            "project_age_group": musical_project.age_group,
+            "script_title": musical_script.title,
+            "script_content": script_content,
+            "music_title": music_title,
+            "source_music_structure": source_music_structure,
+            "source_lyrics_summary": source_lyrics_summary,
+            "song_adaptation_title": song_adaptation.title if song_adaptation else None,
+            "song_adaptation_content": song_adaptation_content,
+        }
+    )
+    task = AiTask(
+        task_type="musical_fusion.generate",
+        status="PENDING",
+        progress=5,
+        business_id=musical_fusion_plan.id,
+        input_snapshot=input_snapshot,
+    )
+    db.add(task)
+    db.commit()
+
+    try:
+        enqueue_musical_fusion_task(
+            {
+                "task_id": task.id,
+                "musical_fusion_plan_id": musical_fusion_plan.id,
+                "musical_script_id": musical_script.id,
+                "song_adaptation_id": song_adaptation.id if song_adaptation else None,
+                "project_id": musical_script.project_id,
+                "task_type": task.task_type,
+            }
+        )
+    except QueueUnavailableError as exc:
+        task.status = "FAILED"
+        task.progress = 100
+        task.error_code = "QUEUE_UNAVAILABLE"
+        task.error_message = str(exc)
+        task.finished_at = datetime.utcnow()
+        musical_fusion_plan.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+    return MusicalFusionGenerateResponse(
+        task_id=task.id,
+        musical_fusion_plan_id=musical_fusion_plan.id,
+        status=task.status,
+        message="歌舞融合任务已创建，前端可以通过 task_id 轮询进度。",
+    )
+
+
+@router.get(
+    "/musical-fusion-plans",
+    response_model=list[MusicalFusionPlanSummaryResponse],
+    summary="查询已保存歌舞融合方案列表",
+)
+def list_musical_fusion_plans(db: Session = Depends(get_db)) -> list[MusicalFusionPlanSummaryResponse]:
+    """按更新时间倒序返回 M04 摘要列表。"""
+
+    plans = db.query(MusicalFusionPlan).order_by(desc(MusicalFusionPlan.updated_at)).all()
+    return [musical_fusion_summary(plan) for plan in plans]
+
+
+@router.get(
+    "/musical-fusion-plans/{musical_fusion_plan_id}",
+    response_model=MusicalFusionPlanResponse,
+    summary="读取歌舞融合方案详情",
+)
+def get_musical_fusion_plan(
+    musical_fusion_plan_id: UUID,
+    db: Session = Depends(get_db),
+) -> MusicalFusionPlanResponse:
+    """返回 AI 初稿和编导编辑确认稿。"""
+
+    plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="歌舞融合方案不存在。")
+    return plan
+
+
+@router.put(
+    "/musical-fusion-plans/{musical_fusion_plan_id}",
+    response_model=MusicalFusionPlanResponse,
+    summary="保存编辑后的歌舞融合方案",
+)
+def update_musical_fusion_plan(
+    musical_fusion_plan_id: UUID,
+    request: MusicalFusionPlanUpdateRequest,
+    db: Session = Depends(get_db),
+) -> MusicalFusionPlanResponse:
+    """保存编导确认后的 M04 内容并同步列表摘要字段。"""
+
+    plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="歌舞融合方案不存在。")
+
+    edited_content = request.edited_content.model_dump()
+    plan.edited_content = edited_content
+    plan.content = plan.content or edited_content
+    plan.title = request.edited_content.title
+    plan.related_scene = request.edited_content.related_scene
+    plan.fusion_goal = request.edited_content.fusion_goal
+    plan.stage_space = request.edited_content.stage_space
+    plan.actor_count = request.edited_content.actor_count
+    plan.status = "reviewed"
+    plan.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(plan)
+    return plan
+
+
+@router.get(
+    "/musical-fusion-plans/{musical_fusion_plan_id}/markdown",
+    response_class=PlainTextResponse,
+    summary="导出歌舞融合方案 Markdown",
+)
+def export_musical_fusion_markdown(
+    musical_fusion_plan_id: UUID,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    """导出 Markdown 文本，优先使用编导编辑确认稿。"""
+
+    plan = db.get(MusicalFusionPlan, musical_fusion_plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="歌舞融合方案不存在。")
+    markdown = render_musical_fusion_markdown(plan)
+    if markdown is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="歌舞融合内容尚未生成，无法导出。")
+    return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
+
+
+@router.delete(
+    "/musical-fusion-plans/{musical_fusion_plan_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="删除已保存歌舞融合方案",
+)
+def delete_musical_fusion_plan(
+    musical_fusion_plan_id: UUID,
+    db: Session = Depends(get_db),
+) -> Response:
+    """删除 M04 和关联 AI 任务，不删除剧本或唱段适配。"""
+
+    deleted = delete_musical_fusion_with_related_data(db, musical_fusion_plan_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="歌舞融合方案不存在。")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
     "/role-training/generate",
     response_model=RoleTrainingGenerateResponse,
     status_code=status.HTTP_202_ACCEPTED,
@@ -391,6 +631,21 @@ def generate_role_training_plan(
     script_content = musical_script.edited_content or musical_script.content
     if not script_content:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="剧本内容尚未生成，无法生成分角色训练计划。")
+
+    fusion_plan: MusicalFusionPlan | None = None
+    fusion_content: dict | None = None
+    if request.fusion_plan_id is not None:
+        fusion_plan = db.get(MusicalFusionPlan, request.fusion_plan_id)
+        if fusion_plan is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="歌舞融合方案不存在。")
+        if fusion_plan.script_id != musical_script.id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="歌舞融合方案不属于当前剧本，不能作为训练计划输入。",
+            )
+        fusion_content = fusion_plan.edited_content or fusion_plan.content
+        if not fusion_content:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="歌舞融合内容尚未生成，无法继续。")
 
     llm_provider, llm_model, reasoning_level = _resolve_llm_options(
         request.llm_provider,
@@ -419,6 +674,8 @@ def generate_role_training_plan(
     input_snapshot["reasoning_level"] = reasoning_level
     input_snapshot["script_title"] = musical_script.title
     input_snapshot["script_content"] = script_content
+    input_snapshot["fusion_plan_title"] = fusion_plan.title if fusion_plan else None
+    input_snapshot["fusion_content"] = fusion_content
     task = AiTask(
         task_type="role_training.generate",
         status="PENDING",

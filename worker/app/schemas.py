@@ -1,6 +1,6 @@
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1200)]
@@ -120,6 +120,47 @@ class SongAdaptationContent(BaseModel):
     sections: list[SongSection]
     dance_interludes: list[DanceInterlude]
     review_notes: list[str]
+
+
+class MusicalFusionSegment(BaseModel):
+    """M04 结构表中的一个可排练段落。"""
+
+    segment_no: str = Field(min_length=1)
+    story_content: str = Field(min_length=1)
+    music_position: str = Field(min_length=1)
+    singing_mode: str = Field(min_length=1)
+    singing_roles: list[NonEmptyText] = Field(min_length=1)
+    dance_form: str = Field(min_length=1)
+    formation_suggestion: str = Field(min_length=1)
+    emotion: str = Field(min_length=1)
+    song_dance_relationship: str = Field(min_length=1)
+    transition_note: str = Field(min_length=1)
+    rehearsal_tip: str = Field(min_length=1)
+    safety_note: str = Field(min_length=1)
+    is_highlight: bool
+
+
+class MusicalFusionContent(BaseModel):
+    """M04 大模型必须返回的结构化歌舞融合正文。"""
+
+    title: str = Field(min_length=1)
+    related_scene: str = Field(min_length=1)
+    fusion_goal: str = Field(min_length=2)
+    stage_space: str = Field(min_length=1)
+    actor_count: int = Field(ge=1, le=120)
+    overall_design: str = Field(min_length=1)
+    segments: list[MusicalFusionSegment] = Field(min_length=2)
+    highlight_summary: str = Field(min_length=1)
+    rehearsal_notes: list[NonEmptyText] = Field(min_length=1)
+    director_review_notes: list[NonEmptyText] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def ensure_highlight_segment(self) -> "MusicalFusionContent":
+        """防止模型漏掉 M04 验收所需的高潮标记。"""
+
+        if not any(segment.is_highlight for segment in self.segments):
+            raise ValueError("歌舞融合结果必须至少标记一个高潮段落。")
+        return self
 
 
 class RoleDailyPlan(BaseModel):

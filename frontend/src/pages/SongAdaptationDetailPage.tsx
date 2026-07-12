@@ -62,6 +62,24 @@ export function SongAdaptationDetailPage() {
     }
   }
 
+  async function openMusicalFusion() {
+    if (!songAdaptation || !editedContent) {
+      return;
+    }
+    setSaving(true);
+    setNotice("");
+    try {
+      // M04 读取唱段编辑确认稿，跳转前先保存，避免带入旧版 AI 初稿。
+      await updateSongAdaptation(songAdaptation.id, editedContent);
+      navigate(
+        `/musical-fusion-plans/generate?script_id=${songAdaptation.script_id}&song_adaptation_id=${songAdaptation.id}`,
+      );
+    } catch (caughtError) {
+      setNotice(caughtError instanceof Error ? caughtError.message : "保存并打开歌舞融合失败。");
+      setSaving(false);
+    }
+  }
+
   return (
     <main className="page-frame">
       <PageTitle
@@ -78,6 +96,9 @@ export function SongAdaptationDetailPage() {
                 导出 Markdown
               </Button>
             ) : null}
+            <Button variant="secondary" type="button" disabled={!editedContent || saving} onClick={() => void openMusicalFusion()}>
+              保存并生成歌舞融合
+            </Button>
             <Button type="button" disabled={!editedContent || saving} onClick={() => void saveSongAdaptation()}>
               {saving ? "保存中..." : "保存全部修改"}
             </Button>

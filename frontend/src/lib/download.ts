@@ -2,6 +2,7 @@ import {
   fetchClassInteractionMarkdown,
   fetchLessonPlanMarkdown,
   fetchMovementGuideMarkdown,
+  fetchMusicalFusionMarkdown,
   fetchMusicalScriptMarkdown,
   fetchPracticeReportMarkdown,
   fetchRoleTrainingMarkdown,
@@ -31,6 +32,11 @@ export async function downloadRoleTrainingMarkdown(roleTrainingPlanId: string, t
 export async function downloadSongAdaptationMarkdown(songAdaptationId: string, title: string) {
   const markdown = await fetchSongAdaptationMarkdown(songAdaptationId);
   saveMarkdown(markdown, title, "song-adaptation");
+}
+
+export async function downloadMusicalFusionMarkdown(musicalFusionPlanId: string, title: string) {
+  const markdown = await fetchMusicalFusionMarkdown(musicalFusionPlanId);
+  saveMarkdown(markdown, title, "musical-fusion-plan");
 }
 
 export async function downloadMovementGuideMarkdown(movementGuideId: string, title: string) {

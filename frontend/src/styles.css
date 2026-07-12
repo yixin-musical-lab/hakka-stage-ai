@@ -182,6 +182,18 @@ button:disabled {
   color: #183f3c;
 }
 
+@media (max-width: 1360px) {
+  .app-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .main-nav {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
 .page-frame {
   padding-top: 24px;
 }
@@ -578,6 +590,102 @@ h3 {
   gap: 18px;
   margin-top: 18px;
   align-items: start;
+}
+
+.creation-flow-section {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid rgba(38, 69, 65, 0.14);
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(226, 236, 231, 0.74), rgba(255, 255, 255, 0.9)),
+    var(--card);
+  box-shadow: 0 18px 52px rgba(31, 47, 43, 0.06);
+}
+
+.creation-flow-section .section-heading {
+  margin-bottom: 18px;
+}
+
+.creation-flow-section .section-heading p:last-child {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.creation-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.creation-stage-card {
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  border-color: rgba(38, 69, 65, 0.16);
+  box-shadow: 0 12px 30px rgba(31, 47, 43, 0.06);
+}
+
+.creation-stage-card [data-slot="card-header"] {
+  min-height: 146px;
+}
+
+.creation-stage-card [data-slot="card-content"] {
+  display: grid;
+  gap: 16px;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.creation-stage-card [data-slot="card-content"] p {
+  margin: 0;
+}
+
+.creation-stage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.creation-stage-index {
+  color: rgba(24, 63, 60, 0.22);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.creation-stage-count {
+  font-size: 13px;
+}
+
+.creation-stage-actions {
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.creation-stage-actions > * {
+  flex: 1 1 132px;
+}
+
+.source-summary {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+}
+
+.source-summary p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .script-detail-layout {
@@ -1270,6 +1378,7 @@ textarea:focus {
   }
 
   .lesson-layout,
+  .creation-flow-grid,
   .status-strip,
   .health-grid {
     grid-template-columns: 1fr;
@@ -1328,6 +1437,14 @@ textarea:focus {
 
   .surface-panel {
     padding: 16px;
+  }
+
+  .creation-flow-section {
+    padding: 16px;
+  }
+
+  .creation-stage-actions > * {
+    flex-basis: 100%;
   }
 
   .hero-overview {

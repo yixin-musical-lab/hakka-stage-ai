@@ -13,6 +13,7 @@ from app.llm_options import REASONING_LEVELS, provider_models
 from app.schemas import (
     ClassInteractionContent,
     LessonPlanContent,
+    MusicalFusionContent,
     MusicalScriptContent,
     RoleTrainingContent,
     SongAdaptationContent,
@@ -21,12 +22,14 @@ from app.schemas import (
 LESSON_PLAN_PROMPT_VERSION = "lesson_plan_v1"
 MUSICAL_SCRIPT_PROMPT_VERSION = "musical_script_v1"
 SONG_ADAPTATION_PROMPT_VERSION = "song_adaptation_v1"
+MUSICAL_FUSION_PROMPT_VERSION = "musical_fusion_v1"
 ROLE_TRAINING_PROMPT_VERSION = "role_training_v1"
 CLASS_INTERACTION_PROMPT_VERSION = "class_interaction_v1"
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 LESSON_PLAN_PROMPT_PATH = PROMPT_DIR / "lesson_plan_v1.md"
 MUSICAL_SCRIPT_PROMPT_PATH = PROMPT_DIR / "musical_script_v1.md"
 SONG_ADAPTATION_PROMPT_PATH = PROMPT_DIR / "song_adaptation_v1.md"
+MUSICAL_FUSION_PROMPT_PATH = PROMPT_DIR / "musical_fusion_v1.md"
 ROLE_TRAINING_PROMPT_PATH = PROMPT_DIR / "role_training_v1.md"
 CLASS_INTERACTION_PROMPT_PATH = PROMPT_DIR / "class_interaction_v1.md"
 LLM_RETRY_ATTEMPTS = 4
@@ -59,6 +62,17 @@ SONG_ADAPTATION_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 2. 不要新增与唱段适配无关的信息，尽量保留原始语义。
 3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
 4. JSON 必须符合唱段适配字段结构：title、source_song、related_scene、adaptation_goal、sections、dance_interludes、review_notes。
+"""
+MUSICAL_FUSION_REPAIR_PROMPT = """你是严格的 JSON 修复器。
+
+请把用户提供的模型原文修复为一个合法 JSON 对象。
+
+规则：
+1. 只能输出 JSON，不要 Markdown、代码块或解释。
+2. 不要新增与歌舞融合结构无关的信息，尽量保留原始语义。
+3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
+4. JSON 必须符合字段结构：title、related_scene、fusion_goal、stage_space、actor_count、overall_design、segments、highlight_summary、rehearsal_notes、director_review_notes。
+5. segments 至少包含两个段落，并且至少一个段落的 is_highlight 为 true。
 """
 ROLE_TRAINING_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 
@@ -191,6 +205,35 @@ class LLMClient:
             empty_message="LLM 返回内容为空。",
             truncated_message="LLM 输出被截断，无法生成完整唱段适配 JSON，请调高 LLM_TIMEOUT_SECONDS 或降低推理强度后重试。",
             parse_error_label="唱段适配 JSON",
+            temperature=0.35,
+        )
+
+    def generate_musical_fusion(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """调用 LLM 生成结构化 M04 歌舞融合建议。"""
+
+        provider = str(input_snapshot.get("llm_provider") or self.settings.llm_default_provider)
+        model = str(input_snapshot.get("llm_model") or self.settings.llm_default_model)
+        reasoning_level = str(input_snapshot.get("reasoning_level") or self.settings.llm_default_reasoning_level)
+        if model not in provider_models(provider):
+            raise RuntimeError(f"{provider} 不支持模型 {model}。")
+        extra_body = self._reasoning_extra_body(provider, reasoning_level)
+
+        if self.settings.llm_mock_mode:
+            return self._mock_musical_fusion(input_snapshot, provider, model, reasoning_level, extra_body)
+
+        return self._generate_structured_json(
+            input_snapshot=input_snapshot,
+            provider=provider,
+            model=model,
+            reasoning_level=reasoning_level,
+            extra_body=extra_body,
+            prompt_path=MUSICAL_FUSION_PROMPT_PATH,
+            prompt_version=MUSICAL_FUSION_PROMPT_VERSION,
+            schema_model=MusicalFusionContent,
+            repair_prompt=MUSICAL_FUSION_REPAIR_PROMPT,
+            empty_message="LLM 返回内容为空。",
+            truncated_message="LLM 输出被截断，无法生成完整歌舞融合 JSON，请降低段落数量或推理强度后重试。",
+            parse_error_label="歌舞融合方案 JSON",
             temperature=0.35,
         )
 
@@ -760,6 +803,107 @@ class LLMClient:
         model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, SONG_ADAPTATION_PROMPT_VERSION)
         return content, model_info
 
+    def _mock_musical_fusion(
+        self,
+        input_snapshot: dict[str, Any],
+        provider: str,
+        model: str,
+        reasoning_level: str,
+        extra_body: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """生成同时覆盖 M03 引用和手工音乐段落模式的本地 M04 示例。"""
+
+        script_title = str(input_snapshot.get("script_title") or "客家山歌小剧场")
+        related_scene = str(input_snapshot.get("related_scene") or "第二幕：一起排练")
+        fusion_goal = str(input_snapshot.get("fusion_goal") or "从剧情铺垫推进到全员齐唱群舞高潮")
+        stage_space = str(input_snapshot.get("stage_space") or "普通教室或小舞台")
+        actor_count = int(input_snapshot.get("actor_count") or 12)
+        music_title = str(input_snapshot.get("music_title") or "客家山歌类曲目")
+        content = MusicalFusionContent(
+            title=f"{script_title} · {related_scene}歌舞融合建议",
+            related_scene=related_scene,
+            fusion_goal=fusion_goal,
+            stage_space=stage_space,
+            actor_count=actor_count,
+            overall_design=(
+                f"围绕《{music_title}》采用“旁白铺垫—主角领唱—全员齐唱—间奏转场”的递进结构，"
+                "舞蹈强度和队形变化逐段增加，同时保留清楚的剧情信息和少儿排演安全距离。"
+            ),
+            segments=[
+                {
+                    "segment_no": "A1",
+                    "story_content": "旁白介绍山歌和家乡记忆，主角从侧区进入。",
+                    "music_position": "0:00-0:18 前奏",
+                    "singing_mode": "不演唱，旁白衔接",
+                    "singing_roles": ["旁白"],
+                    "dance_form": "群演做轻踏步和呼吸式手位，保持背景律动。",
+                    "formation_suggestion": "群演半圆分散，中心留出主角进入通道。",
+                    "emotion": "温柔、好奇",
+                    "song_dance_relationship": "动作只负责营造氛围，不遮挡旁白和主角入场。",
+                    "transition_note": "旁白最后一句结束时，主角走到中心并接入主歌。",
+                    "rehearsal_tip": "先无音乐排清入场路线，再加入前奏卡点。",
+                    "safety_note": "半圆演员之间保持一臂距离，入场通道不得交叉。",
+                    "is_highlight": False,
+                },
+                {
+                    "segment_no": "B1",
+                    "story_content": "主角第一次尝试唱山歌，其他角色用动作回应。",
+                    "music_position": "0:18-0:55 主歌一",
+                    "singing_mode": "主角独唱，奶奶短句回应",
+                    "singing_roles": ["主角", "奶奶"],
+                    "dance_form": "主角以表演性手位为主，群演做左右呼应的小幅动作。",
+                    "formation_suggestion": "主角中心偏前，奶奶侧后方，群演保持两侧弧线。",
+                    "emotion": "试探、逐渐明亮",
+                    "song_dance_relationship": "独唱承担剧情，舞蹈保持克制并用呼应动作突出歌词关键词。",
+                    "transition_note": "奶奶回应后，两侧群演向中心收拢准备副歌。",
+                    "rehearsal_tip": "先把独唱和回应台词排稳，再加入群演动作。",
+                    "safety_note": "向中心收拢时统一走两拍，不抢位、不快速转圈。",
+                    "is_highlight": False,
+                },
+                {
+                    "segment_no": "C1",
+                    "story_content": "全体理解山歌情感，完成齐唱和群舞爆发点。",
+                    "music_position": "0:55-1:25 副歌",
+                    "singing_mode": "领唱带全体齐唱",
+                    "singing_roles": ["领唱", "全体"],
+                    "dance_form": "八拍群舞组合，动作幅度逐步打开并在末句定格。",
+                    "formation_suggestion": "两排错位展开为宽半圆，领唱保持视觉中心。",
+                    "emotion": "热烈、团结",
+                    "song_dance_relationship": "齐唱和群舞同步增强，歌词重拍对应队形展开和手位打开。",
+                    "transition_note": "副歌末句定格两拍后，由领舞带入间奏转场。",
+                    "rehearsal_tip": "先慢速练队形变化，再按原速合唱跳，老师重点检查重拍同步。",
+                    "safety_note": "展开队形时避免后退交叉，动作幅度按实际场地缩小。",
+                    "is_highlight": True,
+                },
+                {
+                    "segment_no": "D1",
+                    "story_content": "间奏中角色完成位置交换，为后续剧情或收束做准备。",
+                    "music_position": "1:25-1:45 间奏",
+                    "singing_mode": "不演唱，可保留短口令",
+                    "singing_roles": ["领舞"],
+                    "dance_form": "领舞带队完成错位踏步和方向转换。",
+                    "formation_suggestion": "宽半圆收成前后三组，主角回到中心。",
+                    "emotion": "轻快、收束",
+                    "song_dance_relationship": "间奏让舞蹈承担转场功能，不新增复杂剧情信息。",
+                    "transition_note": "音乐收弱时全体面向中心，接入下一段台词或终场造型。",
+                    "rehearsal_tip": "给每组设置固定终点标记，分组确认后再整体连接。",
+                    "safety_note": "路线交汇处采用先后顺序，不同时穿越中心。",
+                    "is_highlight": False,
+                },
+            ],
+            highlight_summary="副歌 C1 是全段高潮：领唱带全员齐唱，两排展开为宽半圆并完成八拍群舞定格。",
+            rehearsal_notes=[
+                "先分别排唱段、动作和队形，再按 A1 到 D1 顺序连接。",
+                "每次合排只增加一个变量，优先保证歌词、路线和安全距离清楚。",
+            ],
+            director_review_notes=[
+                "这是 mock 演示方案，编导需要结合真实场地、演员能力和音乐长度复核。",
+                "方案没有完成专业编舞或音频节拍分析，具体动作和卡点由老师最终确认。",
+            ],
+        ).model_dump()
+        model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, MUSICAL_FUSION_PROMPT_VERSION)
+        return content, model_info
+
     def _mock_role_training(
         self,
         input_snapshot: dict[str, Any],
@@ -771,11 +915,18 @@ class LLMClient:
         """生成本地演示分角色训练计划。"""
 
         script_title = input_snapshot.get("script_title") or "客家山歌小剧场"
+        fusion_content = input_snapshot.get("fusion_content") or {}
+        fusion_note = (
+            f" 已引用歌舞融合方案“{input_snapshot.get('fusion_plan_title') or fusion_content.get('title')}”，"
+            f"训练时重点复现其高潮设计：{fusion_content.get('highlight_summary', '')}"
+            if fusion_content
+            else ""
+        )
         content = RoleTrainingContent(
             title=f"{script_title} · 分角色训练计划",
             project_overview=(
                 f"排练周期 {input_snapshot['rehearsal_days']} 天，每次 {input_snapshot['session_minutes']} 分钟，"
-                f"重点训练：{input_snapshot['training_focus']}。"
+                f"重点训练：{input_snapshot['training_focus']}。{fusion_note}"
             ),
             role_tasks=[
                 {

@@ -16,6 +16,10 @@ import type {
   MovementGuideForm,
   MovementGuideResponse,
   MovementGuideSummary,
+  MusicalFusionContent,
+  MusicalFusionForm,
+  MusicalFusionPlanResponse,
+  MusicalFusionPlanSummary,
   MusicalScriptContent,
   MusicalScriptForm,
   MusicalScriptResponse,
@@ -289,6 +293,63 @@ export async function deleteSongAdaptation(songAdaptationId: string) {
 
 export async function fetchSongAdaptationMarkdown(songAdaptationId: string) {
   const response = await fetch(`${apiBaseUrl}/api/song-adaptations/${songAdaptationId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export async function createMusicalFusionTask(form: MusicalFusionForm) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; musical_fusion_plan_id: string; status: string };
+}
+
+export async function fetchMusicalFusionPlans(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalFusionPlanSummary[];
+}
+
+export async function fetchMusicalFusionPlan(musicalFusionPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans/${musicalFusionPlanId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalFusionPlanResponse;
+}
+
+export async function updateMusicalFusionPlan(musicalFusionPlanId: string, editedContent: MusicalFusionContent) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans/${musicalFusionPlanId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as MusicalFusionPlanResponse;
+}
+
+export async function deleteMusicalFusionPlan(musicalFusionPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans/${musicalFusionPlanId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchMusicalFusionMarkdown(musicalFusionPlanId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/musical-fusion-plans/${musicalFusionPlanId}/markdown`);
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }
