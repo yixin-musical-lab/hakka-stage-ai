@@ -15,6 +15,7 @@ from app.schemas import (
     LessonPlanContent,
     MusicalFusionContent,
     MusicalScriptContent,
+    RehearsalReviewContent,
     RoleTrainingContent,
     SongAdaptationContent,
 )
@@ -25,6 +26,7 @@ SONG_ADAPTATION_PROMPT_VERSION = "song_adaptation_v1"
 MUSICAL_FUSION_PROMPT_VERSION = "musical_fusion_v1"
 ROLE_TRAINING_PROMPT_VERSION = "role_training_v1"
 CLASS_INTERACTION_PROMPT_VERSION = "class_interaction_v1"
+REHEARSAL_REVIEW_PROMPT_VERSION = "rehearsal_review_v1"
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 LESSON_PLAN_PROMPT_PATH = PROMPT_DIR / "lesson_plan_v1.md"
 MUSICAL_SCRIPT_PROMPT_PATH = PROMPT_DIR / "musical_script_v1.md"
@@ -32,6 +34,7 @@ SONG_ADAPTATION_PROMPT_PATH = PROMPT_DIR / "song_adaptation_v1.md"
 MUSICAL_FUSION_PROMPT_PATH = PROMPT_DIR / "musical_fusion_v1.md"
 ROLE_TRAINING_PROMPT_PATH = PROMPT_DIR / "role_training_v1.md"
 CLASS_INTERACTION_PROMPT_PATH = PROMPT_DIR / "class_interaction_v1.md"
+REHEARSAL_REVIEW_PROMPT_PATH = PROMPT_DIR / "rehearsal_review_v1.md"
 LLM_RETRY_ATTEMPTS = 4
 LESSON_PLAN_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 
@@ -94,6 +97,17 @@ CLASS_INTERACTION_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
 4. JSON 必须符合课堂互动字段结构：title、teaching_phase、interaction_goal、duration_minutes、space_materials、game_rules、teacher_script、command_phrases、student_actions、grouping_method、encouragement_phrases、safety_notes、variations、teacher_check_notes。
 5. teaching_phase 只能是「开场」「热身」「动作学习」「分组展示」「收束」之一。
+"""
+REHEARSAL_REVIEW_REPAIR_PROMPT = """你是严格的 JSON 修复器。
+
+请把用户提供的模型原文修复为一个合法 JSON 对象。
+
+规则：
+1. 只能输出 JSON，不要 Markdown、代码块或解释。
+2. 不要新增人工观察记录中不存在的具体演出事实。
+3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
+4. JSON 必须符合字段结构：title、overview、highlights、issues、role_suggestions、singing_and_rhythm_advice、dance_and_formation_advice、performance_and_blocking_advice、next_rehearsal_plan、teaching_reflection、reusable_template、reviewer_notes、boundary_note。
+5. boundary_note 必须说明视频仅供人工查看，AI 未分析视频内容。
 """
 
 
@@ -293,6 +307,35 @@ class LLMClient:
             truncated_message="LLM 输出被截断，无法生成完整课堂互动方案 JSON，请降低时长或推理强度后重试。",
             parse_error_label="课堂互动方案 JSON",
             temperature=0.4,
+        )
+
+    def generate_rehearsal_review(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """根据人工观察记录生成结构化 M08 复盘报告。"""
+
+        provider = str(input_snapshot.get("llm_provider") or self.settings.llm_default_provider)
+        model = str(input_snapshot.get("llm_model") or self.settings.llm_default_model)
+        reasoning_level = str(input_snapshot.get("reasoning_level") or self.settings.llm_default_reasoning_level)
+        if model not in provider_models(provider):
+            raise RuntimeError(f"{provider} 不支持模型 {model}。")
+        extra_body = self._reasoning_extra_body(provider, reasoning_level)
+
+        if self.settings.llm_mock_mode:
+            return self._mock_rehearsal_review(input_snapshot, provider, model, reasoning_level, extra_body)
+
+        return self._generate_structured_json(
+            input_snapshot=input_snapshot,
+            provider=provider,
+            model=model,
+            reasoning_level=reasoning_level,
+            extra_body=extra_body,
+            prompt_path=REHEARSAL_REVIEW_PROMPT_PATH,
+            prompt_version=REHEARSAL_REVIEW_PROMPT_VERSION,
+            schema_model=RehearsalReviewContent,
+            repair_prompt=REHEARSAL_REVIEW_REPAIR_PROMPT,
+            empty_message="LLM 返回内容为空。",
+            truncated_message="LLM 输出被截断，无法生成完整复盘报告 JSON，请减少观察记录长度或降低推理强度后重试。",
+            parse_error_label="排练复盘 JSON",
+            temperature=0.35,
         )
 
     def _generate_structured_json(
@@ -983,6 +1026,103 @@ class LLMClient:
             teacher_checkpoints=["不同角色任务是否有区分。", "群演和旁白是否都有明确任务。", "正式排练前需要老师确认动作难度。"],
         ).model_dump()
         model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, ROLE_TRAINING_PROMPT_VERSION)
+        return content, model_info
+
+    def _mock_rehearsal_review(
+        self,
+        input_snapshot: dict[str, Any],
+        provider: str,
+        model: str,
+        reasoning_level: str,
+        extra_body: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """生成完全离线、且明确不分析视频的 M08 演示报告。"""
+
+        script_title = str(input_snapshot.get("script_title") or "客家山歌小剧场")
+        event_label = "演出" if input_snapshot.get("event_type") == "performance" else "排练"
+        review_focus = [str(item) for item in input_snapshot.get("review_focus") or ["唱段", "队形", "表情"]]
+        fusion_content = input_snapshot.get("fusion_content") or {}
+        role_training_content = input_snapshot.get("role_training_content") or {}
+        source_notes = []
+        if fusion_content:
+            source_notes.append(f"已参考 M04 高潮设计：{fusion_content.get('highlight_summary', '歌舞融合重点段落')}。")
+        if role_training_content:
+            source_notes.append("已参考 M05 的分角色任务和老师检查点。")
+        role_name = "全体演员"
+        role_tasks = role_training_content.get("role_tasks") or []
+        if role_tasks:
+            role_name = str(role_tasks[0].get("role_name") or role_name)
+        strengths = str(input_snapshot.get("strengths") or "").strip()
+        highlights = (
+            [strengths]
+            if strengths
+            else ["人工记录未单独标注表现亮点，请老师结合现场情况补充后再确认报告。"]
+        )
+        role_observation = (
+            "M05 已为该角色安排训练任务，本次需要由老师核对这些任务在现场的落实情况。"
+            if role_tasks
+            else "人工观察记录未按角色拆分表现，本条仅作为下一次分角色记录提示。"
+        )
+
+        content = RehearsalReviewContent(
+            title=f"{script_title} · {input_snapshot.get('event_date', '')} {event_label}复盘",
+            overview=(
+                f"本次围绕“{input_snapshot.get('rehearsal_content', '')}”开展{event_label}。"
+                f"以下结论仅整理老师填写的观察记录。{' '.join(source_notes)}"
+            ),
+            highlights=highlights,
+            issues=[
+                {
+                    "category": review_focus[0],
+                    "observation": str(
+                        input_snapshot.get("issues")
+                        or input_snapshot.get("observation_notes")
+                        or "重点段落的完成稳定性仍需继续观察。"
+                    ),
+                    "possible_cause": "分段练习和完整连接之间的切换次数不足，演员对统一检查点还不够熟悉。",
+                    "improvement_action": "下一次先按问题段落慢速拆分，再加入前后衔接，并由老师逐项确认。",
+                    "priority": "high",
+                    "next_check": "连续完成两次重点段落，确认节奏、队形和角色任务均能稳定复现。",
+                },
+            ],
+            role_suggestions=[
+                {
+                    "role_name": role_name,
+                    "observation": role_observation,
+                    "suggestion": "先由老师补充该角色的现场观察，再确认个人任务，并与相邻角色完成两轮连接。",
+                    "next_tasks": ["补充分角色观察", "复核个人关键段落", "确认与相邻角色的衔接信号"],
+                },
+            ],
+            singing_and_rhythm_advice="先用拍点或口令统一进入时机，再加入歌词；老师重点检查重拍和句尾是否整齐。",
+            dance_and_formation_advice="先确认起点、移动路线和终点，队形稳定后再增加动作幅度，避免同时修改多个变量。",
+            performance_and_blocking_advice="角色进入重点段落前要有清楚的视线和情绪变化，转场时保持观众能理解剧情关系。",
+            next_rehearsal_plan={
+                "goal": str(input_snapshot.get("next_goal") or "稳定完成重点段落并跑通整场连接。"),
+                "focus_items": review_focus,
+                "action_steps": [
+                    "用 10 分钟复盘本次两个最高优先级问题。",
+                    "分角色或分组慢速修正重点段落。",
+                    "加入唱段、动作和队形完成两次连接。",
+                    "最后进行一次不中断合排并记录结果。",
+                ],
+                "teacher_checkpoints": ["问题是否有可观察改善", "转场是否减少临时提醒", "下一次任务是否落实到角色"],
+            },
+            teaching_reflection="本次复盘说明，先固定观察标准再合排，比同时纠正台词、唱段、动作和队形更容易形成稳定改进。老师后续可沿用同一检查清单记录变化。",
+            reusable_template={
+                "template_title": f"{script_title} · 常规{event_label}复盘模板",
+                "review_focus": review_focus,
+                "observation_prompts": [
+                    "本次哪些段落已经可以稳定复现？",
+                    "问题出现在哪个角色、段落或衔接环节？",
+                    "老师减少提醒后，演员能否独立完成？",
+                    "下一次最需要先解决哪一个问题？",
+                ],
+                "closing_checklist": ["确认问题有事实依据", "确认改进措施可执行", "确认任务落实到角色", "确认下次检查方法"],
+            },
+            reviewer_notes=["请老师核对问题描述是否符合现场事实。", "请结合真实场地和演员状态调整排练时长与动作强度。"],
+            boundary_note="本报告仅整理人工观察记录；上传视频仅供人工查看，AI 未分析视频内容。",
+        ).model_dump()
+        model_info = self._mock_model_info(provider, model, reasoning_level, extra_body, REHEARSAL_REVIEW_PROMPT_VERSION)
         return content, model_info
 
     def _mock_class_interaction(

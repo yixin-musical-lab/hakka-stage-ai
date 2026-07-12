@@ -23,6 +23,9 @@ import { PracticeSubmissionListPage } from "./pages/PracticeSubmissionListPage";
 import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
 import { RoleTrainingGeneratePage } from "./pages/RoleTrainingGeneratePage";
 import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
+import { RehearsalReviewDetailPage } from "./pages/RehearsalReviewDetailPage";
+import { RehearsalReviewGeneratePage } from "./pages/RehearsalReviewGeneratePage";
+import { RehearsalReviewListPage } from "./pages/RehearsalReviewListPage";
 import { SongAdaptationDetailPage } from "./pages/SongAdaptationDetailPage";
 import { SongAdaptationGeneratePage } from "./pages/SongAdaptationGeneratePage";
 import { SongAdaptationListPage } from "./pages/SongAdaptationListPage";
@@ -51,6 +54,9 @@ export function App() {
           <Route path="/role-training-plans/generate" element={<RoleTrainingGeneratePage />} />
           <Route path="/role-training-plans" element={<RoleTrainingPlanListPage />} />
           <Route path="/role-training-plans/:roleTrainingPlanId" element={<RoleTrainingPlanDetailPage />} />
+          <Route path="/rehearsal-reviews/generate" element={<RehearsalReviewGeneratePage />} />
+          <Route path="/rehearsal-reviews" element={<RehearsalReviewListPage />} />
+          <Route path="/rehearsal-reviews/:rehearsalReviewId" element={<RehearsalReviewDetailPage />} />
           <Route path="/movement-guides/new" element={<MovementGuideCreatePage />} />
           <Route path="/movement-guides" element={<MovementGuideListPage />} />
           <Route path="/movement-guides/:movementGuideId" element={<MovementGuideDetailPage />} />

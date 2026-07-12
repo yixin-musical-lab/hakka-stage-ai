@@ -482,6 +482,130 @@ export type RoleTrainingPlanSummary = {
   updated_at: string;
 };
 
+export type RehearsalReviewEventType = "rehearsal" | "performance";
+
+export type RehearsalReviewForm = {
+  script_id: string;
+  fusion_plan_id: string | null;
+  role_training_plan_id: string | null;
+  event_type: RehearsalReviewEventType;
+  event_date: string;
+  rehearsal_content: string;
+  observation_notes: string;
+  strengths: string;
+  issues: string;
+  review_focus: string[];
+  next_goal: string;
+  video_object_key: string;
+  video_original_file_name: string;
+  video_content_type: string;
+  video_size_bytes: number | null;
+  video_notes: string;
+  llm_provider: "deepseek" | "qwen";
+  llm_model: string;
+  reasoning_level: "off" | "standard" | "enhanced";
+};
+
+export type RehearsalVideoUploadResponse = {
+  object_key: string;
+  original_file_name: string;
+  content_type: string;
+  size_bytes: number;
+  storage_mode: "minio";
+};
+
+export type RehearsalIssue = {
+  category: string;
+  observation: string;
+  possible_cause: string;
+  improvement_action: string;
+  priority: "high" | "medium" | "low";
+  next_check: string;
+};
+
+export type RehearsalRoleSuggestion = {
+  role_name: string;
+  observation: string;
+  suggestion: string;
+  next_tasks: string[];
+};
+
+export type NextRehearsalPlan = {
+  goal: string;
+  focus_items: string[];
+  action_steps: string[];
+  teacher_checkpoints: string[];
+};
+
+export type ReusableReviewTemplate = {
+  template_title: string;
+  review_focus: string[];
+  observation_prompts: string[];
+  closing_checklist: string[];
+};
+
+export type RehearsalReviewContent = {
+  title: string;
+  overview: string;
+  highlights: string[];
+  issues: RehearsalIssue[];
+  role_suggestions: RehearsalRoleSuggestion[];
+  singing_and_rhythm_advice: string;
+  dance_and_formation_advice: string;
+  performance_and_blocking_advice: string;
+  next_rehearsal_plan: NextRehearsalPlan;
+  teaching_reflection: string;
+  reusable_template: ReusableReviewTemplate;
+  reviewer_notes: string[];
+  boundary_note: string;
+};
+
+export type RehearsalReviewResponse = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  fusion_plan_id: string | null;
+  role_training_plan_id: string | null;
+  title: string;
+  status: string;
+  event_type: RehearsalReviewEventType;
+  event_date: string;
+  rehearsal_content: string;
+  observation_notes: string;
+  strengths: string;
+  issues: string;
+  review_focus: string[];
+  next_goal: string;
+  has_video_attachment: boolean;
+  video_original_file_name: string;
+  video_content_type: string;
+  video_size_bytes: number | null;
+  video_notes: string;
+  content: RehearsalReviewContent | null;
+  edited_content: RehearsalReviewContent | null;
+  raw_model_info: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RehearsalReviewSummary = {
+  id: string;
+  project_id: string;
+  script_id: string;
+  fusion_plan_id: string | null;
+  role_training_plan_id: string | null;
+  title: string;
+  status: string;
+  event_type: RehearsalReviewEventType;
+  event_date: string;
+  has_video_attachment: boolean;
+  provider: string | null;
+  model: string | null;
+  reasoning_level: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type MovementAssetType =
   | "reference_video"
   | "skeleton_preview"

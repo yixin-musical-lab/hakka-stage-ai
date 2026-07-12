@@ -62,6 +62,19 @@ export function RoleTrainingPlanDetailPage() {
     }
   }
 
+  async function openRehearsalReview() {
+    if (!plan || !editedContent) {
+      return;
+    }
+    try {
+      // 进入 M08 前保存当前训练确认稿，确保复盘任务读取到老师刚修改的角色任务。
+      await updateRoleTrainingPlan(plan.id, editedContent);
+      navigate(`/rehearsal-reviews/generate?script_id=${plan.script_id}&role_training_plan_id=${plan.id}`);
+    } catch (caughtError) {
+      setNotice(caughtError instanceof Error ? caughtError.message : "保存并打开排练复盘失败。");
+    }
+  }
+
   return (
     <main className="page-frame">
       <PageTitle
@@ -89,11 +102,27 @@ export function RoleTrainingPlanDetailPage() {
       {loading ? <EmptyState title="正在读取训练计划" text="请稍候，系统正在读取训练计划详情。" /> : null}
 
       {editedContent ? (
-        <Card asChild className="surface-panel">
-          <section>
-            <RoleTrainingEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
-          </section>
-        </Card>
+        <>
+          <Card asChild className="surface-panel">
+            <section>
+              <RoleTrainingEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
+            </section>
+          </Card>
+          <Card asChild className="surface-panel next-step-panel">
+            <section>
+              <div className="section-heading">
+                <div>
+                  <p className="section-kicker">下一步 · M08</p>
+                  <h2>排练后记录问题并形成下一次计划</h2>
+                  <p>复盘报告会读取本训练计划的角色任务和检查点，也可以上传一个仅供人工回看的视频附件。</p>
+                </div>
+                <Button type="button" onClick={() => void openRehearsalReview()}>
+                  基于本计划创建复盘
+                </Button>
+              </div>
+            </section>
+          </Card>
+        </>
       ) : !loading ? (
         <EmptyState title="训练计划内容不可用" text="这份训练计划可能尚未生成成功，暂时无法编辑或导出。" />
       ) : null}

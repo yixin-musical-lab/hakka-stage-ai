@@ -3,10 +3,10 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
-import { fetchMusicalFusionPlans, fetchRoleTrainingPlans, fetchSongAdaptations } from "../../lib/api";
-import type { MusicalFusionPlanSummary, RoleTrainingPlanSummary, SongAdaptationSummary } from "../../types";
+import { fetchMusicalFusionPlans, fetchRehearsalReviews, fetchRoleTrainingPlans, fetchSongAdaptations } from "../../lib/api";
+import type { MusicalFusionPlanSummary, RehearsalReviewSummary, RoleTrainingPlanSummary, SongAdaptationSummary } from "../../types";
 
-export type MusicalCreationStage = "m03" | "m04" | "m05";
+export type MusicalCreationStage = "m03" | "m04" | "m05" | "m08";
 
 type StageStatus = {
   label: string;
@@ -29,17 +29,19 @@ export function MusicalCreationFlowPanel({
   const [songAdaptations, setSongAdaptations] = useState<SongAdaptationSummary[]>([]);
   const [fusionPlans, setFusionPlans] = useState<MusicalFusionPlanSummary[]>([]);
   const [trainingPlans, setTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
+  const [rehearsalReviews, setRehearsalReviews] = useState<RehearsalReviewSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errors, setErrors] = useState<Record<MusicalCreationStage, boolean>>({ m03: false, m04: false, m05: false });
+  const [errors, setErrors] = useState<Record<MusicalCreationStage, boolean>>({ m03: false, m04: false, m05: false, m08: false });
 
   useEffect(() => {
     const controller = new AbortController();
 
     async function loadStages() {
-      const [songResult, fusionResult, trainingResult] = await Promise.allSettled([
+      const [songResult, fusionResult, trainingResult, reviewResult] = await Promise.allSettled([
         fetchSongAdaptations(controller.signal),
         fetchMusicalFusionPlans(controller.signal),
         fetchRoleTrainingPlans(controller.signal),
+        fetchRehearsalReviews(controller.signal),
       ]);
       if (controller.signal.aborted) {
         return;
@@ -54,10 +56,14 @@ export function MusicalCreationFlowPanel({
       if (trainingResult.status === "fulfilled") {
         setTrainingPlans(trainingResult.value.filter((item) => item.script_id === scriptId));
       }
+      if (reviewResult.status === "fulfilled") {
+        setRehearsalReviews(reviewResult.value.filter((item) => item.script_id === scriptId));
+      }
       setErrors({
         m03: songResult.status === "rejected",
         m04: fusionResult.status === "rejected",
         m05: trainingResult.status === "rejected",
+        m08: reviewResult.status === "rejected",
       });
       setLoading(false);
     }
@@ -70,8 +76,11 @@ export function MusicalCreationFlowPanel({
     const latestSongAdaptation = songAdaptations[0] ?? null;
     const latestFusionPlan = fusionPlans[0] ?? null;
     const latestTrainingPlan = trainingPlans[0] ?? null;
+    const latestRehearsalReview = rehearsalReviews[0] ?? null;
     const m04Query = latestSongAdaptation ? `&song_adaptation_id=${latestSongAdaptation.id}` : "";
     const m05Query = latestFusionPlan ? `&fusion_plan_id=${latestFusionPlan.id}` : "";
+    const m08FusionQuery = latestFusionPlan ? `&fusion_plan_id=${latestFusionPlan.id}` : "";
+    const m08TrainingQuery = latestTrainingPlan ? `&role_training_plan_id=${latestTrainingPlan.id}` : "";
 
     return [
       {
@@ -104,15 +113,25 @@ export function MusicalCreationFlowPanel({
         latestPath: latestTrainingPlan ? `/role-training-plans/${latestTrainingPlan.id}` : null,
         createPath: `/role-training-plans/generate?script_id=${scriptId}${m05Query}`,
       },
+      {
+        key: "m08" as const,
+        step: "04",
+        eyebrow: "M08 排练 / 演出复盘",
+        title: "把现场观察变成下一次行动",
+        description: "整理问题、原因、角色任务、教学反思和下一次排练计划。",
+        rows: rehearsalReviews,
+        latestPath: latestRehearsalReview ? `/rehearsal-reviews/${latestRehearsalReview.id}` : null,
+        createPath: `/rehearsal-reviews/generate?script_id=${scriptId}${m08FusionQuery}${m08TrainingQuery}`,
+      },
     ];
-  }, [fusionPlans, scriptId, songAdaptations, trainingPlans]);
+  }, [fusionPlans, rehearsalReviews, scriptId, songAdaptations, trainingPlans]);
 
   return (
     <section className="creation-flow-section" aria-labelledby="creation-flow-title">
       <div className="section-heading">
         <div>
           <p className="section-kicker">创编流程</p>
-          <h2 id="creation-flow-title">从剧本确认稿继续完成 M03 → M04 → M05</h2>
+          <h2 id="creation-flow-title">从剧本确认稿继续完成 M03 → M04 → M05 → M08</h2>
           <p>进入新任务前会自动保存当前剧本；查看已有结果不会修改剧本内容。</p>
         </div>
       </div>

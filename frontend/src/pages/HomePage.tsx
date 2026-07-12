@@ -10,6 +10,7 @@ import {
   fetchMusicalFusionPlans,
   fetchMusicalScripts,
   fetchPracticeSubmissions,
+  fetchRehearsalReviews,
   fetchRoleTrainingPlans,
   fetchSongAdaptations,
 } from "../lib/api";
@@ -22,6 +23,7 @@ import type {
   MusicalFusionPlanSummary,
   MusicalScriptSummary,
   PracticeSubmissionSummary,
+  RehearsalReviewSummary,
   RoleTrainingPlanSummary,
   SongAdaptationSummary,
 } from "../types";
@@ -36,6 +38,7 @@ export function HomePage() {
   const [roleTrainingPlans, setRoleTrainingPlans] = useState<RoleTrainingPlanSummary[]>([]);
   const [movementGuides, setMovementGuides] = useState<MovementGuideSummary[]>([]);
   const [practiceSubmissions, setPracticeSubmissions] = useState<PracticeSubmissionSummary[]>([]);
+  const [rehearsalReviews, setRehearsalReviews] = useState<RehearsalReviewSummary[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -48,6 +51,7 @@ export function HomePage() {
     void fetchRoleTrainingPlans(controller.signal).then(setRoleTrainingPlans).catch(() => setRoleTrainingPlans([]));
     void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
     void fetchPracticeSubmissions(controller.signal).then(setPracticeSubmissions).catch(() => setPracticeSubmissions([]));
+    void fetchRehearsalReviews(controller.signal).then(setRehearsalReviews).catch(() => setRehearsalReviews([]));
     return () => controller.abort();
   }, []);
 
@@ -58,6 +62,7 @@ export function HomePage() {
   const latestMusicalFusionPlan = musicalFusionPlans[0];
   const latestMovementGuide = movementGuides[0];
   const latestPracticeSubmission = practiceSubmissions[0];
+  const latestRehearsalReview = rehearsalReviews[0];
   const configuredModelProviders =
     health?.dependencies
       .filter((dependency) => ["deepseek", "qwen"].includes(dependency.name) && dependency.configured)
@@ -95,6 +100,12 @@ export function HomePage() {
       action: "查看",
     },
     {
+      label: "排练复盘",
+      title: latestRehearsalReview ? latestRehearsalReview.title : "还没有保存的排练复盘",
+      to: latestRehearsalReview ? `/rehearsal-reviews/${latestRehearsalReview.id}` : "/rehearsal-reviews/generate",
+      action: latestRehearsalReview ? "打开" : "创建",
+    },
+    {
       label: "示范材料",
       title: latestMovementGuide ? latestMovementGuide.title : "还没有保存的动作图解",
       to: latestMovementGuide ? `/movement-guides/${latestMovementGuide.id}` : "/movement-guides/new",
@@ -120,6 +131,7 @@ export function HomePage() {
     { label: "唱段", count: songAdaptations.length, to: "/song-adaptations" },
     { label: "融合", count: musicalFusionPlans.length, to: "/musical-fusion-plans" },
     { label: "训练", count: roleTrainingPlans.length, to: "/role-training-plans" },
+    { label: "复盘", count: rehearsalReviews.length, to: "/rehearsal-reviews" },
     { label: "示范", count: movementGuides.length, to: "/movement-guides" },
     { label: "练习", count: practiceSubmissions.length, to: "/practice-submissions" },
   ];
@@ -130,6 +142,7 @@ export function HomePage() {
     songAdaptations.length +
     musicalFusionPlans.length +
     roleTrainingPlans.length +
+    rehearsalReviews.length +
     movementGuides.length +
     practiceSubmissions.length;
 
@@ -255,6 +268,12 @@ export function HomePage() {
           status="已接入"
           description="基于已确认剧本生成主角、配角、旁白、群演、领舞等角色训练任务。"
           to="/role-training-plans"
+        />
+        <ModuleTile
+          title="排练 / 演出复盘"
+          status="已接入"
+          description="基于人工观察记录生成问题、原因、改进计划和教学反思；视频保存到 MinIO，仅供人工回看。"
+          to="/rehearsal-reviews"
         />
         <ModuleTile
           title="示范材料"

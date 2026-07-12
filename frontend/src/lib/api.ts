@@ -31,6 +31,11 @@ import type {
   PracticeSubmissionForm,
   PracticeSubmissionSummary,
   PracticeVideoUploadResponse,
+  RehearsalReviewContent,
+  RehearsalReviewForm,
+  RehearsalReviewResponse,
+  RehearsalReviewSummary,
+  RehearsalVideoUploadResponse,
   RoleTrainingContent,
   RoleTrainingForm,
   RoleTrainingPlanResponse,
@@ -413,6 +418,93 @@ export async function fetchRoleTrainingMarkdown(roleTrainingPlanId: string) {
   return response.text();
 }
 
+export function uploadRehearsalVideo(file: File, onProgress?: (percent: number) => void) {
+  // Fetch 暂不提供稳定的上传进度事件，因此 M08 单文件上传使用浏览器原生 XHR。
+  // 这只影响前端传输层，不改变后端 multipart 接口和 T06 现有上传实现。
+  return new Promise<RehearsalVideoUploadResponse>((resolve, reject) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const request = new XMLHttpRequest();
+    request.open("POST", `${apiBaseUrl}/api/rehearsal-reviews/upload`);
+    request.responseType = "json";
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+      }
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve(request.response as RehearsalVideoUploadResponse);
+        return;
+      }
+      reject(new Error(readUploadError(request)));
+    });
+    request.addEventListener("error", () => reject(new Error("无法连接后端，视频附件未能上传到 MinIO。")));
+    request.addEventListener("abort", () => reject(new Error("视频上传已取消。")));
+    request.send(formData);
+  });
+}
+
+export async function createRehearsalReviewTask(form: RehearsalReviewForm) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; rehearsal_review_id: string; status: string; message: string };
+}
+
+export async function fetchRehearsalReviews(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RehearsalReviewSummary[];
+}
+
+export async function fetchRehearsalReview(rehearsalReviewId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews/${rehearsalReviewId}`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RehearsalReviewResponse;
+}
+
+export async function updateRehearsalReview(rehearsalReviewId: string, editedContent: RehearsalReviewContent) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews/${rehearsalReviewId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as RehearsalReviewResponse;
+}
+
+export async function deleteRehearsalReview(rehearsalReviewId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews/${rehearsalReviewId}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+}
+
+export async function fetchRehearsalReviewMarkdown(rehearsalReviewId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/rehearsal-reviews/${rehearsalReviewId}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
+export function rehearsalReviewVideoUrl(rehearsalReviewId: string) {
+  return `${apiBaseUrl}/api/rehearsal-reviews/${rehearsalReviewId}/video`;
+}
+
 export async function createMovementGuide(form: MovementGuideForm) {
   const response = await fetch(`${apiBaseUrl}/api/movement-guides`, {
     method: "POST",
@@ -572,4 +664,12 @@ async function readApiError(response: Response) {
   } catch {
     return `请求失败：${response.status}`;
   }
+}
+
+function readUploadError(request: XMLHttpRequest) {
+  const response = request.response as { detail?: string; message?: string } | null;
+  if (response && typeof response === "object") {
+    return response.detail ?? response.message ?? `请求失败：${request.status}`;
+  }
+  return `请求失败：${request.status}`;
 }
