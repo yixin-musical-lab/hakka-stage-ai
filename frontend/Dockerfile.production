@@ -1,0 +1,28 @@
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+# 生产镜像默认走同域反向代理：浏览器请求 /api 和 /health，
+# 由服务器上的 Caddy / Nginx 再转发给 FastAPI，避免暴露 8000 端口。
+ARG VITE_API_BASE_URL=/
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+
+FROM nginx:stable-alpine
+
+# 使用独立配置支持 React Router 刷新回退，并提供容器内部健康检查端点。
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+  CMD wget --quiet --output-document=- http://127.0.0.1/healthz >/dev/null || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
