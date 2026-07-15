@@ -8,6 +8,16 @@ from app.schemas.class_interaction import (
     LessonInteractionPrefillResponse,
     TeacherScriptStep,
 )
+from app.schemas.auth import (
+    AccountCreateRequest,
+    AuthTokenResponse,
+    BatchAccountCreateRequest,
+    BatchAccountCreateResponse,
+    LoginRequest,
+    PasswordChangeRequest,
+    ProfileUpdateRequest,
+    UserResponse,
+)
 from app.schemas.lesson_plan import (
     AiTaskResponse,
     LessonActivity,
@@ -95,7 +105,11 @@ from app.schemas.rehearsal_review import (
 from app.schemas.system import DependencyConfig, HealthResponse
 
 __all__ = [
+    "AccountCreateRequest",
     "AiTaskResponse",
+    "AuthTokenResponse",
+    "BatchAccountCreateRequest",
+    "BatchAccountCreateResponse",
     "ClassInteractionContent",
     "ClassInteractionGenerateRequest",
     "ClassInteractionGenerateResponse",
@@ -106,6 +120,7 @@ __all__ = [
     "HealthResponse",
     "LessonActivity",
     "LessonInteractionPrefillResponse",
+    "LoginRequest",
     "LlmModelOption",
     "LlmOptionsResponse",
     "LlmProviderOption",
@@ -138,6 +153,7 @@ __all__ = [
     "MusicalFusionPlanUpdateRequest",
     "MusicalFusionSegment",
     "PerformanceSlot",
+    "PasswordChangeRequest",
     "PracticeAnalyzeResponse",
     "PracticeIssuePoint",
     "PracticeReportContent",
@@ -147,6 +163,7 @@ __all__ = [
     "PracticeSubmissionDetailResponse",
     "PracticeSubmissionSummaryResponse",
     "PracticeVideoUploadResponse",
+    "ProfileUpdateRequest",
     "NextRehearsalPlan",
     "RehearsalIssue",
     "RehearsalReviewContent",
@@ -178,5 +195,6 @@ __all__ = [
     "SongAdaptationSummaryResponse",
     "SongAdaptationUpdateRequest",
     "SongSection",
+    "UserResponse",
     "TeacherScriptStep",
 ]

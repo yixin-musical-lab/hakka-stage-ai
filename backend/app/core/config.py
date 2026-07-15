@@ -1,6 +1,6 @@
 from os import getenv
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Settings(BaseModel):
@@ -17,6 +17,13 @@ class Settings(BaseModel):
     postgres_db: str = "hakka_stage_ai"
     postgres_user: str = "hakka"
     postgres_password: str = "hakka_password"
+    auth_secret_key: str = Field("local-dev-only-change-me-at-least-32-bytes", min_length=32)
+    auth_access_token_minutes: int = 480
+    auth_cookie_secure: bool = False
+    bootstrap_account_email: str = ""
+    bootstrap_account_password: str = ""
+    bootstrap_account_display_name: str = "平台初始账号"
+    bootstrap_account_role: str = "teacher"
     redis_host: str = "localhost"
     redis_port: str = "6379"
     minio_endpoint: str = "http://localhost:9000"
@@ -75,6 +82,13 @@ def get_settings() -> Settings:
         postgres_db=getenv("POSTGRES_DB", "hakka_stage_ai"),
         postgres_user=getenv("POSTGRES_USER", "hakka"),
         postgres_password=getenv("POSTGRES_PASSWORD", "hakka_password"),
+        auth_secret_key=getenv("AUTH_SECRET_KEY", "local-dev-only-change-me-at-least-32-bytes"),
+        auth_access_token_minutes=int(getenv("AUTH_ACCESS_TOKEN_MINUTES", "480")),
+        auth_cookie_secure=getenv("AUTH_COOKIE_SECURE", "false").lower() in {"1", "true", "yes", "on"},
+        bootstrap_account_email=getenv("BOOTSTRAP_ACCOUNT_EMAIL", ""),
+        bootstrap_account_password=getenv("BOOTSTRAP_ACCOUNT_PASSWORD", ""),
+        bootstrap_account_display_name=getenv("BOOTSTRAP_ACCOUNT_DISPLAY_NAME", "平台初始账号"),
+        bootstrap_account_role=getenv("BOOTSTRAP_ACCOUNT_ROLE", "teacher"),
         redis_host=getenv("REDIS_HOST", "localhost"),
         redis_port=getenv("REDIS_PORT", "6379"),
         minio_endpoint=getenv("MINIO_ENDPOINT", "http://localhost:9000"),

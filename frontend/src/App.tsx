@@ -1,5 +1,9 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { AuthPageShell } from "./components/auth/AuthPageShell";
 import { Shell } from "./components/layout/Shell";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AccountPage } from "./pages/AccountPage";
+import { AccountCreatePage } from "./pages/AccountCreatePage";
 import { ClassInteractionDetailPage } from "./pages/ClassInteractionDetailPage";
 import { ClassInteractionGeneratePage } from "./pages/ClassInteractionGeneratePage";
 import { ClassInteractionListPage } from "./pages/ClassInteractionListPage";
@@ -8,6 +12,7 @@ import { HomePage } from "./pages/HomePage";
 import { LessonPlanDetailPage } from "./pages/LessonPlanDetailPage";
 import { LessonPlanGeneratePage } from "./pages/LessonPlanGeneratePage";
 import { LessonPlanListPage } from "./pages/LessonPlanListPage";
+import { LoginPage } from "./pages/LoginPage";
 import { MovementGuideCreatePage } from "./pages/MovementGuideCreatePage";
 import { MovementGuideDetailPage } from "./pages/MovementGuideDetailPage";
 import { MovementGuideListPage } from "./pages/MovementGuideListPage";
@@ -20,22 +25,41 @@ import { MusicalScriptListPage } from "./pages/MusicalScriptListPage";
 import { PracticeSubmissionCreatePage } from "./pages/PracticeSubmissionCreatePage";
 import { PracticeSubmissionDetailPage } from "./pages/PracticeSubmissionDetailPage";
 import { PracticeSubmissionListPage } from "./pages/PracticeSubmissionListPage";
-import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
-import { RoleTrainingGeneratePage } from "./pages/RoleTrainingGeneratePage";
-import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
 import { RehearsalReviewDetailPage } from "./pages/RehearsalReviewDetailPage";
 import { RehearsalReviewGeneratePage } from "./pages/RehearsalReviewGeneratePage";
 import { RehearsalReviewListPage } from "./pages/RehearsalReviewListPage";
+import { RoleTrainingPlanDetailPage } from "./pages/RoleTrainingPlanDetailPage";
+import { RoleTrainingGeneratePage } from "./pages/RoleTrainingGeneratePage";
+import { RoleTrainingPlanListPage } from "./pages/RoleTrainingPlanListPage";
 import { SongAdaptationDetailPage } from "./pages/SongAdaptationDetailPage";
 import { SongAdaptationGeneratePage } from "./pages/SongAdaptationGeneratePage";
 import { SongAdaptationListPage } from "./pages/SongAdaptationListPage";
 
-export function App() {
+function RequireAuth() {
+  const { user, checkingSession } = useAuth();
+  const location = useLocation();
+
+  if (checkingSession) {
+    return <AuthPageShell><div className="auth-form-heading"><p className="eyebrow">正在恢复会话</p><h2>请稍候</h2><p>正在向后端确认账号状态。</p></div></AuthPageShell>;
+  }
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  return <Outlet />;
+}
+
+function ProtectedShell() {
+  return <Shell><Outlet /></Shell>;
+}
+
+function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Shell>
-        <Routes>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<Navigate to="/login" replace />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<ProtectedShell />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/account" element={<AccountPage />} />
+          <Route path="/accounts/new" element={<AccountCreatePage />} />
           <Route path="/lesson-plans/generate" element={<LessonPlanGeneratePage />} />
           <Route path="/lesson-plans" element={<LessonPlanListPage />} />
           <Route path="/lesson-plans/:lessonPlanId" element={<LessonPlanDetailPage />} />
@@ -65,8 +89,12 @@ export function App() {
           <Route path="/practice-submissions/:submissionId" element={<PracticeSubmissionDetailPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Shell>
-    </BrowserRouter>
+        </Route>
+      </Route>
+    </Routes>
   );
+}
+
+export function App() {
+  return <BrowserRouter><AuthProvider><AppRoutes /></AuthProvider></BrowserRouter>;
 }

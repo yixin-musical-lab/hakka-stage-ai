@@ -1,4 +1,6 @@
 import { apiBaseUrl } from "./config";
+// 模块内统一把现有 fetch 指向鉴权封装，避免 60 余个业务请求逐个维护令牌请求头。
+import { authenticatedFetch as fetch, getAccessToken } from "./authStorage";
 import type {
   AiTaskResponse,
   ClassInteractionContent,
@@ -434,6 +436,9 @@ export function uploadRehearsalVideo(file: File, onProgress?: (percent: number) 
     formData.append("file", file);
     const request = new XMLHttpRequest();
     request.open("POST", `${apiBaseUrl}/api/rehearsal-reviews/upload`);
+    const accessToken = getAccessToken();
+    if (accessToken) request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    request.withCredentials = true;
     request.responseType = "json";
     request.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) {

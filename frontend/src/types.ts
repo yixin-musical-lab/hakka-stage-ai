@@ -11,6 +11,41 @@ export type HealthResponse = {
   dependencies: DependencyConfig[];
 };
 
+export type AccountRole = "teacher" | "student";
+
+export type UserAccount = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: AccountRole;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AuthSession = {
+  access_token: string;
+  token_type: "bearer";
+  expires_in: number;
+  user: UserAccount;
+};
+
+export type LoginForm = {
+  email: string;
+  password: string;
+};
+
+export type AccountCreateForm = LoginForm & {
+  display_name: string;
+  role: AccountRole;
+};
+
+export type BatchAccountCreateResponse = {
+  created_count: number;
+  users: UserAccount[];
+};
+
 export type LessonActivity = {
   name: string;
   duration_minutes: number;

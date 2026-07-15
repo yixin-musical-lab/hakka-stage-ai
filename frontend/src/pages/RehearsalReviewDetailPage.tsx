@@ -142,7 +142,7 @@ export function RehearsalReviewDetailPage() {
             <CardDescription>{review.video_original_file_name} · {formatFileSize(review.video_size_bytes)} · 通过后端从 MinIO 私有桶代理播放</CardDescription>
           </CardHeader>
           <CardContent>
-            <video className="review-video-player" controls preload="metadata" src={rehearsalReviewVideoUrl(review.id)} />
+            <video className="review-video-player" controls crossOrigin="use-credentials" preload="metadata" src={rehearsalReviewVideoUrl(review.id)} />
             {review.video_notes ? <p className="review-video-note">老师备注：{review.video_notes}</p> : null}
           </CardContent>
         </Card>

@@ -182,6 +182,51 @@ button:disabled {
   color: #183f3c;
 }
 
+.account-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.account-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 128px;
+  padding: 7px 9px;
+  border-radius: var(--radius-lg);
+}
+
+.account-link:hover,
+.account-link.active {
+  background: var(--secondary);
+}
+
+.account-link svg {
+  width: 20px;
+  color: var(--primary);
+}
+
+.account-link strong,
+.account-link small {
+  display: block;
+}
+
+.account-link strong {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-link small {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
 @media (max-width: 1360px) {
   .app-header {
     align-items: flex-start;
@@ -191,6 +236,299 @@ button:disabled {
   .main-nav {
     justify-content: flex-start;
     width: 100%;
+  }
+
+  .account-nav {
+    width: 100%;
+    padding-top: 10px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+/* 账号入口采用独立的双栏版式，让登录页与业务工作台保持视觉关联，
+   同时在窄屏上退化为单列，便于老师和学生使用平板或手机完成登录。 */
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  min-height: 100vh;
+  background: #f4f1ea;
+}
+
+.auth-brand-panel,
+.auth-form-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(32px, 6vw, 88px);
+}
+
+.auth-brand-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 90% 12%, rgba(221, 163, 82, 0.28), transparent 27%),
+    linear-gradient(145deg, #123f3c, #205f58);
+  color: #f8f4e9;
+}
+
+.auth-brand-panel::after {
+  position: absolute;
+  right: -80px;
+  bottom: -90px;
+  width: 280px;
+  height: 280px;
+  border: 34px solid rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  content: "";
+}
+
+.auth-brand {
+  position: absolute;
+  top: clamp(28px, 5vw, 56px);
+  left: clamp(32px, 6vw, 88px);
+  color: #fff;
+}
+
+.auth-brand .brand-seal {
+  background: #f3e8d2;
+  color: #183f3c;
+}
+
+.auth-brand strong,
+.auth-brand small {
+  color: inherit;
+}
+
+.auth-brand-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 580px;
+}
+
+.auth-brand-copy .eyebrow {
+  color: #e9c98e;
+}
+
+.auth-brand-copy h1 {
+  margin: 12px 0 20px;
+  color: #fff;
+  font-size: clamp(2.2rem, 4vw, 4.3rem);
+  line-height: 1.12;
+}
+
+.auth-brand-copy > p:last-child {
+  max-width: 42rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.auth-boundary-note {
+  position: absolute;
+  bottom: clamp(28px, 5vw, 56px);
+  left: clamp(32px, 6vw, 88px);
+  z-index: 1;
+  max-width: 38rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.8rem;
+}
+
+.auth-form-panel {
+  align-items: center;
+}
+
+.auth-form-panel > * {
+  width: min(460px, 100%);
+}
+
+.auth-form-heading h2 {
+  margin: 8px 0 10px;
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.auth-form-heading > p:last-child {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
+
+.auth-form,
+.account-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-field [data-slot="input"],
+.auth-select {
+  height: 46px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.auth-select {
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+}
+
+.auth-field small {
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+.auth-error,
+.form-notice {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 4px solid var(--destructive);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--destructive) 8%, white);
+  color: var(--destructive);
+  line-height: 1.6;
+}
+
+.form-notice {
+  border-left-color: var(--primary);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.auth-help {
+  margin-top: 24px;
+  color: var(--muted-foreground);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.account-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.account-layout > :first-child {
+  grid-column: 1 / -1;
+}
+
+.account-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-summary > div {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.account-summary span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.account-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.account-form {
+  margin-top: 0;
+}
+
+.account-create-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+  align-items: start;
+}
+
+.batch-json-input {
+  min-height: 390px;
+  resize: vertical;
+  background: #162522;
+  color: #eef8f4;
+  font-family: Consolas, "Cascadia Code", monospace;
+  line-height: 1.65;
+  tab-size: 2;
+}
+
+.created-account-card {
+  margin-top: 18px;
+}
+
+.created-account-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.created-account-list li {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--muted);
+}
+
+.created-account-list span {
+  overflow-wrap: anywhere;
+  color: var(--muted-foreground);
+}
+
+.created-account-list small {
+  color: var(--primary);
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-brand-panel {
+    min-height: 330px;
+    padding-top: 110px;
+  }
+
+  .auth-boundary-note {
+    position: static;
+    margin-top: 30px;
+  }
+
+  .auth-form-panel {
+    padding-top: 54px;
+    padding-bottom: 54px;
+  }
+
+  .account-layout,
+  .account-summary,
+  .account-create-layout,
+  .created-account-list {
+    grid-template-columns: 1fr;
   }
 }
 

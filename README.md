@@ -4,8 +4,8 @@ AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生�
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、课前教案生成 API、课堂互动方案生成与教案预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
-- 暂不包含：登录鉴权、复杂权限、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、课堂互动方案生成与教案预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
+- 暂不包含：复杂权限与业务数据按账号隔离、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 M05 详情页的每张角色任务卡提供“保存并导出训练卡”操作：系统会先保存页面上的全部编辑内容，再按当前角色索引下载独立训练卡，避免导出旧稿。
@@ -78,6 +78,13 @@ flowchart TB
 | `BACKEND_HOST` | `0.0.0.0` | 后端监听地址，Docker 中保持默认即可 |
 | `BACKEND_PORT` | `8000` | 后端端口 |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | 允许访问后端 API 的前端来源 |
+| `AUTH_SECRET_KEY` | `local-dev-only-change-me-at-least-32-bytes` | JWT 签名密钥；公开部署前必须替换为至少 32 字节的随机字符串 |
+| `AUTH_ACCESS_TOKEN_MINUTES` | `480` | 登录访问令牌有效期，单位分钟 |
+| `AUTH_COOKIE_SECURE` | `false` | HTTPS 部署时设为 `true`，保护媒体播放使用的 HttpOnly Cookie |
+| `BOOTSTRAP_ACCOUNT_EMAIL` | 空 | 全新数据库首次启动时创建首账号使用；已有账号时忽略 |
+| `BOOTSTRAP_ACCOUNT_PASSWORD` | 空 | 首账号初始密码；创建成功后必须从部署环境删除 |
+| `BOOTSTRAP_ACCOUNT_DISPLAY_NAME` | `平台初始账号` | 首账号显示名称 |
+| `BOOTSTRAP_ACCOUNT_ROLE` | `teacher` | 首账号身份，可选 `teacher` 或 `student` |
 | `VITE_API_BASE_URL` | `auto` | 前端请求后端的基础地址；`auto` 会按当前访问主机自动请求同一台机器的 `8000` 端口 |
 | `DEEPSEEK_API_KEY` | 空 | DeepSeek 本地真实密钥，只写入 `.env`，不能提交到 Git |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek OpenAI 兼容接口地址 |
@@ -102,11 +109,37 @@ flowchart TB
 | `MINIO_BUCKET` | `hakka-stage-ai` | 默认对象存储桶名 |
 | `M08_VIDEO_MAX_UPLOAD_MB` | `200` | M08 单个排练 / 演出视频附件的上传上限，单位 MB |
 
+### 账号创建边界
+
+- 平台不提供匿名注册接口；`POST /api/accounts` 和 `POST /api/accounts/batch` 都必须先登录并携带 Bearer 令牌。
+- 全新数据库没有可登录账号时，可临时填写 `BOOTSTRAP_ACCOUNT_EMAIL` 和 `BOOTSTRAP_ACCOUNT_PASSWORD`。后端只会在账号表为空时创建一次首账号；创建成功后应删除初始密码配置并重启后端。
+- 批量接口一次接受 1-50 个账号。任一字段不合法、同批邮箱重复或数据库已有邮箱时，整批事务回滚，不会产生半成功数据。
+- 批量 JSON 示例：
+
+```json
+{
+  "accounts": [
+    {
+      "email": "student01@example.com",
+      "password": "student2026",
+      "display_name": "学生一",
+      "role": "student"
+    },
+    {
+      "email": "teacher02@example.com",
+      "password": "teacher2026",
+      "display_name": "李老师",
+      "role": "teacher"
+    }
+  ]
+}
+```
+
 ### M08 视频存储边界
 
 - 当前只有 M08 排练 / 演出复盘视频使用 MinIO；T06 课后练习继续使用 `/uploads/practice/` 本地开发链路，本次未改造其接口和数据结构。
 - M08 对象保存在私有桶的 `rehearsal-reviews/` 前缀下，浏览器通过后端 `/api/rehearsal-reviews/{id}/video` 代理播放，不获得 MinIO 永久公开地址。
-- AI 仅整理老师填写的观察记录；上传视频仅供人工查看，系统未分析视频内容。当前系统尚无登录鉴权，不应上传真实敏感学生视频。
+- AI 仅整理老师填写的观察记录；上传视频仅供人工查看，系统未分析视频内容。当前已要求登录访问，但尚未实现班级权限和业务数据按账号隔离，仍不应上传真实敏感学生视频。
 
 ## Docker Compose 全栈启动
 
@@ -317,7 +350,7 @@ worker 的基础镜像已固定为 `condaforge/miniforge3:26.3.2-3`，避免继�
 ## 下一步建议
 
 1. 增加 Alembic 迁移骨架，替换开发期自动建表。
-2. 增加 mock 登录和三类角色入口。
+2. 增加管理员邀请、账号停用、班级关系和业务数据按账号隔离。
 3. 为 M08 增加鉴权后的附件访问控制，并通过 MinIO 生命周期策略清理未提交表单产生的孤立对象。
 4. 为其他尚未闭环的教学模块继续补充接口级 Mock 流程和页面手测记录。
 5. 在重要报告模块补 Word 导出。
