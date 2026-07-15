@@ -6,7 +6,7 @@ import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { fetchRoleTrainingPlan, updateRoleTrainingPlan } from "../lib/api";
-import { downloadRoleTrainingMarkdown } from "../lib/download";
+import { downloadRoleTrainingCardMarkdown, downloadRoleTrainingMarkdown } from "../lib/download";
 import type { RoleTrainingContent, RoleTrainingPlanResponse } from "../types";
 
 export function RoleTrainingPlanDetailPage() {
@@ -17,6 +17,7 @@ export function RoleTrainingPlanDetailPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exportingRoleIndex, setExportingRoleIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!roleTrainingPlanId) {
@@ -62,6 +63,40 @@ export function RoleTrainingPlanDetailPage() {
     }
   }
 
+  async function handleDownloadRoleCard(roleIndex: number) {
+    if (!plan || !editedContent || saving || exportingRoleIndex !== null) {
+      return;
+    }
+
+    setExportingRoleIndex(roleIndex);
+    setNotice("");
+
+    let updatedPlan: RoleTrainingPlanResponse;
+    try {
+      // 先保存页面上的全部编辑内容，确保后端按同一份确认稿索引导出。
+      updatedPlan = await updateRoleTrainingPlan(plan.id, editedContent);
+      setPlan(updatedPlan);
+      setEditedContent(updatedPlan.edited_content ?? updatedPlan.content);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "未知错误";
+      setNotice(`保存失败，未导出训练卡：${message}`);
+      setExportingRoleIndex(null);
+      return;
+    }
+
+    try {
+      const savedContent = updatedPlan.edited_content ?? updatedPlan.content;
+      const roleName = savedContent?.role_tasks[roleIndex]?.role_name ?? "";
+      await downloadRoleTrainingCardMarkdown(updatedPlan.id, roleIndex, updatedPlan.title, roleName);
+      setNotice(`已保存并导出「${roleName.trim() || `角色${roleIndex + 1}`}」训练卡。`);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : "未知错误";
+      setNotice(`训练计划已保存，但角色训练卡导出失败：${message}`);
+    } finally {
+      setExportingRoleIndex(null);
+    }
+  }
+
   async function openRehearsalReview() {
     if (!plan || !editedContent) {
       return;
@@ -87,11 +122,16 @@ export function RoleTrainingPlanDetailPage() {
               返回列表
             </Button>
             {plan ? (
-              <Button variant="secondary" type="button" onClick={() => void handleDownloadMarkdown()}>
-                导出 Markdown
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={exportingRoleIndex !== null}
+                onClick={() => void handleDownloadMarkdown()}
+              >
+                导出完整计划
               </Button>
             ) : null}
-            <Button type="button" disabled={!editedContent || saving} onClick={() => void savePlan()}>
+            <Button type="button" disabled={!editedContent || saving || exportingRoleIndex !== null} onClick={() => void savePlan()}>
               {saving ? "保存中..." : "保存全部修改"}
             </Button>
           </div>
@@ -105,7 +145,14 @@ export function RoleTrainingPlanDetailPage() {
         <>
           <Card asChild className="surface-panel">
             <section>
-              <RoleTrainingEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
+              <RoleTrainingEditor
+                content={editedContent}
+                onChange={setEditedContent}
+                modelInfo={plan?.raw_model_info ?? null}
+                onExportRole={(roleIndex) => void handleDownloadRoleCard(roleIndex)}
+                exportingRoleIndex={exportingRoleIndex}
+                actionsDisabled={saving || exportingRoleIndex !== null}
+              />
             </section>
           </Card>
           <Card asChild className="surface-panel next-step-panel">
@@ -116,7 +163,7 @@ export function RoleTrainingPlanDetailPage() {
                   <h2>排练后记录问题并形成下一次计划</h2>
                   <p>复盘报告会读取本训练计划的角色任务和检查点，也可以上传一个仅供人工回看的视频附件。</p>
                 </div>
-                <Button type="button" onClick={() => void openRehearsalReview()}>
+                <Button type="button" disabled={saving || exportingRoleIndex !== null} onClick={() => void openRehearsalReview()}>
                   基于本计划创建复盘
                 </Button>
               </div>

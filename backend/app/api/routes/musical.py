@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -49,6 +49,7 @@ from app.services.musical_service import (
     musical_fusion_summary,
     render_musical_fusion_markdown,
     render_musical_script_markdown,
+    render_role_training_card_markdown,
     render_role_training_markdown,
     render_song_adaptation_markdown,
     role_training_summary,
@@ -784,6 +785,32 @@ def export_role_training_markdown(role_training_plan_id: UUID, db: Session = Dep
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="分角色训练计划不存在。")
 
     markdown = render_role_training_markdown(role_training_plan)
+    if markdown is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="分角色训练计划尚未生成，无法导出。")
+    return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
+
+
+@router.get(
+    "/role-training-plans/{role_training_plan_id}/roles/{role_index}/markdown",
+    response_class=PlainTextResponse,
+    summary="导出指定角色训练卡 Markdown",
+)
+def export_role_training_card_markdown(
+    role_training_plan_id: UUID,
+    role_index: int = Path(..., ge=0, description="角色在当前确认稿 role_tasks 中的零基索引"),
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    """导出单个角色训练卡，优先使用老师编辑后的确认稿。"""
+
+    role_training_plan = db.get(RoleTrainingPlan, role_training_plan_id)
+    if role_training_plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="分角色训练计划不存在。")
+
+    try:
+        markdown = render_role_training_card_markdown(role_training_plan, role_index)
+    except IndexError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="角色索引超出当前训练计划范围。") from error
+
     if markdown is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="分角色训练计划尚未生成，无法导出。")
     return PlainTextResponse(content=markdown, media_type="text/markdown; charset=utf-8")
