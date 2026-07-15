@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TextareaField, TextField } from "../ui/FormFields";
 import { EditableSection, EmptyReadable, ModelInfoLine, ReadableList, ReadableText } from "../ui/EditableSection";
+import { Button } from "../ui/button";
 import { FieldGroup, FieldLegend, FieldSet } from "../ui/field";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -10,10 +11,16 @@ export function RoleTrainingEditor({
   content,
   modelInfo,
   onChange,
+  onExportRole,
+  exportingRoleIndex,
+  actionsDisabled = false,
 }: {
   content: RoleTrainingContent;
   modelInfo: Record<string, unknown> | null;
   onChange: (content: RoleTrainingContent) => void;
+  onExportRole: (roleIndex: number) => void;
+  exportingRoleIndex: number | null;
+  actionsDisabled?: boolean;
 }) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
@@ -54,7 +61,12 @@ export function RoleTrainingEditor({
         onToggleEdit={() => toggleEditing("role_tasks")}
         editContent={<RoleTaskEditor values={content.role_tasks} onChange={(values) => updateValue("role_tasks", values)} />}
       >
-        <RoleTaskReadView values={content.role_tasks} />
+        <RoleTaskReadView
+          values={content.role_tasks}
+          onExportRole={onExportRole}
+          exportingRoleIndex={exportingRoleIndex}
+          actionsDisabled={actionsDisabled}
+        />
       </EditableSection>
 
       <EditableSection
@@ -89,7 +101,17 @@ export function RoleTrainingEditor({
   );
 }
 
-function RoleTaskReadView({ values }: { values: RoleTrainingItem[] }) {
+function RoleTaskReadView({
+  values,
+  onExportRole,
+  exportingRoleIndex,
+  actionsDisabled,
+}: {
+  values: RoleTrainingItem[];
+  onExportRole: (roleIndex: number) => void;
+  exportingRoleIndex: number | null;
+  actionsDisabled: boolean;
+}) {
   if (values.length === 0) {
     return <EmptyReadable text="暂无分角色任务。" />;
   }
@@ -99,7 +121,18 @@ function RoleTaskReadView({ values }: { values: RoleTrainingItem[] }) {
         <article className="readable-record" key={`role-task-read-${index}`}>
           <div className="readable-record-header">
             <h4>{roleTask.role_name}</h4>
-            <span className="readable-chip">{roleTask.role_type || "未标注角色类型"}</span>
+            <div className="button-row">
+              <span className="readable-chip">{roleTask.role_type || "未标注角色类型"}</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                disabled={actionsDisabled}
+                onClick={() => onExportRole(index)}
+              >
+                {exportingRoleIndex === index ? "正在导出..." : "保存并导出训练卡"}
+              </Button>
+            </div>
           </div>
           <dl className="readable-definition-list">
             <div>
