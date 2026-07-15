@@ -6,6 +6,7 @@ import {
   fetchMusicalScriptMarkdown,
   fetchPracticeReportMarkdown,
   fetchRehearsalReviewMarkdown,
+  fetchRoleTrainingCardMarkdown,
   fetchRoleTrainingMarkdown,
   fetchSongAdaptationMarkdown,
 } from "./api";
@@ -28,6 +29,17 @@ export async function downloadMusicalScriptMarkdown(musicalScriptId: string, tit
 export async function downloadRoleTrainingMarkdown(roleTrainingPlanId: string, title: string) {
   const markdown = await fetchRoleTrainingMarkdown(roleTrainingPlanId);
   saveMarkdown(markdown, title, "role-training-plan");
+}
+
+export async function downloadRoleTrainingCardMarkdown(
+  roleTrainingPlanId: string,
+  roleIndex: number,
+  planTitle: string,
+  roleName: string,
+) {
+  const markdown = await fetchRoleTrainingCardMarkdown(roleTrainingPlanId, roleIndex);
+  const resolvedRoleName = roleName.trim() || `角色${roleIndex + 1}`;
+  saveMarkdown(markdown, `${planTitle}-${resolvedRoleName}-训练卡`, `role-training-card-${roleIndex + 1}`);
 }
 
 export async function downloadSongAdaptationMarkdown(songAdaptationId: string, title: string) {

@@ -418,6 +418,14 @@ export async function fetchRoleTrainingMarkdown(roleTrainingPlanId: string) {
   return response.text();
 }
 
+export async function fetchRoleTrainingCardMarkdown(roleTrainingPlanId: string, roleIndex: number) {
+  const response = await fetch(`${apiBaseUrl}/api/role-training-plans/${roleTrainingPlanId}/roles/${roleIndex}/markdown`);
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return response.text();
+}
+
 export function uploadRehearsalVideo(file: File, onProgress?: (percent: number) => void) {
   // Fetch 暂不提供稳定的上传进度事件，因此 M08 单文件上传使用浏览器原生 XHR。
   // 这只影响前端传输层，不改变后端 multipart 接口和 T06 现有上传实现。

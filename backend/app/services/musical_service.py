@@ -234,6 +234,54 @@ def render_role_training_markdown(role_training_plan: RoleTrainingPlan) -> str |
     )
 
 
+def render_role_training_card_markdown(role_training_plan: RoleTrainingPlan, role_index: int) -> str | None:
+    """把指定角色的训练任务渲染成独立 Markdown 训练卡。
+
+    角色目前没有稳定业务 ID，因此接口与编辑页面统一使用当前确认稿
+    ``role_tasks`` 的零基索引。调用方需要在导出前先保存页面内容，保证索引
+    与训练卡正文来自同一份确认稿。
+    """
+
+    content = role_training_plan.edited_content or role_training_plan.content
+    if not content:
+        return None
+
+    role_tasks = content.get("role_tasks", [])
+    if role_index < 0 or role_index >= len(role_tasks):
+        raise IndexError("角色索引超出当前训练计划范围。")
+
+    role_task = role_tasks[role_index]
+    role_name = role_task.get("role_name") or f"角色{role_index + 1}"
+    role_type = role_task.get("role_type") or "未填写"
+    raw_model_info = role_training_plan.raw_model_info or {}
+    provider = raw_model_info.get("provider", "unknown")
+    model = raw_model_info.get("model", "unknown")
+    generated_at = raw_model_info.get("generated_at", "unknown")
+
+    # 单角色导出不复用整份计划的角色列表，避免把其他角色内容带入训练卡。
+    training_focus = "\n".join(
+        [
+            f"- 台词训练：{role_task.get('line_focus', '')}",
+            f"- 演唱训练：{role_task.get('singing_focus', '')}",
+            f"- 舞蹈训练：{role_task.get('dance_focus', '')}",
+            f"- 走位提醒：{role_task.get('blocking_tips', '')}",
+        ]
+    )
+
+    return "\n\n".join(
+        [
+            f"# {content.get('title', role_training_plan.title)} · {role_name}训练卡",
+            "## 排练概况\n" + str(content.get("project_overview", "")),
+            f"## 角色信息\n- 角色名称：{role_name}\n- 角色类型：{role_type}",
+            "## 训练重点\n" + training_focus,
+            "## 每日任务\n" + _markdown_list(role_task.get("daily_tasks", [])),
+            "## 角色检查点\n" + _markdown_list(role_task.get("teacher_checkpoints", [])),
+            "## 共通老师提醒\n" + _markdown_list(content.get("teacher_checkpoints", [])),
+            f"---\n\n模型信息：{provider} / {model} / {generated_at}",
+        ]
+    )
+
+
 def delete_musical_script_with_related_data(db: Session, musical_script_id: UUID) -> bool:
     """删除剧本及其唱段、歌舞融合、训练计划、复盘报告和 AI 任务。"""
 
