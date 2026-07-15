@@ -4,6 +4,7 @@ from app.models.movement_guide import MovementGuide
 from app.models.musical import MusicalFusionPlan, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.models.practice import PracticeReport, PracticeSubmission
 from app.models.rehearsal_review import RehearsalReview
+from app.models.user import User
 
 __all__ = [
     "AiTask",
@@ -19,4 +20,5 @@ __all__ = [
     "MusicalScript",
     "RoleTrainingPlan",
     "SongAdaptation",
+    "User",
 ]

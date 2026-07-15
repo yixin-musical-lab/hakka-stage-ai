@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router";
+import { LogOut, UserRound } from "lucide-react";
+import { Button } from "../ui/button";
+import { useAuth } from "../../contexts/AuthContext";
 
 export function Shell({ children }: { children: ReactNode }) {
+  const { user, logout } = useAuth();
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -27,6 +32,16 @@ export function Shell({ children }: { children: ReactNode }) {
           <NavLink to="/practice-submissions">课后练习</NavLink>
           <NavLink to="/health">系统状态</NavLink>
         </nav>
+        <div className="account-nav">
+          <NavLink className="account-link" to="/account">
+            <UserRound aria-hidden="true" />
+            <span><strong>{user?.display_name}</strong><small>{user?.role === "student" ? "学生账号" : "老师账号"}</small></span>
+          </NavLink>
+          <Button type="button" variant="ghost" size="sm" onClick={() => void logout()} title="退出登录">
+            <LogOut aria-hidden="true" />
+            退出
+          </Button>
+        </div>
       </header>
       {children}
     </div>

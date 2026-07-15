@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.database import init_db
+from app.services.account_bootstrap import ensure_bootstrap_account
 
 settings = get_settings()
 
@@ -40,7 +41,7 @@ def _local_dev_cors_regex() -> str:
 
 app = FastAPI(
     title="客韵智演 API",
-    description="AI 歌舞剧教学与排演辅助系统的 FastAPI 服务，提供教案生成、课堂互动、创编排练、示范材料和课后练习等接口。",
+    description="AI 歌舞剧教学与排演辅助系统的 FastAPI 服务，提供账号鉴权、教案生成、课堂互动、创编排练、示范材料和课后练习等接口。",
     version="0.1.0",
 )
 
@@ -64,6 +65,7 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 def startup() -> None:
-    """服务启动时初始化开发期数据表。"""
+    """服务启动时初始化开发期数据表，并按需创建首个登录账号。"""
 
     init_db()
+    ensure_bootstrap_account()
