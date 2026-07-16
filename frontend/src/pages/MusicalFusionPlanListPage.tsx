@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteMusicalFusionPlan, fetchMusicalFusionPlans } from "../lib/api";
@@ -73,17 +73,21 @@ export function MusicalFusionPlanListPage() {
         <EmptyState title="还没有保存的歌舞融合方案" text="选择一份剧本和唱段适配，生成第一份编导结构建议。" />
       ) : null}
 
-      <section className="lesson-list" aria-label="歌舞融合方案列表">
+      <section className="library-card-grid" aria-label="歌舞融合方案列表">
         {plans.map((plan) => (
-          <Card asChild className="lesson-list-item" key={plan.id}>
+          <Card asChild className="library-card" key={plan.id}>
             <article>
-              <div>
+              <CardHeader>
                 <div className="readable-chip-row">
                   <Badge variant="secondary">{plan.status}</Badge>
                   <Badge variant="outline">{plan.source_mode === "song_adaptation" ? "引用 M03" : "手工段落"}</Badge>
                 </div>
-                <h2>{plan.title}</h2>
-                <p>
+                <CardTitle>
+                  <h2>{plan.title}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="library-card-primary">
                   剧情：{plan.related_scene}
                   {plan.music_title ? ` · 音乐：${plan.music_title}` : ""}
                 </p>
@@ -92,8 +96,8 @@ export function MusicalFusionPlanListPage() {
                   {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
                   {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
                 </p>
-              </div>
-              <div className="button-row">
+              </CardContent>
+              <CardFooter className="library-card-actions">
                 <Button asChild variant="secondary">
                   <Link to={`/musical-fusion-plans/${plan.id}`}>查看</Link>
                 </Button>
@@ -103,7 +107,7 @@ export function MusicalFusionPlanListPage() {
                 <Button variant="destructive" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
                   {deletingId === plan.id ? "删除中" : "删除"}
                 </Button>
-              </div>
+              </CardFooter>
             </article>
           </Card>
         ))}

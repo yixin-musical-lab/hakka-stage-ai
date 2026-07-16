@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteClassInteraction, fetchClassInteractions } from "../lib/api";
@@ -65,21 +65,27 @@ export function ClassInteractionListPage() {
       {notice ? <p className="notice">{notice}</p> : null}
       {loading ? <EmptyState title="正在读取课堂互动方案" text="请稍候，系统正在从后端加载已保存内容。" /> : null}
       {!loading && interactions.length === 0 ? <EmptyState title="还没有保存的课堂互动方案" text="新建一份独立方案，或从教案详情带入课程信息后生成。" /> : null}
-      <section className="lesson-list" aria-label="课堂互动方案列表">
+      <section className="library-card-grid" aria-label="课堂互动方案列表">
         {interactions.map((interaction) => (
-          <Card asChild className="lesson-list-item" key={interaction.id}>
+          <Card asChild className="library-card" key={interaction.id}>
             <article>
-              <div>
-                <Badge variant="secondary">{interaction.status}</Badge>
-                <h2>{interaction.title}</h2>
-                <p>{interaction.course_theme} · {interaction.teaching_phase} · {interaction.duration_minutes} 分钟</p>
+              <CardHeader>
+                <div className="readable-chip-row">
+                  <Badge variant="secondary">{interaction.status}</Badge>
+                </div>
+                <CardTitle>
+                  <h2>{interaction.title}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="library-card-primary">{interaction.course_theme} · {interaction.teaching_phase} · {interaction.duration_minutes} 分钟</p>
                 <p>更新时间：{formatDateTime(interaction.updated_at)}{interaction.model ? ` · ${interaction.provider ?? "model"} / ${interaction.model}` : ""}{interaction.reasoning_level ? ` / ${interaction.reasoning_level}` : ""}</p>
-              </div>
-              <div className="button-row">
+              </CardContent>
+              <CardFooter className="library-card-actions">
                 <Button asChild variant="secondary"><Link to={`/interactions/${interaction.id}`}>查看</Link></Button>
                 <Button variant="secondary" type="button" onClick={() => void handleDownload(interaction)}>导出 Markdown</Button>
                 <Button variant="destructive" type="button" disabled={deletingId === interaction.id} onClick={() => void handleDelete(interaction)}>{deletingId === interaction.id ? "删除中" : "删除"}</Button>
-              </div>
+              </CardFooter>
             </article>
           </Card>
         ))}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { downloadMarkdown } from "../lib/download";
@@ -80,20 +80,26 @@ export function LessonPlanListPage() {
         <EmptyState title="还没有保存的教案" text="先生成一份教案，保存后就会出现在这里。" />
       ) : null}
 
-      <section className="lesson-list" aria-label="已保存教案列表">
+      <section className="library-card-grid" aria-label="已保存教案列表">
         {lessonPlans.map((lessonPlan) => (
-          <Card asChild className="lesson-list-item" key={lessonPlan.id}>
+          <Card asChild className="library-card" key={lessonPlan.id}>
             <article>
-              <div>
-                <Badge variant="secondary">{lessonPlan.status}</Badge>
-                <h2>{lessonPlan.title}</h2>
+              <CardHeader>
+                <div className="readable-chip-row">
+                  <Badge variant="secondary">{lessonPlan.status}</Badge>
+                </div>
+                <CardTitle>
+                  <h2>{lessonPlan.title}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <p>
                   更新时间：{formatDateTime(lessonPlan.updated_at)}
                   {lessonPlan.model ? ` · ${lessonPlan.provider ?? "model"} / ${lessonPlan.model}` : ""}
                   {lessonPlan.reasoning_level ? ` / ${lessonPlan.reasoning_level}` : ""}
                 </p>
-              </div>
-              <div className="button-row">
+              </CardContent>
+              <CardFooter className="library-card-actions">
                 <Button asChild variant="secondary">
                   <Link to={`/lesson-plans/${lessonPlan.id}`}>查看</Link>
                 </Button>
@@ -108,7 +114,7 @@ export function LessonPlanListPage() {
                 >
                   {deletingId === lessonPlan.id ? "删除中" : "删除"}
                 </Button>
-              </div>
+              </CardFooter>
             </article>
           </Card>
         ))}

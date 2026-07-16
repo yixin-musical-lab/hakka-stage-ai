@@ -8,6 +8,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { PageTitle } from "../components/ui/PageTitle";
 import { useAuth } from "../contexts/AuthContext";
+import { formatFullDateTime } from "../lib/format";
 
 export function AccountPage() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -80,7 +81,7 @@ export function AccountPage() {
             <div><span>显示名称</span><strong>{user.display_name}</strong></div>
             <div><span>登录邮箱</span><strong>{user.email}</strong></div>
             <div><span>账号身份</span><Badge variant="secondary">{user.role === "teacher" ? "老师" : "学生"}</Badge></div>
-            <div><span>注册时间</span><strong>{new Date(user.created_at).toLocaleString("zh-CN")}</strong></div>
+            <div><span>注册时间</span><strong>{formatFullDateTime(user.created_at)}</strong></div>
           </CardContent>
         </Card>
         <Card>
