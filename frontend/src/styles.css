@@ -542,6 +542,8 @@ button:disabled {
 .surface-panel,
 .module-tile,
 .lesson-list-item,
+.library-card,
+.review-library-grid > [data-slot="card"],
 .status-item,
 .dependency-card {
   border: 1px solid rgba(38, 69, 65, 0.14);
@@ -1694,6 +1696,55 @@ textarea:focus {
   color: #64716e;
 }
 
+/* 六类资料库统一采用与 M08 复盘页一致的双列卡片结构。
+   使用独立类名，避免影响仍需保留横向列表的动作图解与课后练习页面。 */
+.library-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.library-card {
+  min-width: 0;
+  height: 100%;
+}
+
+.library-card [data-slot="card-header"],
+.library-card [data-slot="card-title"],
+.library-card [data-slot="card-content"] {
+  min-width: 0;
+}
+
+.library-card [data-slot="card-title"] h2 {
+  margin: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.library-card [data-slot="card-content"] {
+  display: grid;
+  gap: 8px;
+}
+
+.library-card [data-slot="card-content"] p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.library-card .library-card-primary {
+  color: var(--foreground);
+  font-weight: 900;
+}
+
+.library-card-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
 .status-item,
 .dependency-card {
   min-width: 0;
@@ -1758,6 +1809,7 @@ textarea:focus {
   .field-grid,
   .hero-overview-status,
   .hero-workbench-grid,
+  .library-card-grid,
   .readable-section-header,
   .readable-two-column,
   .lyric-compare,
@@ -1834,6 +1886,18 @@ textarea:focus {
   top: 18px;
 }
 
+/* 复盘生成区位于窄侧栏中，模型选择使用单列，避免长模型名称撑破卡片。 */
+.review-submit-card .model-picker .field-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.review-submit-card .model-picker .field-grid > [data-slot="field"],
+.review-submit-card .model-picker [data-slot="select-trigger"],
+.review-submit-card .model-picker [data-slot="select-value"] {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .review-template-source {
   border-left: 5px solid #8a6a2e;
 }
@@ -1903,6 +1967,11 @@ textarea:focus {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 18px;
+}
+
+.review-library-grid [data-slot="card-title"] {
+  font-size: 24px;
+  line-height: 1.35;
 }
 
 .review-library-grid [data-slot="card-content"] p {

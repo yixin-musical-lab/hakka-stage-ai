@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteSongAdaptation, fetchSongAdaptations } from "../lib/api";
@@ -74,14 +74,20 @@ export function SongAdaptationListPage() {
         <EmptyState title="还没有保存的唱段适配" text="进入独立生成页选择一份剧本，再创建唱段结构和歌词改写建议。" />
       ) : null}
 
-      <section className="lesson-list" aria-label="唱段适配列表">
+      <section className="library-card-grid" aria-label="唱段适配列表">
         {songAdaptations.map((songAdaptation) => (
-          <Card asChild className="lesson-list-item" key={songAdaptation.id}>
+          <Card asChild className="library-card" key={songAdaptation.id}>
             <article>
-              <div>
-                <Badge variant="secondary">{songAdaptation.status}</Badge>
-                <h2>{songAdaptation.title}</h2>
-                <p>
+              <CardHeader>
+                <div className="readable-chip-row">
+                  <Badge variant="secondary">{songAdaptation.status}</Badge>
+                </div>
+                <CardTitle>
+                  <h2>{songAdaptation.title}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="library-card-primary">
                   段落：{songAdaptation.related_scene}
                   {songAdaptation.source_song ? ` · ${songAdaptation.source_song}` : ""}
                 </p>
@@ -90,8 +96,8 @@ export function SongAdaptationListPage() {
                   {songAdaptation.model ? ` · ${songAdaptation.provider ?? "model"} / ${songAdaptation.model}` : ""}
                   {songAdaptation.reasoning_level ? ` / ${songAdaptation.reasoning_level}` : ""}
                 </p>
-              </div>
-              <div className="button-row">
+              </CardContent>
+              <CardFooter className="library-card-actions">
                 <Button asChild variant="secondary">
                   <Link to={`/song-adaptations/${songAdaptation.id}`}>查看</Link>
                 </Button>
@@ -106,7 +112,7 @@ export function SongAdaptationListPage() {
                 >
                   {deletingId === songAdaptation.id ? "删除中" : "删除"}
                 </Button>
-              </div>
+              </CardFooter>
             </article>
           </Card>
         ))}

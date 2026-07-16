@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteMusicalScript, fetchMusicalScripts } from "../lib/api";
@@ -72,20 +72,26 @@ export function MusicalScriptListPage() {
       {loading ? <EmptyState title="正在读取剧本" text="请稍候，系统正在从后端加载已保存内容。" /> : null}
       {!loading && scripts.length === 0 ? <EmptyState title="还没有保存的剧本" text="先生成一份剧本，保存后就会出现在这里。" /> : null}
 
-      <section className="lesson-list" aria-label="已保存剧本列表">
+      <section className="library-card-grid" aria-label="已保存剧本列表">
         {scripts.map((script) => (
-          <Card asChild className="lesson-list-item" key={script.id}>
+          <Card asChild className="library-card" key={script.id}>
             <article>
-              <div>
-                <Badge variant="secondary">{script.status}</Badge>
-                <h2>{script.title}</h2>
+              <CardHeader>
+                <div className="readable-chip-row">
+                  <Badge variant="secondary">{script.status}</Badge>
+                </div>
+                <CardTitle>
+                  <h2>{script.title}</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <p>
                   更新时间：{formatDateTime(script.updated_at)}
                   {script.model ? ` · ${script.provider ?? "model"} / ${script.model}` : ""}
                   {script.reasoning_level ? ` / ${script.reasoning_level}` : ""}
                 </p>
-              </div>
-              <div className="button-row">
+              </CardContent>
+              <CardFooter className="library-card-actions">
                 <Button asChild variant="secondary">
                   <Link to={`/musical-scripts/${script.id}`}>查看</Link>
                 </Button>
@@ -95,7 +101,7 @@ export function MusicalScriptListPage() {
                 <Button variant="destructive" type="button" disabled={deletingId === script.id} onClick={() => void handleDelete(script)}>
                   {deletingId === script.id ? "删除中" : "删除"}
                 </Button>
-              </div>
+              </CardFooter>
             </article>
           </Card>
         ))}
