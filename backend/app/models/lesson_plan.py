@@ -64,6 +64,36 @@ class LessonPlan(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
+class LessonPlanVariant(Base):
+    """T02 教案变体的来源关系与生成快照。
+
+    变体正文仍保存在 ``lesson_plans``，这样可以直接复用既有的编辑、导出和
+    下游课堂互动能力。本表只保存版本语义和来源快照，避免给已有表补列；当前
+    项目使用 ``create_all``，新增表可以安全创建，但无法自动为旧表增加字段。
+    """
+
+    __tablename__ = "lesson_plan_variants"
+
+    # 一个教案最多对应一条变体元数据；删除变体教案时由数据库同步清理本行。
+    lesson_plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("lesson_plans.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    # 原教案允许被删除；删除后保留变体和快照，前端仍可完成历史对比与导出。
+    source_lesson_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("lesson_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    variant_type: Mapped[str] = mapped_column(String(40))
+    adjustment_direction: Mapped[str] = mapped_column(Text, default="")
+    source_title_snapshot: Mapped[str] = mapped_column(String(200))
+    source_content_snapshot: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class AiTask(Base):
     """AI 异步任务状态。"""
 

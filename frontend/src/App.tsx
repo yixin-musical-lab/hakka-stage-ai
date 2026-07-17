@@ -12,6 +12,7 @@ import { HomePage } from "./pages/HomePage";
 import { LessonPlanDetailPage } from "./pages/LessonPlanDetailPage";
 import { LessonPlanGeneratePage } from "./pages/LessonPlanGeneratePage";
 import { LessonPlanListPage } from "./pages/LessonPlanListPage";
+import { LessonPlanVariantGeneratePage } from "./pages/LessonPlanVariantGeneratePage";
 import { LoginPage } from "./pages/LoginPage";
 import { MovementGuideCreatePage } from "./pages/MovementGuideCreatePage";
 import { MovementGuideDetailPage } from "./pages/MovementGuideDetailPage";
@@ -62,6 +63,7 @@ function AppRoutes() {
           <Route path="/accounts/new" element={<AccountCreatePage />} />
           <Route path="/lesson-plans/generate" element={<LessonPlanGeneratePage />} />
           <Route path="/lesson-plans" element={<LessonPlanListPage />} />
+          <Route path="/lesson-plans/:lessonPlanId/variants/generate" element={<LessonPlanVariantGeneratePage />} />
           <Route path="/lesson-plans/:lessonPlanId" element={<LessonPlanDetailPage />} />
           <Route path="/interactions/generate" element={<ClassInteractionGeneratePage />} />
           <Route path="/interactions" element={<ClassInteractionListPage />} />

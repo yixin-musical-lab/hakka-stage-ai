@@ -5,6 +5,9 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+LessonPlanVariantType = Literal["younger", "basic", "advanced", "performance"]
+
+
 class LessonPlanGenerateRequest(BaseModel):
     """教案生成请求。
 
@@ -27,6 +30,35 @@ class LessonPlanGenerateRequest(BaseModel):
 
 class LessonPlanGenerateResponse(BaseModel):
     """创建教案生成任务后的响应。"""
+
+    task_id: UUID
+    lesson_plan_id: UUID
+    status: str
+    message: str
+
+
+class LessonPlanVariantGenerateRequest(BaseModel):
+    """T02 教案变体生成请求。"""
+
+    variant_type: LessonPlanVariantType = Field(
+        ...,
+        description="变体类型：younger 低龄版、basic 基础版、advanced 进阶版、performance 演出版",
+    )
+    adjustment_direction: str = Field(
+        "",
+        max_length=1200,
+        description="老师补充的调整方向，例如降低动作难度、增加队形变化或增强课堂趣味",
+    )
+    llm_provider: Literal["deepseek", "qwen"] | None = Field(None, description="大模型供应商")
+    llm_model: str | None = Field(None, min_length=1, max_length=120, description="本次生成使用的模型")
+    reasoning_level: Literal["off", "standard", "enhanced"] | None = Field(
+        None,
+        description="本次生成使用的推理强度",
+    )
+
+
+class LessonPlanVariantGenerateResponse(BaseModel):
+    """创建 T02 教案变体任务后的响应。"""
 
     task_id: UUID
     lesson_plan_id: UUID
@@ -64,6 +96,20 @@ class LessonPlanContent(BaseModel):
     cooldown: list[LessonActivity]
     homework: list[str]
     teacher_notes: list[str]
+    # T01 历史数据没有以下字段，因此后端公共 Schema 必须保持可选；T02 Worker
+    # 使用更严格的专用 Schema，确保新生成的变体一定带有适用对象和调整说明。
+    applicable_audience: str | None = Field(None, max_length=1200, description="变体适用的班级或学员类型")
+    adjustment_summary: list[str] = Field(default_factory=list, description="相对原教案的主要调整说明")
+
+
+class LessonPlanVariantInfoResponse(BaseModel):
+    """教案详情中的 T02 来源关系和生成时快照。"""
+
+    source_lesson_plan_id: UUID | None
+    source_title_snapshot: str
+    source_content_snapshot: LessonPlanContent
+    variant_type: LessonPlanVariantType
+    adjustment_direction: str
 
 
 class LessonPlanResponse(BaseModel):
@@ -76,6 +122,7 @@ class LessonPlanResponse(BaseModel):
     content: LessonPlanContent | None
     edited_content: LessonPlanContent | None
     raw_model_info: dict | None
+    variant_info: LessonPlanVariantInfoResponse | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -90,6 +137,9 @@ class LessonPlanSummaryResponse(BaseModel):
     provider: str | None
     model: str | None
     reasoning_level: str | None = None
+    source_lesson_plan_id: UUID | None = None
+    variant_type: LessonPlanVariantType | None = None
+    source_title_snapshot: str | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -36,6 +36,15 @@ class LessonPlanContent(BaseModel):
     cooldown: list[LessonActivity]
     homework: list[str]
     teacher_notes: list[str]
+    applicable_audience: str | None = None
+    adjustment_summary: list[str] = Field(default_factory=list)
+
+
+class LessonPlanVariantContent(LessonPlanContent):
+    """T02 变体专用输出；适用对象和调整说明必须由模型明确给出。"""
+
+    applicable_audience: NonEmptyText
+    adjustment_summary: list[NonEmptyText] = Field(..., min_length=1)
 
 
 class ScriptDialogueLine(BaseModel):

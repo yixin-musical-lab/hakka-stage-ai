@@ -10,10 +10,12 @@ export function LessonEditor({
   content,
   modelInfo,
   onChange,
+  readOnly = false,
 }: {
   content: LessonPlanContent;
   modelInfo: Record<string, unknown> | null;
   onChange: (content: LessonPlanContent) => void;
+  readOnly?: boolean;
 }) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
 
@@ -33,6 +35,7 @@ export function LessonEditor({
         summary="用于快速确认本节课主题、对象和整体教学方向。"
         isEditing={editingKey === "overview"}
         onToggleEdit={() => toggleEditing("overview")}
+        canEdit={!readOnly}
         editContent={
           <>
             <TextField label="教案标题" value={content.title} onChange={(value) => updateValue("title", value)} />
@@ -46,12 +49,49 @@ export function LessonEditor({
         </div>
       </EditableSection>
 
+      {content.applicable_audience !== null || content.adjustment_summary.length > 0 ? (
+        <EditableSection
+          eyebrow="T02 版本说明"
+          title="适用对象与调整摘要"
+          summary="说明这一版适合谁，以及相对生成时原稿做了哪些调整。"
+          isEditing={editingKey === "variant_summary"}
+          onToggleEdit={() => toggleEditing("variant_summary")}
+          canEdit={!readOnly}
+          editContent={
+            <>
+              <TextareaField
+                label="适用班级或学员"
+                value={content.applicable_audience ?? ""}
+                onChange={(value) => updateValue("applicable_audience", value)}
+              />
+              <EditableList
+                title="相对原版的调整说明"
+                values={content.adjustment_summary}
+                onChange={(values) => updateValue("adjustment_summary", values)}
+              />
+            </>
+          }
+        >
+          <div className="variant-summary-content">
+            <div>
+              <p className="readable-record-kicker">适用对象</p>
+              <ReadableText value={content.applicable_audience ?? ""} emptyText="暂无适用对象说明。" />
+            </div>
+            <div>
+              <p className="readable-record-kicker">主要调整</p>
+              <ReadableList values={content.adjustment_summary} emptyText="暂无调整说明。" />
+            </div>
+          </div>
+        </EditableSection>
+      ) : null}
+
       <TextListSection
         title="教学目标"
         values={content.teaching_goals}
         isEditing={editingKey === "teaching_goals"}
         onToggleEdit={() => toggleEditing("teaching_goals")}
         onChange={(values) => updateValue("teaching_goals", values)}
+        canEdit={!readOnly}
       />
       <TextListSection
         title="教学重难点"
@@ -59,6 +99,7 @@ export function LessonEditor({
         isEditing={editingKey === "key_points"}
         onToggleEdit={() => toggleEditing("key_points")}
         onChange={(values) => updateValue("key_points", values)}
+        canEdit={!readOnly}
       />
       <TextListSection
         title="易错点"
@@ -66,6 +107,7 @@ export function LessonEditor({
         isEditing={editingKey === "common_mistakes"}
         onToggleEdit={() => toggleEditing("common_mistakes")}
         onChange={(values) => updateValue("common_mistakes", values)}
+        canEdit={!readOnly}
       />
 
       <ActivitySection
@@ -74,6 +116,7 @@ export function LessonEditor({
         isEditing={editingKey === "warmup"}
         onToggleEdit={() => toggleEditing("warmup")}
         onChange={(values) => updateValue("warmup", values)}
+        canEdit={!readOnly}
       />
       <ActivitySection
         title="主体教学"
@@ -81,12 +124,14 @@ export function LessonEditor({
         isEditing={editingKey === "main_teaching"}
         onToggleEdit={() => toggleEditing("main_teaching")}
         onChange={(values) => updateValue("main_teaching", values)}
+        canEdit={!readOnly}
       />
       <MovementSection
         values={content.movement_breakdown}
         isEditing={editingKey === "movement_breakdown"}
         onToggleEdit={() => toggleEditing("movement_breakdown")}
         onChange={(values) => updateValue("movement_breakdown", values)}
+        canEdit={!readOnly}
       />
       <ActivitySection
         title="放松"
@@ -94,6 +139,7 @@ export function LessonEditor({
         isEditing={editingKey === "cooldown"}
         onToggleEdit={() => toggleEditing("cooldown")}
         onChange={(values) => updateValue("cooldown", values)}
+        canEdit={!readOnly}
       />
 
       <TextListSection
@@ -102,6 +148,7 @@ export function LessonEditor({
         isEditing={editingKey === "homework"}
         onToggleEdit={() => toggleEditing("homework")}
         onChange={(values) => updateValue("homework", values)}
+        canEdit={!readOnly}
       />
       <TextListSection
         title="老师提醒"
@@ -109,6 +156,7 @@ export function LessonEditor({
         isEditing={editingKey === "teacher_notes"}
         onToggleEdit={() => toggleEditing("teacher_notes")}
         onChange={(values) => updateValue("teacher_notes", values)}
+        canEdit={!readOnly}
       />
 
       {modelInfo ? <ModelInfoLine modelInfo={modelInfo} /> : null}
@@ -122,12 +170,14 @@ function TextListSection({
   isEditing,
   onToggleEdit,
   onChange,
+  canEdit,
 }: {
   title: string;
   values: string[];
   isEditing: boolean;
   onToggleEdit: () => void;
   onChange: (values: string[]) => void;
+  canEdit: boolean;
 }) {
   return (
     <EditableSection
@@ -135,6 +185,7 @@ function TextListSection({
       title={title}
       isEditing={isEditing}
       onToggleEdit={onToggleEdit}
+      canEdit={canEdit}
       editContent={<EditableList title={title} values={values} onChange={onChange} />}
     >
       <ReadableList values={values} />
@@ -164,12 +215,14 @@ function ActivitySection({
   isEditing,
   onToggleEdit,
   onChange,
+  canEdit,
 }: {
   title: string;
   values: LessonActivity[];
   isEditing: boolean;
   onToggleEdit: () => void;
   onChange: (values: LessonActivity[]) => void;
+  canEdit: boolean;
 }) {
   return (
     <EditableSection
@@ -177,6 +230,7 @@ function ActivitySection({
       title={title}
       isEditing={isEditing}
       onToggleEdit={onToggleEdit}
+      canEdit={canEdit}
       editContent={<ActivityEditor title={title} values={values} onChange={onChange} />}
     >
       <div className="readable-timeline">
@@ -241,11 +295,13 @@ function MovementSection({
   isEditing,
   onToggleEdit,
   onChange,
+  canEdit,
 }: {
   values: MovementStep[];
   isEditing: boolean;
   onToggleEdit: () => void;
   onChange: (values: MovementStep[]) => void;
+  canEdit: boolean;
 }) {
   return (
     <EditableSection
@@ -253,6 +309,7 @@ function MovementSection({
       title="动作拆解"
       isEditing={isEditing}
       onToggleEdit={onToggleEdit}
+      canEdit={canEdit}
       editContent={<MovementEditor values={values} onChange={onChange} />}
     >
       <div className="readable-grid">
