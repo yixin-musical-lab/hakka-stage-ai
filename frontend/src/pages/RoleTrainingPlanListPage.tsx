@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteRoleTrainingPlan, fetchRoleTrainingPlans } from "../lib/api";
 import { downloadRoleTrainingMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { RoleTrainingPlanSummary } from "../types";
 
 export function RoleTrainingPlanListPage() {
@@ -76,36 +75,23 @@ export function RoleTrainingPlanListPage() {
 
       <section className="library-card-grid" aria-label="分角色训练计划列表">
         {plans.map((plan) => (
-          <Card asChild className="library-card" key={plan.id}>
-            <article>
-              <CardHeader>
-                <div className="readable-chip-row">
-                  <Badge variant="secondary">{plan.status}</Badge>
-                </div>
-                <CardTitle>
-                  <h2>{plan.title}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>
-                  更新时间：{formatDateTime(plan.updated_at)}
-                  {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
-                  {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
-                </p>
-              </CardContent>
-              <CardFooter className="library-card-actions">
-                <Button asChild variant="secondary">
-                  <Link to={`/role-training-plans/${plan.id}`}>查看</Link>
-                </Button>
-                <Button variant="secondary" type="button" onClick={() => void handleDownload(plan)}>
-                  导出 Markdown
-                </Button>
-                <Button variant="destructive" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
-                  {deletingId === plan.id ? "删除中" : "删除"}
-                </Button>
-              </CardFooter>
-            </article>
-          </Card>
+          <LibraryRecordCard
+            key={plan.id}
+            kind="role"
+            title={plan.title}
+            badges={<Badge variant="secondary">{plan.status}</Badge>}
+            summaryLabel="训练用途"
+            summary="分角色训练资料 · 可继续编辑、导出并生成训练卡片"
+            updatedAt={plan.updated_at}
+            provider={plan.provider}
+            model={plan.model}
+            reasoningLevel={plan.reasoning_level}
+            viewTo={`/role-training-plans/${plan.id}`}
+            viewLabel="查看计划"
+            deleting={deletingId === plan.id}
+            onDownload={() => void handleDownload(plan)}
+            onDelete={() => void handleDelete(plan)}
+          />
         ))}
       </section>
     </main>

@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteMusicalFusionPlan, fetchMusicalFusionPlans } from "../lib/api";
 import { downloadMusicalFusionMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { MusicalFusionPlanSummary } from "../types";
 
 export function MusicalFusionPlanListPage() {
@@ -75,41 +74,28 @@ export function MusicalFusionPlanListPage() {
 
       <section className="library-card-grid" aria-label="歌舞融合方案列表">
         {plans.map((plan) => (
-          <Card asChild className="library-card" key={plan.id}>
-            <article>
-              <CardHeader>
-                <div className="readable-chip-row">
-                  <Badge variant="secondary">{plan.status}</Badge>
-                  <Badge variant="outline">{plan.source_mode === "song_adaptation" ? "引用 M03" : "手工段落"}</Badge>
-                </div>
-                <CardTitle>
-                  <h2>{plan.title}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="library-card-primary">
-                  剧情：{plan.related_scene}
-                  {plan.music_title ? ` · 音乐：${plan.music_title}` : ""}
-                </p>
-                <p>
-                  更新时间：{formatDateTime(plan.updated_at)}
-                  {plan.model ? ` · ${plan.provider ?? "model"} / ${plan.model}` : ""}
-                  {plan.reasoning_level ? ` / ${plan.reasoning_level}` : ""}
-                </p>
-              </CardContent>
-              <CardFooter className="library-card-actions">
-                <Button asChild variant="secondary">
-                  <Link to={`/musical-fusion-plans/${plan.id}`}>查看</Link>
-                </Button>
-                <Button variant="secondary" type="button" onClick={() => void handleDownload(plan)}>
-                  导出 Markdown
-                </Button>
-                <Button variant="destructive" type="button" disabled={deletingId === plan.id} onClick={() => void handleDelete(plan)}>
-                  {deletingId === plan.id ? "删除中" : "删除"}
-                </Button>
-              </CardFooter>
-            </article>
-          </Card>
+          <LibraryRecordCard
+            key={plan.id}
+            kind="fusion"
+            title={plan.title}
+            badges={
+              <>
+                <Badge variant="secondary">{plan.status}</Badge>
+                <Badge variant="outline">{plan.source_mode === "song_adaptation" ? "引用 M03" : "手工段落"}</Badge>
+              </>
+            }
+            summaryLabel="编排场景"
+            summary={`${plan.related_scene}${plan.music_title ? ` · 音乐：${plan.music_title}` : ""}`}
+            updatedAt={plan.updated_at}
+            provider={plan.provider}
+            model={plan.model}
+            reasoningLevel={plan.reasoning_level}
+            viewTo={`/musical-fusion-plans/${plan.id}`}
+            viewLabel="查看编排"
+            deleting={deletingId === plan.id}
+            onDownload={() => void handleDownload(plan)}
+            onDelete={() => void handleDelete(plan)}
+          />
         ))}
       </section>
     </main>

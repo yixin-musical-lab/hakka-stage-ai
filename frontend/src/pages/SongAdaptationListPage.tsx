@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteSongAdaptation, fetchSongAdaptations } from "../lib/api";
 import { downloadSongAdaptationMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { SongAdaptationSummary } from "../types";
 
 export function SongAdaptationListPage() {
@@ -76,45 +75,23 @@ export function SongAdaptationListPage() {
 
       <section className="library-card-grid" aria-label="唱段适配列表">
         {songAdaptations.map((songAdaptation) => (
-          <Card asChild className="library-card" key={songAdaptation.id}>
-            <article>
-              <CardHeader>
-                <div className="readable-chip-row">
-                  <Badge variant="secondary">{songAdaptation.status}</Badge>
-                </div>
-                <CardTitle>
-                  <h2>{songAdaptation.title}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="library-card-primary">
-                  段落：{songAdaptation.related_scene}
-                  {songAdaptation.source_song ? ` · ${songAdaptation.source_song}` : ""}
-                </p>
-                <p>
-                  更新时间：{formatDateTime(songAdaptation.updated_at)}
-                  {songAdaptation.model ? ` · ${songAdaptation.provider ?? "model"} / ${songAdaptation.model}` : ""}
-                  {songAdaptation.reasoning_level ? ` / ${songAdaptation.reasoning_level}` : ""}
-                </p>
-              </CardContent>
-              <CardFooter className="library-card-actions">
-                <Button asChild variant="secondary">
-                  <Link to={`/song-adaptations/${songAdaptation.id}`}>查看</Link>
-                </Button>
-                <Button variant="secondary" type="button" onClick={() => void handleDownload(songAdaptation)}>
-                  导出 Markdown
-                </Button>
-                <Button
-                  variant="destructive"
-                  type="button"
-                  disabled={deletingId === songAdaptation.id}
-                  onClick={() => void handleDelete(songAdaptation)}
-                >
-                  {deletingId === songAdaptation.id ? "删除中" : "删除"}
-                </Button>
-              </CardFooter>
-            </article>
-          </Card>
+          <LibraryRecordCard
+            key={songAdaptation.id}
+            kind="song"
+            title={songAdaptation.title}
+            badges={<Badge variant="secondary">{songAdaptation.status}</Badge>}
+            summaryLabel="适配段落"
+            summary={`${songAdaptation.related_scene}${songAdaptation.source_song ? ` · 原曲：${songAdaptation.source_song}` : ""}`}
+            updatedAt={songAdaptation.updated_at}
+            provider={songAdaptation.provider}
+            model={songAdaptation.model}
+            reasoningLevel={songAdaptation.reasoning_level}
+            viewTo={`/song-adaptations/${songAdaptation.id}`}
+            viewLabel="查看唱段"
+            deleting={deletingId === songAdaptation.id}
+            onDownload={() => void handleDownload(songAdaptation)}
+            onDelete={() => void handleDelete(songAdaptation)}
+          />
         ))}
       </section>
     </main>

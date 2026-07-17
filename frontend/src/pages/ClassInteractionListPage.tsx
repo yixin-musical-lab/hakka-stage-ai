@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteClassInteraction, fetchClassInteractions } from "../lib/api";
 import { downloadClassInteractionMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { ClassInteractionSummary } from "../types";
 
 export function ClassInteractionListPage() {
@@ -67,27 +66,23 @@ export function ClassInteractionListPage() {
       {!loading && interactions.length === 0 ? <EmptyState title="还没有保存的课堂互动方案" text="新建一份独立方案，或从教案详情带入课程信息后生成。" /> : null}
       <section className="library-card-grid" aria-label="课堂互动方案列表">
         {interactions.map((interaction) => (
-          <Card asChild className="library-card" key={interaction.id}>
-            <article>
-              <CardHeader>
-                <div className="readable-chip-row">
-                  <Badge variant="secondary">{interaction.status}</Badge>
-                </div>
-                <CardTitle>
-                  <h2>{interaction.title}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="library-card-primary">{interaction.course_theme} · {interaction.teaching_phase} · {interaction.duration_minutes} 分钟</p>
-                <p>更新时间：{formatDateTime(interaction.updated_at)}{interaction.model ? ` · ${interaction.provider ?? "model"} / ${interaction.model}` : ""}{interaction.reasoning_level ? ` / ${interaction.reasoning_level}` : ""}</p>
-              </CardContent>
-              <CardFooter className="library-card-actions">
-                <Button asChild variant="secondary"><Link to={`/interactions/${interaction.id}`}>查看</Link></Button>
-                <Button variant="secondary" type="button" onClick={() => void handleDownload(interaction)}>导出 Markdown</Button>
-                <Button variant="destructive" type="button" disabled={deletingId === interaction.id} onClick={() => void handleDelete(interaction)}>{deletingId === interaction.id ? "删除中" : "删除"}</Button>
-              </CardFooter>
-            </article>
-          </Card>
+          <LibraryRecordCard
+            key={interaction.id}
+            kind="interaction"
+            title={interaction.title}
+            badges={<Badge variant="secondary">{interaction.status}</Badge>}
+            summaryLabel="课堂配置"
+            summary={`${interaction.course_theme} · ${interaction.teaching_phase} · ${interaction.duration_minutes} 分钟`}
+            updatedAt={interaction.updated_at}
+            provider={interaction.provider}
+            model={interaction.model}
+            reasoningLevel={interaction.reasoning_level}
+            viewTo={`/interactions/${interaction.id}`}
+            viewLabel="查看方案"
+            deleting={deletingId === interaction.id}
+            onDownload={() => void handleDownload(interaction)}
+            onDelete={() => void handleDelete(interaction)}
+          />
         ))}
       </section>
     </main>
