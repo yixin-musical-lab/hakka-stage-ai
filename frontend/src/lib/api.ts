@@ -13,6 +13,7 @@ import type {
   LessonPlanForm,
   LessonPlanResponse,
   LessonPlanSummary,
+  LessonPlanVariantForm,
   LlmOptionsResponse,
   MovementGuideContent,
   MovementGuideForm,
@@ -68,6 +69,18 @@ export async function createLessonPlanTask(form: LessonPlanForm) {
   return (await response.json()) as { task_id: string; lesson_plan_id: string; status: string };
 }
 
+export async function createLessonPlanVariantTask(sourceLessonPlanId: string, form: LessonPlanVariantForm) {
+  const response = await fetch(`${apiBaseUrl}/api/lesson-plans/${sourceLessonPlanId}/variants/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(form),
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as { task_id: string; lesson_plan_id: string; status: string; message: string };
+}
+
 export async function fetchLlmOptions(signal?: AbortSignal) {
   const response = await fetch(`${apiBaseUrl}/api/llm-options`, { signal });
   if (!response.ok) {
@@ -86,6 +99,14 @@ export async function fetchAiTask(taskId: string) {
 
 export async function fetchLessonPlans(signal?: AbortSignal) {
   const response = await fetch(`${apiBaseUrl}/api/lesson-plans`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as LessonPlanSummary[];
+}
+
+export async function fetchLessonPlanVariants(sourceLessonPlanId: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/lesson-plans/${sourceLessonPlanId}/variants`, { signal });
   if (!response.ok) {
     throw new Error(await readApiError(response));
   }

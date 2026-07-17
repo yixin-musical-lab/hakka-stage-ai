@@ -366,6 +366,7 @@ flowchart LR
 | `users` | 用户信息 |
 | `courses` | 课程基础信息 |
 | `lesson_plans` | 教案生成结果 |
+| `lesson_plan_variants` | T02 变体与原教案的一级关系、版本类型、调整方向和生成时原稿快照 |
 | `class_interactions` | 课堂互动脚本 |
 | `demo_assets` | 示范视频、图片、动作拆解材料 |
 | `practice_submissions` | 学生练习上传记录 |
@@ -388,6 +389,10 @@ flowchart LR
 | `/api/auth/login` | POST | 登录 |
 | `/api/courses` | POST / GET | 创建和查询课程 |
 | `/api/lesson-plans/generate` | POST | 生成教案 |
+| `/api/lesson-plans/{sourceLessonPlanId}/variants/generate` | POST | 基于原教案确认稿创建一个 T02 变体异步任务 |
+| `/api/lesson-plans/{sourceLessonPlanId}/variants` | GET | 查询原教案的直属一级变体 |
+| `/api/lesson-plans/{lessonPlanId}` | GET / PUT / DELETE | 查询、保存或删除原教案 / 变体；删除原教案时保留变体快照 |
+| `/api/lesson-plans/{lessonPlanId}/markdown` | GET | 导出原教案或变体的当前确认稿 Markdown |
 | `/api/interactions/generate` | POST | 生成课堂互动脚本 |
 | `/api/demo-assets/upload` | POST | 上传示范材料 |
 | `/api/practice-submissions` | POST | 学生上传练习 |
@@ -482,6 +487,7 @@ AI 能力由统一 Python 技术栈承载。FastAPI API 服务负责接收请求
 ```text
 prompts
 ├── lesson_plan.md
+├── lesson_plan_variant_v1.md
 ├── class_interaction.md
 ├── action_breakdown.md
 ├── motion_script.md
@@ -732,6 +738,28 @@ Codex 作为统一的 AI 开发工具，用于辅助技术组完成需求拆解�
 6. 前端展示可编辑教案。
 7. 支持 Markdown 导出。
 
+#### 7.1.1 T02 多版本教案
+
+T02 复用 T01 的 `courses`、`lesson_plans`、`ai_tasks` 和 Redis 队列，不复制课程记录。每个变体本身仍是一条独立 `lesson_plans` 记录，并通过 `lesson_plan_variants` 保存以下元数据：
+
+- `lesson_plan_id`：变体教案主键，同时是一对一外键。
+- `source_lesson_plan_id`：原教案 ID，删除原教案时使用 `SET NULL`。
+- `variant_type`：`younger`、`basic`、`advanced`、`performance` 四种固定类型。
+- `adjustment_direction`：老师补充的自由文本要求。
+- `source_title_snapshot`、`source_content_snapshot`：任务创建时冻结的原教案标题和完整确认稿。
+
+生成链路：
+
+1. 前端在原教案详情页先保存当前编辑稿，再进入变体生成页。
+2. API 校验来源必须是原教案且正文可用，拒绝从变体继续派生。
+3. API 创建共享同一 `course_id` 的变体草稿和 `lesson_plan.variant.generate` 任务，并把课程、原稿快照、版本类型和模型设置写入任务快照。
+4. Worker 使用 `lesson_plan_variant_v1.md` 和严格 JSON Schema 生成完整教案，同时强制输出 `applicable_audience` 与 `adjustment_summary`。
+5. 前端轮询统一 `/api/ai-tasks/{taskId}`，成功后进入双栏详情：左侧只读展示生成时原稿快照，右侧独立编辑当前变体。
+6. 资料库按 `course_id` 分组展示原教案和所有变体；删除原教案只断开来源外键，不删除变体、任务结果或快照。
+7. 任一版本都可独立保存、导出 Markdown，并作为课堂互动预填来源。变体预填额外带入适用对象和调整摘要。
+
+第一版每次只生成一个变体，只支持一级关系和完整内容对照；不实现批量生成、多级树、自动文本差异、回滚、合并或 Word 导出。项目继续沿用开发期 `create_all` 自动建表，因此关系元数据放入新表，不修改历史 `lesson_plans` 列结构；正式部署前应通过 Alembic 建立迁移。
+
 ### 7.2 课堂互动方案生成
 
 输入字段：
@@ -762,7 +790,7 @@ Codex 作为统一的 AI 开发工具，用于辅助技术组完成需求拆解�
 
 实现方式：
 
-课堂互动方案可以复用教案上下文，也可以单独生成。前端要支持“一键带入当前教案信息”，减少老师重复输入。
+课堂互动方案可以复用原教案或 T02 变体上下文，也可以单独生成。前端要显示已锁定的来源版本，并带入当前教案信息；如果来源是变体，还要带入适用对象和相对原版调整摘要，减少老师重复输入并避免误用版本。
 
 2026-07-02 已与负责人确认：T05 第一版只生成老师现场可照着执行的文字互动方案，不开发 Web 小游戏，不生成 2D / 3D 游戏，不做语音合成，不控制灯光、投影或背景素材。AI 输出必须可编辑、可保存、可再次查看，并支持 Markdown 导出。
 

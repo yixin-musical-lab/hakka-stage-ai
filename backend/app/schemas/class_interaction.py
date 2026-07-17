@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, StringConstraints
 
+from app.schemas.lesson_plan import LessonPlanVariantType
+
 
 TeachingPhase = Literal["开场", "热身", "动作学习", "分组展示", "收束"]
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1200)]
@@ -131,6 +133,8 @@ class LessonInteractionPrefillResponse(BaseModel):
     """从已保存教案提取的课堂互动表单预填信息。"""
 
     source_lesson_plan_id: UUID
+    source_lesson_plan_title: str
+    source_variant_type: LessonPlanVariantType | None = None
     course_theme: str
     age_group: str
     student_count: int

@@ -58,6 +58,8 @@ export type MovementStep = {
   teaching_tips: string;
 };
 
+export type LessonPlanVariantType = "younger" | "basic" | "advanced" | "performance";
+
 export type LessonPlanContent = {
   title: string;
   course_overview: string;
@@ -70,6 +72,16 @@ export type LessonPlanContent = {
   cooldown: LessonActivity[];
   homework: string[];
   teacher_notes: string[];
+  applicable_audience: string | null;
+  adjustment_summary: string[];
+};
+
+export type LessonPlanVariantInfo = {
+  source_lesson_plan_id: string | null;
+  source_title_snapshot: string;
+  source_content_snapshot: LessonPlanContent;
+  variant_type: LessonPlanVariantType;
+  adjustment_direction: string;
 };
 
 export type LessonPlanResponse = {
@@ -80,6 +92,9 @@ export type LessonPlanResponse = {
   content: LessonPlanContent | null;
   edited_content: LessonPlanContent | null;
   raw_model_info: Record<string, unknown> | null;
+  variant_info: LessonPlanVariantInfo | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type LessonPlanSummary = {
@@ -90,8 +105,19 @@ export type LessonPlanSummary = {
   provider: string | null;
   model: string | null;
   reasoning_level: string | null;
+  source_lesson_plan_id: string | null;
+  variant_type: LessonPlanVariantType | null;
+  source_title_snapshot: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type LessonPlanVariantForm = {
+  variant_type: LessonPlanVariantType;
+  adjustment_direction: string;
+  llm_provider: "deepseek" | "qwen";
+  llm_model: string;
+  reasoning_level: "off" | "standard" | "enhanced";
 };
 
 export type AiTaskResponse = {
@@ -201,6 +227,8 @@ export type ClassInteractionSummary = {
 
 export type LessonInteractionPrefill = {
   source_lesson_plan_id: string;
+  source_lesson_plan_title: string;
+  source_variant_type: LessonPlanVariantType | null;
   course_theme: string;
   age_group: string;
   student_count: number;

@@ -1,5 +1,6 @@
 import json
 import time
+from copy import deepcopy
 from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
@@ -13,6 +14,7 @@ from app.llm_options import REASONING_LEVELS, provider_models
 from app.schemas import (
     ClassInteractionContent,
     LessonPlanContent,
+    LessonPlanVariantContent,
     MusicalFusionContent,
     MusicalScriptContent,
     RehearsalReviewContent,
@@ -21,6 +23,7 @@ from app.schemas import (
 )
 
 LESSON_PLAN_PROMPT_VERSION = "lesson_plan_v1"
+LESSON_PLAN_VARIANT_PROMPT_VERSION = "lesson_plan_variant_v1"
 MUSICAL_SCRIPT_PROMPT_VERSION = "musical_script_v1"
 SONG_ADAPTATION_PROMPT_VERSION = "song_adaptation_v1"
 MUSICAL_FUSION_PROMPT_VERSION = "musical_fusion_v1"
@@ -29,6 +32,7 @@ CLASS_INTERACTION_PROMPT_VERSION = "class_interaction_v1"
 REHEARSAL_REVIEW_PROMPT_VERSION = "rehearsal_review_v1"
 PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 LESSON_PLAN_PROMPT_PATH = PROMPT_DIR / "lesson_plan_v1.md"
+LESSON_PLAN_VARIANT_PROMPT_PATH = PROMPT_DIR / "lesson_plan_variant_v1.md"
 MUSICAL_SCRIPT_PROMPT_PATH = PROMPT_DIR / "musical_script_v1.md"
 SONG_ADAPTATION_PROMPT_PATH = PROMPT_DIR / "song_adaptation_v1.md"
 MUSICAL_FUSION_PROMPT_PATH = PROMPT_DIR / "musical_fusion_v1.md"
@@ -45,6 +49,17 @@ LESSON_PLAN_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 2. 不要新增与教案无关的信息，尽量保留原始语义。
 3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
 4. JSON 必须符合教案字段结构：title、course_overview、teaching_goals、key_points、common_mistakes、warmup、main_teaching、movement_breakdown、cooldown、homework、teacher_notes。
+"""
+LESSON_PLAN_VARIANT_REPAIR_PROMPT = """你是严格的 JSON 修复器。
+
+请把用户提供的模型原文修复为一个合法 JSON 对象。
+
+规则：
+1. 只能输出 JSON，不要 Markdown、代码块或解释。
+2. 不要新增与原教案和目标版本无关的信息，尽量保留原始语义。
+3. 修复缺失逗号、未转义双引号、尾逗号、代码块包裹等常见问题。
+4. JSON 必须包含完整教案字段，并额外包含 applicable_audience 和 adjustment_summary。
+5. adjustment_summary 至少保留一条具体调整说明。
 """
 MUSICAL_SCRIPT_REPAIR_PROMPT = """你是严格的 JSON 修复器。
 
@@ -162,6 +177,39 @@ class LLMClient:
             truncated_message="LLM 输出被截断，无法生成完整教案 JSON，请调高 LLM_TIMEOUT_SECONDS 或降低推理强度后重试。",
             parse_error_label="教案 JSON",
             temperature=0.4,
+        )
+
+    def generate_lesson_plan_variant(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+        """基于冻结的原教案确认稿生成一个结构化 T02 变体。"""
+
+        provider = str(input_snapshot.get("llm_provider") or self.settings.llm_default_provider)
+        model = str(input_snapshot.get("llm_model") or self.settings.llm_default_model)
+        reasoning_level = str(input_snapshot.get("reasoning_level") or self.settings.llm_default_reasoning_level)
+        if model not in provider_models(provider):
+            raise RuntimeError(f"{provider} 不支持模型 {model}。")
+        if input_snapshot.get("variant_type") not in {"younger", "basic", "advanced", "performance"}:
+            raise RuntimeError("不支持的教案变体类型。")
+        if not input_snapshot.get("source_content"):
+            raise RuntimeError("教案变体任务缺少原教案正文快照。")
+        extra_body = self._reasoning_extra_body(provider, reasoning_level)
+
+        if self.settings.llm_mock_mode:
+            return self._mock_lesson_plan_variant(input_snapshot, provider, model, reasoning_level, extra_body)
+
+        return self._generate_structured_json(
+            input_snapshot=input_snapshot,
+            provider=provider,
+            model=model,
+            reasoning_level=reasoning_level,
+            extra_body=extra_body,
+            prompt_path=LESSON_PLAN_VARIANT_PROMPT_PATH,
+            prompt_version=LESSON_PLAN_VARIANT_PROMPT_VERSION,
+            schema_model=LessonPlanVariantContent,
+            repair_prompt=LESSON_PLAN_VARIANT_REPAIR_PROMPT,
+            empty_message="LLM 返回教案变体内容为空。",
+            truncated_message="LLM 输出被截断，无法生成完整变体 JSON，请降低推理强度后重试。",
+            parse_error_label="教案变体 JSON",
+            temperature=0.35,
         )
 
     def generate_musical_script(self, input_snapshot: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -652,6 +700,107 @@ class LLMClient:
             "provider_parameters": extra_body,
             "mock": True,
             "prompt_version": LESSON_PLAN_PROMPT_VERSION,
+            "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+            "finish_reason": "mock_mode",
+            "usage": None,
+        }
+        return content, model_info
+
+    def _mock_lesson_plan_variant(
+        self,
+        input_snapshot: dict[str, Any],
+        provider: str,
+        model: str,
+        reasoning_level: str,
+        extra_body: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """根据四种稳定预设生成可离线验收的 T02 变体。"""
+
+        source = deepcopy(input_snapshot["source_content"])
+        variant_type = str(input_snapshot["variant_type"])
+        policies = {
+            "younger": {
+                "label": "低龄版",
+                "audience": "6-8 岁、第一次接触民族舞或注意力持续时间较短的学生",
+                "focus": "用短口令、重复模仿和趣味游戏建立安全的基础节奏",
+                "key_points": ["听懂短口令后再动作", "小幅度完成手位和踏步", "保持安全间距"],
+                "mistakes": ["动作幅度过大导致失去平衡", "注意力转移后抢拍", "转身时相互靠得过近"],
+                "activity": "拆成短句示范，每完成一次就用节奏接龙复习，不安排连续转圈。",
+                "movement": "缩小动作幅度，老师用一拍一提示带领，转身改为原地换方向。",
+                "summary": ["降低动作和转身复杂度", "增加重复模仿与节奏游戏", "强化安全间距提醒"],
+            },
+            "basic": {
+                "label": "基础版",
+                "audience": "8-12 岁零基础或基础节奏尚不稳定的学生",
+                "focus": "放慢推进速度，通过分解、慢练和及时纠正完成基础组合",
+                "key_points": ["四拍节奏稳定", "手脚分开练习后再组合", "动作路线清楚"],
+                "mistakes": ["手脚同时加入后漏拍", "动作连接过快", "重心没有回到稳定位置"],
+                "activity": "先无音乐分解，再用慢速口令连接，最后完成一遍基础组合。",
+                "movement": "每个动作先练手位再加脚步，完成后停一拍检查重心。",
+                "summary": ["降低组合推进速度", "增加分解练习和停顿检查", "突出节拍与重心纠正"],
+            },
+            "advanced": {
+                "label": "进阶版",
+                "audience": "10-14 岁、有基础组合经验并能稳定跟拍的学生",
+                "focus": "提升动作连接、方向变化、队形协作和情绪表达的完整度",
+                "key_points": ["动作连接流畅", "方向与队形变化同步", "节奏、呼吸和表情统一"],
+                "mistakes": ["追求速度导致动作路线变形", "换位时只顾自己", "表情与身体力度脱节"],
+                "activity": "基础组合完成后加入方向变化和双人呼应，分组自主修正连接细节。",
+                "movement": "保持原动作安全边界，增加方向、呼吸和眼神要求，不加入危险技巧。",
+                "summary": ["提高连接和协调要求", "增加方向与队形协作", "强化自主修正和情绪表达"],
+            },
+            "performance": {
+                "label": "演出版",
+                "audience": "已掌握基础组合、准备课堂展示或校园舞台演出的学生",
+                "focus": "围绕入场、队形、舞台表达、段落衔接和终场造型组织排练",
+                "key_points": ["入退场路线清楚", "队形变化整齐", "高潮段落表达集中"],
+                "mistakes": ["候场位置混乱", "换队形时交叉抢位", "终场造型提前松懈"],
+                "activity": "按入场、主体组合、队形变化和谢幕顺序走台，再配音乐完整连排。",
+                "movement": "动作本身不增加危险难度，重点统一朝向、舞台幅度和定点眼神。",
+                "summary": ["增加入退场和队形衔接", "强化舞台朝向与高潮表达", "加入完整连排和终场造型"],
+            },
+        }
+        policy = policies[variant_type]
+        source_title = str(source.get("title") or input_snapshot.get("source_title") or "课前教案")
+        main_teaching = deepcopy(source.get("main_teaching") or [])
+        if not main_teaching:
+            main_teaching = [{"name": "主题动作学习", "duration_minutes": 20, "description": policy["activity"]}]
+        else:
+            main_teaching[0]["description"] = policy["activity"]
+        movement_breakdown = deepcopy(source.get("movement_breakdown") or [])
+        if not movement_breakdown:
+            movement_breakdown = [{"name": "主题动作", "beats": "八拍 x 1", "teaching_tips": policy["movement"]}]
+        else:
+            movement_breakdown[0]["teaching_tips"] = policy["movement"]
+
+        adjustment_summary = list(policy["summary"])
+        adjustment_direction = str(input_snapshot.get("adjustment_direction") or "").strip()
+        if adjustment_direction:
+            adjustment_summary.append(f"落实老师补充方向：{adjustment_direction}")
+
+        content = LessonPlanVariantContent(
+            title=f"{source_title} · {policy['label']}",
+            course_overview=f"{source.get('course_overview', '')} 本版本定位：{policy['focus']}。",
+            teaching_goals=list(source.get("teaching_goals") or [policy["focus"]]) + [policy["focus"]],
+            key_points=policy["key_points"],
+            common_mistakes=policy["mistakes"],
+            warmup=deepcopy(source.get("warmup") or [{"name": "节奏热身", "duration_minutes": 5, "description": "用拍手和踏步建立节奏。"}]),
+            main_teaching=main_teaching,
+            movement_breakdown=movement_breakdown,
+            cooldown=deepcopy(source.get("cooldown") or [{"name": "呼吸放松", "duration_minutes": 5, "description": "完成肩颈和腿部伸展。"}]),
+            homework=list(source.get("homework") or ["复习本版本课堂组合。"]),
+            teacher_notes=list(source.get("teacher_notes") or [])
+            + ["这是 T02 mock 演示初稿，老师需结合真实班级、场地和学生状态复核。"],
+            applicable_audience=policy["audience"],
+            adjustment_summary=adjustment_summary,
+        ).model_dump()
+        model_info = {
+            "provider": provider,
+            "model": model,
+            "reasoning_level": reasoning_level,
+            "provider_parameters": extra_body,
+            "mock": True,
+            "prompt_version": LESSON_PLAN_VARIANT_PROMPT_VERSION,
             "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
             "finish_reason": "mock_mode",
             "usage": None,

@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteRehearsalReview, fetchRehearsalReviews } from "../lib/api";
 import { downloadRehearsalReviewMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { RehearsalReviewSummary } from "../types";
 
 
@@ -74,33 +73,31 @@ export function RehearsalReviewListPage() {
         <EmptyState title="还没有复盘报告" text="完成一次排练或演出后，填写人工观察记录并生成第一份 M08 报告。" />
       ) : null}
 
-      <section className="review-library-grid" aria-label="排练复盘报告列表">
+      <section className="library-card-grid" aria-label="排练复盘报告列表">
         {reviews.map((review) => (
-          <Card key={review.id}>
-            <CardHeader>
-              <div className="readable-chip-row">
+          <LibraryRecordCard
+            key={review.id}
+            kind="review"
+            title={review.title}
+            badges={
+              <>
                 <Badge variant="secondary">{review.event_type === "performance" ? "演出复盘" : "排练复盘"}</Badge>
                 <Badge variant="outline">{review.status}</Badge>
                 {review.has_video_attachment ? <Badge variant="outline">MinIO 视频</Badge> : null}
-              </div>
-              <CardTitle>{review.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="review-list-date">现场日期：{review.event_date}</p>
-              <p>
-                更新时间：{formatDateTime(review.updated_at)}
-                {review.model ? ` · ${review.provider ?? "model"} / ${review.model}` : ""}
-                {review.reasoning_level ? ` / ${review.reasoning_level}` : ""}
-              </p>
-            </CardContent>
-            <CardFooter className="review-card-actions">
-              <Button asChild variant="secondary"><Link to={`/rehearsal-reviews/${review.id}`}>查看报告</Link></Button>
-              <Button type="button" variant="secondary" onClick={() => void handleDownload(review)}>导出 Markdown</Button>
-              <Button type="button" variant="destructive" disabled={deletingId === review.id} onClick={() => void handleDelete(review)}>
-                {deletingId === review.id ? "删除中" : "删除"}
-              </Button>
-            </CardFooter>
-          </Card>
+              </>
+            }
+            summaryLabel="现场日期"
+            summary={review.event_date}
+            updatedAt={review.updated_at}
+            provider={review.provider}
+            model={review.model}
+            reasoningLevel={review.reasoning_level}
+            viewTo={`/rehearsal-reviews/${review.id}`}
+            viewLabel="查看报告"
+            deleting={deletingId === review.id}
+            onDownload={() => void handleDownload(review)}
+            onDelete={() => void handleDelete(review)}
+          />
         ))}
       </section>
     </main>

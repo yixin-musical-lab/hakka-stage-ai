@@ -92,6 +92,9 @@ def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
     if task_type == "lesson_plan.generate":
         _process_lesson_plan_task(payload, llm_client)
         return
+    if task_type == "lesson_plan.variant.generate":
+        _process_lesson_plan_variant_task(payload, llm_client)
+        return
     if task_type == "musical_script.generate":
         _process_musical_script_task(payload, llm_client)
         return
@@ -144,6 +147,54 @@ def _process_lesson_plan_task(payload: dict, llm_client: LLMClient) -> None:
             task.finished_at = datetime.utcnow()
             db.commit()
             print(f"教案任务完成：task={task_id} lesson_plan={lesson_plan_id}", flush=True)
+        except Exception as exc:
+            db.rollback()
+            task = db.get(AiTask, task_id)
+            lesson_plan = db.get(LessonPlan, lesson_plan_id)
+            if task is not None:
+                task.status = "FAILED"
+                task.progress = 100
+                task.error_code = type(exc).__name__
+                task.error_message = _safe_error_message(exc)
+                task.finished_at = datetime.utcnow()
+            if lesson_plan is not None:
+                lesson_plan.status = "failed"
+                lesson_plan.updated_at = datetime.utcnow()
+            db.commit()
+            raise
+
+
+def _process_lesson_plan_variant_task(payload: dict, llm_client: LLMClient) -> None:
+    """处理 T02 教案变体任务，始终使用 AiTask 中冻结的原教案快照。"""
+
+    task_id = UUID(payload["task_id"])
+    lesson_plan_id = UUID(payload["lesson_plan_id"])
+
+    with SessionLocal() as db:
+        task = db.get(AiTask, task_id)
+        lesson_plan = db.get(LessonPlan, lesson_plan_id)
+        if task is None or lesson_plan is None:
+            raise RuntimeError("任务或教案变体记录不存在，无法继续处理。")
+
+        task.status = "RUNNING"
+        task.progress = 20
+        task.started_at = datetime.utcnow()
+        lesson_plan.status = "generating"
+        db.commit()
+
+        try:
+            content, model_info = llm_client.generate_lesson_plan_variant(task.input_snapshot)
+            lesson_plan.content = content
+            lesson_plan.title = content["title"]
+            lesson_plan.raw_model_info = model_info
+            lesson_plan.status = "generated"
+            lesson_plan.updated_at = datetime.utcnow()
+            task.status = "SUCCESS"
+            task.progress = 100
+            task.result_id = lesson_plan.id
+            task.finished_at = datetime.utcnow()
+            db.commit()
+            print(f"教案变体任务完成：task={task_id} lesson_plan={lesson_plan_id}", flush=True)
         except Exception as exc:
             db.rollback()
             task = db.get(AiTask, task_id)

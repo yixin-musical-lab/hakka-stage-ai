@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { LibraryRecordCard } from "../components/library/LibraryRecordCard";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { deleteMusicalScript, fetchMusicalScripts } from "../lib/api";
 import { downloadMusicalScriptMarkdown } from "../lib/download";
-import { formatDateTime } from "../lib/format";
 import type { MusicalScriptSummary } from "../types";
 
 export function MusicalScriptListPage() {
@@ -74,36 +73,23 @@ export function MusicalScriptListPage() {
 
       <section className="library-card-grid" aria-label="已保存剧本列表">
         {scripts.map((script) => (
-          <Card asChild className="library-card" key={script.id}>
-            <article>
-              <CardHeader>
-                <div className="readable-chip-row">
-                  <Badge variant="secondary">{script.status}</Badge>
-                </div>
-                <CardTitle>
-                  <h2>{script.title}</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>
-                  更新时间：{formatDateTime(script.updated_at)}
-                  {script.model ? ` · ${script.provider ?? "model"} / ${script.model}` : ""}
-                  {script.reasoning_level ? ` / ${script.reasoning_level}` : ""}
-                </p>
-              </CardContent>
-              <CardFooter className="library-card-actions">
-                <Button asChild variant="secondary">
-                  <Link to={`/musical-scripts/${script.id}`}>查看</Link>
-                </Button>
-                <Button variant="secondary" type="button" onClick={() => void handleDownload(script)}>
-                  导出 Markdown
-                </Button>
-                <Button variant="destructive" type="button" disabled={deletingId === script.id} onClick={() => void handleDelete(script)}>
-                  {deletingId === script.id ? "删除中" : "删除"}
-                </Button>
-              </CardFooter>
-            </article>
-          </Card>
+          <LibraryRecordCard
+            key={script.id}
+            kind="script"
+            title={script.title}
+            badges={<Badge variant="secondary">{script.status}</Badge>}
+            summaryLabel="创作阶段"
+            summary="编导确认稿 · 可继续衔接唱段适配与角色训练"
+            updatedAt={script.updated_at}
+            provider={script.provider}
+            model={script.model}
+            reasoningLevel={script.reasoning_level}
+            viewTo={`/musical-scripts/${script.id}`}
+            viewLabel="查看剧本"
+            deleting={deletingId === script.id}
+            onDownload={() => void handleDownload(script)}
+            onDelete={() => void handleDelete(script)}
+          />
         ))}
       </section>
     </main>

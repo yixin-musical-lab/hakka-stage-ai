@@ -69,7 +69,11 @@ def render_class_interaction_markdown(class_interaction: Any) -> str | None:
     )
 
 
-def build_lesson_interaction_prefill(course: Any, lesson_plan: Any) -> LessonInteractionPrefillResponse:
+def build_lesson_interaction_prefill(
+    course: Any,
+    lesson_plan: Any,
+    variant: Any | None = None,
+) -> LessonInteractionPrefillResponse:
     """从教案和课程中提取 T05 表单预填信息。
 
     这里只生成文本快照，后续课堂互动方案可独立编辑和删除，不会反向修改原教案。
@@ -78,6 +82,8 @@ def build_lesson_interaction_prefill(course: Any, lesson_plan: Any) -> LessonInt
     lesson_content = lesson_plan.edited_content or lesson_plan.content or {}
     context_sections = [
         f"课程教学目标：{course.teaching_goal}",
+        _context_text("变体适用对象", lesson_content.get("applicable_audience")),
+        _context_list("相对原版调整", lesson_content.get("adjustment_summary") or []),
         _context_list("教案教学目标", lesson_content.get("teaching_goals", [])),
         _context_list("本课重点", lesson_content.get("key_points", [])),
         _context_list("老师备注", lesson_content.get("teacher_notes", [])),
@@ -86,6 +92,8 @@ def build_lesson_interaction_prefill(course: Any, lesson_plan: Any) -> LessonInt
 
     return LessonInteractionPrefillResponse(
         source_lesson_plan_id=lesson_plan.id,
+        source_lesson_plan_title=lesson_plan.title,
+        source_variant_type=getattr(variant, "variant_type", None),
         course_theme=course.theme,
         age_group=course.age_group,
         student_count=course.student_count,
@@ -139,6 +147,13 @@ def _context_list(label: str, items: list[str]) -> str:
 
     cleaned = [str(item).strip() for item in items if str(item).strip()]
     return f"{label}：{'；'.join(cleaned)}" if cleaned else ""
+
+
+def _context_text(label: str, value: object) -> str:
+    """把可选的 T02 文本字段安全压缩为课堂互动上下文。"""
+
+    cleaned = str(value).strip() if value is not None else ""
+    return f"{label}：{cleaned}" if cleaned else ""
 
 
 def _optional_string(value: object) -> str | None:

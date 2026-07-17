@@ -138,6 +138,7 @@ class ClassInteractionServiceTests(unittest.TestCase):
         )
         lesson_plan = SimpleNamespace(
             id=lesson_plan_id,
+            title="老师确认后的山歌律动教案",
             content={"teaching_goals": ["AI 初稿目标"]},
             edited_content={
                 "teaching_goals": ["老师确认目标：稳定完成四拍组合"],
@@ -149,6 +150,8 @@ class ClassInteractionServiceTests(unittest.TestCase):
         prefill = service.build_lesson_interaction_prefill(course, lesson_plan)
 
         self.assertEqual(prefill.source_lesson_plan_id, lesson_plan_id)
+        self.assertEqual(prefill.source_lesson_plan_title, "老师确认后的山歌律动教案")
+        self.assertIsNone(prefill.source_variant_type)
         self.assertEqual(prefill.class_style, "活泼、协作")
         self.assertIn("老师确认目标：稳定完成四拍组合", prefill.lesson_context)
         self.assertNotIn("AI 初稿目标", prefill.lesson_context)

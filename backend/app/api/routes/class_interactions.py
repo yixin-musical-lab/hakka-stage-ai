@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.llm_options import is_supported_model, is_supported_reasoning_level, models_for_provider
-from app.models import AiTask, ClassInteraction, Course, LessonPlan
+from app.models import AiTask, ClassInteraction, Course, LessonPlan, LessonPlanVariant
 from app.schemas import (
     ClassInteractionGenerateRequest,
     ClassInteractionGenerateResponse,
@@ -136,7 +136,8 @@ def prefill_class_interaction_from_lesson(
     course = db.get(Course, lesson_plan.course_id)
     if course is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="教案关联的课程信息不存在。")
-    return build_lesson_interaction_prefill(course, lesson_plan)
+    variant = db.get(LessonPlanVariant, lesson_plan.id)
+    return build_lesson_interaction_prefill(course, lesson_plan, variant)
 
 
 @router.get(

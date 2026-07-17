@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { ClassInteractionEditor, PhaseField } from "../components/class-interactions/ClassInteractionEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -17,11 +18,13 @@ import {
   updateClassInteraction,
 } from "../lib/api";
 import { initialClassInteractionForm } from "../lib/lessonPlanDefaults";
+import { lessonPlanVariantLabel } from "../lib/lessonPlanVariants";
 import type {
   AiTaskResponse,
   ClassInteractionContent,
   ClassInteractionForm,
   ClassInteractionResponse,
+  LessonInteractionPrefill,
   LlmOptionsResponse,
 } from "../types";
 
@@ -34,6 +37,7 @@ export function ClassInteractionGeneratePage() {
   const [interaction, setInteraction] = useState<ClassInteractionResponse | null>(null);
   const [editedContent, setEditedContent] = useState<ClassInteractionContent | null>(null);
   const [llmOptions, setLlmOptions] = useState<LlmOptionsResponse | null>(null);
+  const [sourcePrefill, setSourcePrefill] = useState<LessonInteractionPrefill | null>(null);
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,6 +66,7 @@ export function ClassInteractionGeneratePage() {
     const controller = new AbortController();
     void fetchLessonInteractionPrefill(sourceLessonPlanId, controller.signal)
       .then((prefill) => {
+        setSourcePrefill(prefill);
         setForm((current) => ({
           ...current,
           source_lesson_plan_id: prefill.source_lesson_plan_id,
@@ -72,7 +77,7 @@ export function ClassInteractionGeneratePage() {
           space_materials: prefill.space_materials,
           lesson_context: prefill.lesson_context,
         }));
-        setNotice("已带入当前教案的课程主题、年龄段、课堂风格、学生人数和老师备注。");
+        setNotice(`已带入“${prefill.source_lesson_plan_title}”的课程条件和老师确认内容。`);
       })
       .catch((caughtError) => {
         if (controller.signal.aborted) {
@@ -180,6 +185,16 @@ export function ClassInteractionGeneratePage() {
         <Card asChild className="surface-panel input-panel">
           <form onSubmit={submitInteraction}>
             <div className="section-heading"><div><p className="section-kicker">课堂条件</p><h2>生成现场执行方案</h2></div></div>
+            {sourcePrefill ? (
+              <div className="interaction-source-banner">
+                <div className="readable-chip-row">
+                  <Badge>{lessonPlanVariantLabel(sourcePrefill.source_variant_type)}</Badge>
+                  <Badge variant="outline">已锁定来源</Badge>
+                </div>
+                <strong>{sourcePrefill.source_lesson_plan_title}</strong>
+                <span>下方预填内容来自此版本；生成后的课堂互动仍可独立编辑和删除。</span>
+              </div>
+            ) : null}
             <div className="field-grid">
               <TextField label="课程主题" value={form.course_theme} onChange={(value) => updateForm("course_theme", value)} />
               <TextField label="年龄段" value={form.age_group} onChange={(value) => updateForm("age_group", value)} />

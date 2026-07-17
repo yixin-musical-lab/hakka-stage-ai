@@ -57,6 +57,33 @@ class LessonPlan(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
 
 
+class LessonPlanVariant(Base):
+    """T02 教案变体关系表的 Worker 侧镜像。
+
+    Worker 主要通过任务快照生成正文，但仍注册此模型，保证 Worker 单独启动时
+    ``create_all`` 能看到完整的新表结构。
+    """
+
+    __tablename__ = "lesson_plan_variants"
+
+    lesson_plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("lesson_plans.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    source_lesson_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("lesson_plans.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    variant_type: Mapped[str] = mapped_column(String(40))
+    adjustment_direction: Mapped[str] = mapped_column(Text, default="")
+    source_title_snapshot: Mapped[str] = mapped_column(String(200))
+    source_content_snapshot: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class MusicalProject(Base):
     """歌舞剧项目基础信息。"""
 

@@ -5,10 +5,11 @@ type EditableSectionProps = {
   eyebrow?: string;
   title: string;
   summary?: string;
-  isEditing: boolean;
-  onToggleEdit: () => void;
+  isEditing?: boolean;
+  onToggleEdit?: () => void;
   children: ReactNode;
-  editContent: ReactNode;
+  editContent?: ReactNode;
+  canEdit?: boolean;
 };
 
 // 详情页统一使用“阅读态优先”的区块容器：
@@ -21,6 +22,7 @@ export function EditableSection({
   onToggleEdit,
   children,
   editContent,
+  canEdit = true,
 }: EditableSectionProps) {
   return (
     <section className={`readable-section${isEditing ? " is-editing" : ""}`}>
@@ -30,11 +32,15 @@ export function EditableSection({
           <h3>{title}</h3>
           {summary ? <p className="readable-section-summary">{summary}</p> : null}
         </div>
-        <Button type="button" variant={isEditing ? "secondary" : "outline"} size="sm" onClick={onToggleEdit}>
-          {isEditing ? "完成编辑" : "编辑"}
-        </Button>
+        {canEdit && onToggleEdit ? (
+          <Button type="button" variant={isEditing ? "secondary" : "outline"} size="sm" onClick={onToggleEdit}>
+            {isEditing ? "完成编辑" : "编辑"}
+          </Button>
+        ) : null}
       </header>
-      <div className={isEditing ? "readable-section-edit" : "readable-section-content"}>{isEditing ? editContent : children}</div>
+      <div className={isEditing && editContent ? "readable-section-edit" : "readable-section-content"}>
+        {isEditing && editContent ? editContent : children}
+      </div>
     </section>
   );
 }
