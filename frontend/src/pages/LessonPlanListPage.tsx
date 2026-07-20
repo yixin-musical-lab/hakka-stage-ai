@@ -34,7 +34,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { downloadMarkdown } from "../lib/download";
 import { deleteLessonPlan, fetchLessonPlans, isAbortError } from "../lib/api";
-import { formatDateTime } from "../lib/format";
+import { apiDateTimeToEpoch, formatDateTime } from "../lib/format";
 import { lessonPlanVariantLabel } from "../lib/lessonPlanVariants";
 import { cn } from "../lib/utils";
 import type { LessonPlanSummary } from "../types";
@@ -407,9 +407,9 @@ function groupLessonPlans(lessonPlans: LessonPlanSummary[]): LessonPlanGroup[] {
       const root = items.find((item) => !item.variant_type) ?? null;
       const variants = items
         .filter((item) => Boolean(item.variant_type))
-        .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
+        .sort((left, right) => apiDateTimeToEpoch(right.updated_at) - apiDateTimeToEpoch(left.updated_at));
       const updatedAt = items.reduce(
-        (latest, item) => Date.parse(item.updated_at) > Date.parse(latest) ? item.updated_at : latest,
+        (latest, item) => apiDateTimeToEpoch(item.updated_at) > apiDateTimeToEpoch(latest) ? item.updated_at : latest,
         items[0].updated_at,
       );
       return {
@@ -420,5 +420,5 @@ function groupLessonPlans(lessonPlans: LessonPlanSummary[]): LessonPlanGroup[] {
         title: root?.title ?? variants[0]?.source_title_snapshot ?? variants[0]?.title ?? "未命名课程",
       };
     })
-    .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
+    .sort((left, right) => apiDateTimeToEpoch(right.updatedAt) - apiDateTimeToEpoch(left.updatedAt));
 }

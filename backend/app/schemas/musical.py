@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic import Field, StringConstraints, model_validator
+
+from app.schemas.base import ApiSchema as BaseModel
 
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1600)]
