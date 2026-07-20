@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type LayoutMode = "classic" | "workspace";
 
@@ -7,28 +7,35 @@ type LayoutPreferenceContextValue = {
   setLayoutMode: (mode: LayoutMode) => void;
 };
 
-const STORAGE_KEY = "hakka-stage-layout-mode";
+// v1 在首次进入页面时会自动写入 workspace，无法区分“系统默认”与“用户主动选择”。
+// 使用新键重新建立清晰语义：没有 v2 偏好时始终进入经典布局，只有用户手动切换后才持久化。
+const STORAGE_KEY = "hakka-stage-layout-mode-v2";
 const LayoutPreferenceContext = createContext<LayoutPreferenceContextValue | null>(null);
 
 function readStoredLayoutMode(): LayoutMode {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === "classic" ? "classic" : "workspace";
+    return window.localStorage.getItem(STORAGE_KEY) === "workspace" ? "workspace" : "classic";
   } catch {
-    // 浏览器禁用本地存储时仍可使用新工作台布局，只是不跨刷新保存偏好。
-    return "workspace";
+    // 浏览器禁用本地存储时仍默认使用经典布局，只是不跨刷新保存用户选择。
+    return "classic";
   }
 }
 
 export function LayoutPreferenceProvider({ children }: { children: ReactNode }) {
   const [layoutMode, setLayoutModeState] = useState<LayoutMode>(readStoredLayoutMode);
 
-  useEffect(() => {
-    document.documentElement.dataset.layout = layoutMode;
+  const setLayoutMode = useCallback((mode: LayoutMode) => {
+    setLayoutModeState(mode);
     try {
-      window.localStorage.setItem(STORAGE_KEY, layoutMode);
+      // 只在用户通过界面主动切换时写入，首次渲染不再悄悄保存新布局。
+      window.localStorage.setItem(STORAGE_KEY, mode);
     } catch {
       // 存储失败不影响当前会话内切换。
     }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.layout = layoutMode;
   }, [layoutMode]);
 
   useEffect(() => {
@@ -43,8 +50,8 @@ export function LayoutPreferenceProvider({ children }: { children: ReactNode }) 
   }, []);
 
   const value = useMemo(
-    () => ({ layoutMode, setLayoutMode: setLayoutModeState }),
-    [layoutMode],
+    () => ({ layoutMode, setLayoutMode }),
+    [layoutMode, setLayoutMode],
   );
 
   return <LayoutPreferenceContext.Provider value={value}>{children}</LayoutPreferenceContext.Provider>;
