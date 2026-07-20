@@ -10,6 +10,7 @@ from app.api.routes.musical import router as musical_router
 from app.api.routes.practice import router as practice_router
 from app.api.routes.rehearsal_reviews import router as rehearsal_review_router
 from app.api.routes.system import router as system_router
+from app.api.routes.workspace_overview import router as workspace_overview_router
 
 api_router = APIRouter()
 protected_router = APIRouter(dependencies=[Depends(get_current_user)])
@@ -28,4 +29,5 @@ protected_router.include_router(musical_router)
 protected_router.include_router(movement_guide_router)
 protected_router.include_router(practice_router)
 protected_router.include_router(rehearsal_review_router)
+protected_router.include_router(workspace_overview_router)
 api_router.include_router(protected_router)

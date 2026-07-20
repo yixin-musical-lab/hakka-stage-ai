@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { MusicalScriptEditor } from "../components/musical/MusicalScriptEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -13,6 +14,7 @@ import {
   fetchAiTask,
   fetchLlmOptions,
   fetchMusicalScript,
+  isAbortError,
   updateMusicalScript,
 } from "../lib/api";
 import { initialMusicalScriptForm } from "../lib/lessonPlanDefaults";
@@ -43,7 +45,7 @@ export function MusicalScriptGeneratePage() {
         }));
       })
       .catch((caughtError) => {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取模型配置失败。");
@@ -147,7 +149,12 @@ export function MusicalScriptGeneratePage() {
         }
       />
 
-      <section className="lesson-layout">
+      <StudioLayout
+        currentStep={musicalScript ? 3 : task ? 2 : 1}
+        libraryTo="/musical-scripts"
+        libraryLabel="查看已保存剧本"
+      >
+        <section className="lesson-layout">
         <Card asChild className="surface-panel input-panel">
           <form onSubmit={submitMusicalScript}>
             <div className="section-heading">
@@ -222,7 +229,8 @@ export function MusicalScriptGeneratePage() {
             )}
           </section>
         </Card>
-      </section>
+        </section>
+      </StudioLayout>
     </main>
   );
 

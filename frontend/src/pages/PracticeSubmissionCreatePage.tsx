@@ -5,7 +5,7 @@ import { TextareaField, TextField } from "../components/ui/FormFields";
 import { Field, FieldLabel } from "../components/ui/field";
 import { Input } from "../components/ui/input";
 import { PageTitle } from "../components/ui/PageTitle";
-import { createPracticeSubmission, fetchMovementGuide, fetchMovementGuides, uploadPracticeVideo } from "../lib/api";
+import { createPracticeSubmission, fetchMovementGuide, fetchMovementGuides, isAbortError, uploadPracticeVideo } from "../lib/api";
 import { initialPracticeSubmissionForm } from "../lib/lessonPlanDefaults";
 import type { MovementGuideResponse, MovementGuideSummary, PracticeSubmissionForm } from "../types";
 
@@ -22,7 +22,14 @@ export function PracticeSubmissionCreatePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchMovementGuides(controller.signal).then(setMovementGuides).catch(() => setMovementGuides([]));
+    void fetchMovementGuides(controller.signal)
+      .then(setMovementGuides)
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setMovementGuides([]);
+      });
     return () => controller.abort();
   }, []);
 

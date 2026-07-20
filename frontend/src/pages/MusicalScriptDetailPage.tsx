@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { MusicalCreationFlowPanel, type MusicalCreationStage } from "../components/musical/MusicalCreationFlowPanel";
 import { MusicalScriptEditor } from "../components/musical/MusicalScriptEditor";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -109,34 +110,36 @@ export function MusicalScriptDetailPage() {
         }
       />
 
-      {message ? (
-        <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
-          {message}
-        </p>
-      ) : null}
-      {loading ? <EmptyState title="正在读取剧本" text="请稍候，系统正在读取剧本详情。" /> : null}
+      <StudioLayout mode="edit" currentStep={musicalScript?.edited_content ? 3 : 2}>
+        {message ? (
+          <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
+            {message}
+          </p>
+        ) : null}
+        {loading ? <EmptyState title="正在读取剧本" text="请稍候，系统正在读取剧本详情。" /> : null}
 
-      {musicalScript && editedContent ? (
-        <MusicalCreationFlowPanel
-          scriptId={musicalScript.id}
-          disabled={saving}
-          openingStage={openingStage}
-          onCreate={openCreationStage}
-          onOpen={navigate}
-        />
-      ) : null}
+        {musicalScript && editedContent ? (
+          <MusicalCreationFlowPanel
+            scriptId={musicalScript.id}
+            disabled={saving}
+            openingStage={openingStage}
+            onCreate={openCreationStage}
+            onOpen={navigate}
+          />
+        ) : null}
 
-      <section className="script-detail-layout">
-        <Card asChild className="surface-panel">
-          <section>
-            {editedContent ? (
-              <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
-            ) : !loading ? (
-              <EmptyState title="剧本内容不可用" text="这份剧本可能尚未生成成功，暂时无法编辑、导出或进入下游创编任务。" />
-            ) : null}
-          </section>
-        </Card>
-      </section>
+        <section className="script-detail-layout">
+          <Card asChild className="surface-panel">
+            <section>
+              {editedContent ? (
+                <MusicalScriptEditor content={editedContent} onChange={setEditedContent} modelInfo={musicalScript?.raw_model_info ?? null} />
+              ) : !loading ? (
+                <EmptyState title="剧本内容不可用" text="这份剧本可能尚未生成成功，暂时无法编辑、导出或进入下游创编任务。" />
+              ) : null}
+            </section>
+          </Card>
+        </section>
+      </StudioLayout>
     </main>
   );
 

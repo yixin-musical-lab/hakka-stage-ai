@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { SongAdaptationEditor } from "../components/musical/SongAdaptationEditor";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -106,22 +107,24 @@ export function SongAdaptationDetailPage() {
         }
       />
 
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取唱段适配" text="请稍候，系统正在读取唱段适配详情。" /> : null}
+      <StudioLayout mode="edit" currentStep={songAdaptation?.edited_content ? 3 : 2}>
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取唱段适配" text="请稍候，系统正在读取唱段适配详情。" /> : null}
 
-      {editedContent ? (
-        <Card asChild className="surface-panel">
-          <section>
-            <SongAdaptationEditor
-              content={editedContent}
-              onChange={setEditedContent}
-              modelInfo={songAdaptation?.raw_model_info ?? null}
-            />
-          </section>
-        </Card>
-      ) : !loading ? (
-        <EmptyState title="唱段适配内容不可用" text="这份唱段适配可能尚未生成成功，暂时无法编辑或导出。" />
-      ) : null}
+        {editedContent ? (
+          <Card asChild className="surface-panel">
+            <section>
+              <SongAdaptationEditor
+                content={editedContent}
+                onChange={setEditedContent}
+                modelInfo={songAdaptation?.raw_model_info ?? null}
+              />
+            </section>
+          </Card>
+        ) : !loading ? (
+          <EmptyState title="唱段适配内容不可用" text="这份唱段适配可能尚未生成成功，暂时无法编辑或导出。" />
+        ) : null}
+      </StudioLayout>
     </main>
   );
 }

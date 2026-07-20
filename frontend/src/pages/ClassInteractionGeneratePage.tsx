@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { ClassInteractionEditor, PhaseField } from "../components/class-interactions/ClassInteractionEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
 import { Badge } from "../components/ui/badge";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -15,6 +16,7 @@ import {
   fetchClassInteraction,
   fetchLessonInteractionPrefill,
   fetchLlmOptions,
+  isAbortError,
   updateClassInteraction,
 } from "../lib/api";
 import { initialClassInteractionForm } from "../lib/lessonPlanDefaults";
@@ -51,7 +53,7 @@ export function ClassInteractionGeneratePage() {
         setForm((current) => ({ ...current, llm_provider: options.default_provider, llm_model: options.default_model, reasoning_level: options.default_reasoning_level }));
       })
       .catch((caughtError) => {
-        if (controller.signal.aborted) {
+        if (isAbortError(caughtError)) {
           return;
         }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取模型配置失败。");
@@ -80,7 +82,7 @@ export function ClassInteractionGeneratePage() {
         setNotice(`已带入“${prefill.source_lesson_plan_title}”的课程条件和老师确认内容。`);
       })
       .catch((caughtError) => {
-        if (controller.signal.aborted) {
+        if (isAbortError(caughtError)) {
           return;
         }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取教案预填信息失败。");
@@ -181,7 +183,12 @@ export function ClassInteractionGeneratePage() {
         action={<Button variant="secondary" type="button" onClick={() => navigate("/interactions")}>已保存的方案</Button>}
       />
 
-      <section className="lesson-layout">
+      <StudioLayout
+        currentStep={interaction ? 3 : task ? 2 : 1}
+        libraryTo="/interactions"
+        libraryLabel="查看已保存互动方案"
+      >
+        <section className="lesson-layout">
         <Card asChild className="surface-panel input-panel">
           <form onSubmit={submitInteraction}>
             <div className="section-heading"><div><p className="section-kicker">课堂条件</p><h2>生成现场执行方案</h2></div></div>
@@ -236,7 +243,8 @@ export function ClassInteractionGeneratePage() {
             {editedContent ? <ClassInteractionEditor content={editedContent} onChange={setEditedContent} modelInfo={interaction?.raw_model_info ?? null} /> : <EmptyState title="还没有课堂互动初稿" text="提交任务后，生成结果会显示在这里。" />}
           </section>
         </Card>
-      </section>
+        </section>
+      </StudioLayout>
     </main>
   );
 }

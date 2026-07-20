@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
@@ -16,6 +17,7 @@ import {
   fetchLlmOptions,
   fetchMusicalFusionPlans,
   fetchMusicalScripts,
+  isAbortError,
 } from "../lib/api";
 import { initialRoleTrainingForm } from "../lib/lessonPlanDefaults";
 import type {
@@ -93,7 +95,7 @@ export function RoleTrainingGeneratePage() {
           showStatus(`${warnings.join("；")}。`);
         }
       } catch (caughtError) {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         showError(caughtError instanceof Error ? caughtError.message : "读取剧本、歌舞融合方案和模型配置失败。");
@@ -198,18 +200,23 @@ export function RoleTrainingGeneratePage() {
         }
       />
 
-      {message ? (
-        <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
-          {message}
-        </p>
-      ) : null}
-      {loading ? <EmptyState title="正在读取排练资料" text="请稍候，系统正在加载剧本、歌舞融合方案和模型配置。" /> : null}
-      {!loading && scripts.length === 0 ? (
-        <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再创建分角色训练计划。" />
-      ) : null}
+      <StudioLayout
+        currentStep={task?.status === "SUCCESS" ? 3 : task ? 2 : 1}
+        libraryTo="/role-training-plans"
+        libraryLabel="查看已保存训练计划"
+      >
+        {message ? (
+          <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
+            {message}
+          </p>
+        ) : null}
+        {loading ? <EmptyState title="正在读取排练资料" text="请稍候，系统正在加载剧本、歌舞融合方案和模型配置。" /> : null}
+        {!loading && scripts.length === 0 ? (
+          <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再创建分角色训练计划。" />
+        ) : null}
 
-      {!loading && scripts.length > 0 ? (
-        <form className="lesson-layout" onSubmit={submitRoleTraining}>
+        {!loading && scripts.length > 0 ? (
+          <form className="lesson-layout" onSubmit={submitRoleTraining}>
           <Card className="surface-panel input-panel">
             <CardHeader>
               <CardTitle>选择剧本与排演上下文</CardTitle>
@@ -320,8 +327,9 @@ export function RoleTrainingGeneratePage() {
               </Button>
             </CardFooter>
           </Card>
-        </form>
-      ) : null}
+          </form>
+        ) : null}
+      </StudioLayout>
     </main>
   );
 

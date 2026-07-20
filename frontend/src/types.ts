@@ -46,6 +46,31 @@ export type BatchAccountCreateResponse = {
   users: UserAccount[];
 };
 
+export type WorkspaceLatestItem = {
+  id: string;
+  title: string;
+  status: string;
+  updated_at: string;
+};
+
+export type WorkspaceModuleOverview = {
+  count: number;
+  latest: WorkspaceLatestItem | null;
+};
+
+/** 首页轻量概览；只包含统计和最新摘要，不携带业务正文。 */
+export type WorkspaceOverviewResponse = {
+  lesson_plans: WorkspaceModuleOverview;
+  class_interactions: WorkspaceModuleOverview;
+  musical_scripts: WorkspaceModuleOverview;
+  song_adaptations: WorkspaceModuleOverview;
+  musical_fusion_plans: WorkspaceModuleOverview;
+  role_training_plans: WorkspaceModuleOverview;
+  movement_guides: WorkspaceModuleOverview;
+  practice_submissions: WorkspaceModuleOverview;
+  rehearsal_reviews: WorkspaceModuleOverview;
+};
+
 export type LessonActivity = {
   name: string;
   duration_minutes: number;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { LessonEditor } from "../components/lesson-plans/LessonEditor";
 import { Badge } from "../components/ui/badge";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -136,16 +137,17 @@ export function LessonPlanDetailPage() {
         }
       />
 
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取教案" text="请稍候，系统正在读取教案详情和版本关系。" /> : null}
+      <StudioLayout mode="edit" currentStep={lessonPlan?.edited_content ? 3 : 2}>
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取教案" text="请稍候，系统正在读取教案详情和版本关系。" /> : null}
 
-      {!loading && lessonPlan && !variantInfo ? (
-        <RootVersionOverview lessonPlan={lessonPlan} variants={variants} />
-      ) : null}
+        {!loading && lessonPlan && !variantInfo ? (
+          <RootVersionOverview lessonPlan={lessonPlan} variants={variants} />
+        ) : null}
 
-      {!loading && lessonPlan && variantInfo && editedContent ? (
-        <>
-          <Card className="variant-provenance-card">
+        {!loading && lessonPlan && variantInfo && editedContent ? (
+          <>
+            <Card className="variant-provenance-card">
             <CardHeader>
               <div className="readable-chip-row">
                 <Badge>{lessonPlanVariantLabel(variantInfo.variant_type)}</Badge>
@@ -182,10 +184,10 @@ export function LessonPlanDetailPage() {
                 ) : <p>尚未填写调整摘要。</p>}
               </div>
             </CardContent>
-          </Card>
+            </Card>
 
-          {/* 变体详情只呈现当前版本正文，来源关系由上方说明卡片承载，避免阅读时被双栏对比打断。 */}
-          <Card className="surface-panel lesson-detail-card variant-lesson-detail-card">
+            {/* 变体详情只呈现当前版本正文，来源关系由上方说明卡片承载，避免阅读时被双栏对比打断。 */}
+            <Card className="surface-panel lesson-detail-card variant-lesson-detail-card">
             <CardHeader>
               <div className="readable-chip-row">
                 <Badge>{lessonPlanVariantLabel(variantInfo.variant_type)}</Badge>
@@ -197,12 +199,12 @@ export function LessonPlanDetailPage() {
             <CardContent>
               <LessonEditor content={editedContent} onChange={setEditedContent} modelInfo={lessonPlan.raw_model_info} />
             </CardContent>
-          </Card>
-        </>
-      ) : null}
+            </Card>
+          </>
+        ) : null}
 
-      {!loading && lessonPlan && !variantInfo && editedContent ? (
-        <Card className="surface-panel lesson-detail-card">
+        {!loading && lessonPlan && !variantInfo && editedContent ? (
+          <Card className="surface-panel lesson-detail-card">
           <CardHeader>
             <div className="readable-chip-row">
               <Badge variant="secondary">原教案</Badge>
@@ -214,12 +216,13 @@ export function LessonPlanDetailPage() {
           <CardContent>
             <LessonEditor content={editedContent} onChange={setEditedContent} modelInfo={lessonPlan.raw_model_info} />
           </CardContent>
-        </Card>
-      ) : null}
+          </Card>
+        ) : null}
 
-      {!loading && (!lessonPlan || !editedContent) ? (
-        <EmptyState title="教案内容不可用" text="这份教案可能尚未生成成功，暂时无法编辑或导出。" />
-      ) : null}
+        {!loading && (!lessonPlan || !editedContent) ? (
+          <EmptyState title="教案内容不可用" text="这份教案可能尚未生成成功，暂时无法编辑或导出。" />
+        ) : null}
+      </StudioLayout>
     </main>
   );
 }

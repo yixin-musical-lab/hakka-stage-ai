@@ -47,7 +47,21 @@ import type {
   SongAdaptationForm,
   SongAdaptationResponse,
   SongAdaptationSummary,
+  WorkspaceOverviewResponse,
 } from "../types";
+
+/**
+ * 判断请求失败是否由 AbortController 主动取消导致。
+ *
+ * React StrictMode 会在开发环境中额外执行一次 effect 清理；此时 fetch 可能抛出
+ * DOMException，也可能由不同运行时包装为普通 Error，因此统一按错误名称识别。
+ */
+export function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  );
+}
 
 export async function fetchHealth(signal?: AbortSignal) {
   const response = await fetch(`${apiBaseUrl}/health`, { signal });
@@ -55,6 +69,14 @@ export async function fetchHealth(signal?: AbortSignal) {
     throw new Error(`后端返回异常状态码：${response.status}`);
   }
   return (await response.json()) as HealthResponse;
+}
+
+export async function fetchWorkspaceOverview(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/workspace/overview`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as WorkspaceOverviewResponse;
 }
 
 export async function createLessonPlanTask(form: LessonPlanForm) {

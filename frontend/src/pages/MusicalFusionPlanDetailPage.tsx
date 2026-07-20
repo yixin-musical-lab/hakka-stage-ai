@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { MusicalFusionEditor } from "../components/musical/MusicalFusionEditor";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -104,40 +105,42 @@ export function MusicalFusionPlanDetailPage() {
         }
       />
 
-      {plan ? (
-        <div className="readable-chip-row">
-          <Badge variant="secondary">{plan.source_mode === "song_adaptation" ? "引用 M03" : "手工音乐段落"}</Badge>
-          <Badge variant="outline">{plan.music_title || "未标注音乐"}</Badge>
-        </div>
-      ) : null}
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取歌舞融合方案" text="请稍候，系统正在加载编导结构。" /> : null}
+      <StudioLayout mode="edit" currentStep={plan?.edited_content ? 3 : 2}>
+        {plan ? (
+          <div className="readable-chip-row">
+            <Badge variant="secondary">{plan.source_mode === "song_adaptation" ? "引用 M03" : "手工音乐段落"}</Badge>
+            <Badge variant="outline">{plan.music_title || "未标注音乐"}</Badge>
+          </div>
+        ) : null}
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取歌舞融合方案" text="请稍候，系统正在加载编导结构。" /> : null}
 
-      {editedContent ? (
-        <>
-          <Card asChild className="surface-panel">
-            <section>
-              <MusicalFusionEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
-            </section>
-          </Card>
-          <Card asChild className="surface-panel next-step-panel">
-            <section>
-              <div className="section-heading">
-                <div>
-                  <p className="section-kicker">下一步 · M05</p>
-                  <h2>把歌舞融合结构带入分角色训练</h2>
-                  <p>训练计划会读取本方案的演唱角色、舞蹈形式、队形、高潮和排练提示。</p>
+        {editedContent ? (
+          <>
+            <Card asChild className="surface-panel">
+              <section>
+                <MusicalFusionEditor content={editedContent} onChange={setEditedContent} modelInfo={plan?.raw_model_info ?? null} />
+              </section>
+            </Card>
+            <Card asChild className="surface-panel next-step-panel">
+              <section>
+                <div className="section-heading">
+                  <div>
+                    <p className="section-kicker">下一步 · M05</p>
+                    <h2>把歌舞融合结构带入分角色训练</h2>
+                    <p>训练计划会读取本方案的演唱角色、舞蹈形式、队形、高潮和排练提示。</p>
+                  </div>
+                  <Button type="button" onClick={() => void openRoleTraining()}>
+                    基于本方案生成训练计划
+                  </Button>
                 </div>
-                <Button type="button" onClick={() => void openRoleTraining()}>
-                  基于本方案生成训练计划
-                </Button>
-              </div>
-            </section>
-          </Card>
-        </>
-      ) : !loading ? (
-        <EmptyState title="歌舞融合内容不可用" text="这份方案可能尚未生成成功，暂时无法编辑或导出。" />
-      ) : null}
+              </section>
+            </Card>
+          </>
+        ) : !loading ? (
+          <EmptyState title="歌舞融合内容不可用" text="这份方案可能尚未生成成功，暂时无法编辑或导出。" />
+        ) : null}
+      </StudioLayout>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ClassInteractionEditor } from "../components/class-interactions/ClassInteractionEditor";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -66,9 +67,11 @@ export function ClassInteractionDetailPage() {
         description="查看、继续修改并导出老师确认稿。"
         action={<div className="button-row"><Button variant="secondary" type="button" onClick={() => navigate("/interactions")}>返回列表</Button>{interaction ? <Button variant="secondary" type="button" onClick={() => void handleDownload()}>导出 Markdown</Button> : null}<Button type="button" disabled={!editedContent || saving} onClick={() => void saveInteraction()}>{saving ? "保存中..." : "保存全部修改"}</Button></div>}
       />
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取课堂互动方案" text="请稍候，系统正在读取详情。" /> : null}
-      {editedContent ? <Card asChild className="surface-panel"><section><ClassInteractionEditor content={editedContent} onChange={setEditedContent} modelInfo={interaction?.raw_model_info ?? null} /></section></Card> : !loading ? <EmptyState title="课堂互动内容不可用" text="这份方案可能尚未生成成功，暂时无法编辑或导出。" /> : null}
+      <StudioLayout mode="edit" currentStep={interaction?.edited_content ? 3 : 2}>
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取课堂互动方案" text="请稍候，系统正在读取详情。" /> : null}
+        {editedContent ? <Card asChild className="surface-panel"><section><ClassInteractionEditor content={editedContent} onChange={setEditedContent} modelInfo={interaction?.raw_model_info ?? null} /></section></Card> : !loading ? <EmptyState title="课堂互动内容不可用" text="这份方案可能尚未生成成功，暂时无法编辑或导出。" /> : null}
+      </StudioLayout>
     </main>
   );
 }
