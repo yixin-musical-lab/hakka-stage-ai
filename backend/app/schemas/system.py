@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from app.schemas.base import ApiSchema as BaseModel
 
 
 class DependencyConfig(BaseModel):

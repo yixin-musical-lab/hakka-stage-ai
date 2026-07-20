@@ -26,6 +26,23 @@ class WorkerSettings(BaseModel):
     llm_default_reasoning_level: str = "standard"
     llm_mock_mode: bool = False
     llm_timeout_seconds: float = 120.0
+    minio_endpoint: str = "http://localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "hakka-stage-ai"
+    grsai_api_key: str = ""
+    grsai_base_url: str = "https://grsai.dakka.com.cn"
+    runninghub_api_key: str = ""
+    runninghub_base_url: str = "https://www.runninghub.cn"
+    media_mock_mode: bool = True
+    media_http_timeout_seconds: float = 120.0
+    media_poll_interval_seconds: int = 5
+    media_poll_max_count: int = 720
+    # GRS AI 的真实图生图通常需要几十秒到数分钟。独立使用较低频率轮询，
+    # 避免沿用 RunningHub 的 5 秒间隔产生不必要请求；100 分钟上限也小于
+    # 供应商异步查询结果约 2 小时的有效期，便于在结果失效前明确结束任务。
+    grsai_poll_interval_seconds: int = 15
+    grsai_poll_max_count: int = 400
 
     @property
     def database_url(self) -> str:
@@ -65,4 +82,18 @@ def get_settings() -> WorkerSettings:
         llm_default_reasoning_level=getenv("LLM_DEFAULT_REASONING_LEVEL", "standard"),
         llm_mock_mode=getenv("LLM_MOCK_MODE", "false").lower() in {"1", "true", "yes", "on"},
         llm_timeout_seconds=float(getenv("LLM_TIMEOUT_SECONDS", "120")),
+        minio_endpoint=getenv("MINIO_ENDPOINT", "http://localhost:9000"),
+        minio_access_key=getenv("MINIO_ACCESS_KEY", "minioadmin"),
+        minio_secret_key=getenv("MINIO_SECRET_KEY", "minioadmin"),
+        minio_bucket=getenv("MINIO_BUCKET", "hakka-stage-ai"),
+        grsai_api_key=getenv("GRSAI_API_KEY", ""),
+        grsai_base_url=getenv("GRSAI_BASE_URL", "https://grsai.dakka.com.cn"),
+        runninghub_api_key=getenv("RUNNINGHUB_API_KEY", ""),
+        runninghub_base_url=getenv("RUNNINGHUB_BASE_URL", "https://www.runninghub.cn"),
+        media_mock_mode=getenv("MEDIA_MOCK_MODE", "true").lower() in {"1", "true", "yes", "on"},
+        media_http_timeout_seconds=float(getenv("MEDIA_HTTP_TIMEOUT_SECONDS", "120")),
+        media_poll_interval_seconds=int(getenv("MEDIA_POLL_INTERVAL_SECONDS", "5")),
+        media_poll_max_count=int(getenv("MEDIA_POLL_MAX_COUNT", "720")),
+        grsai_poll_interval_seconds=int(getenv("GRSAI_POLL_INTERVAL_SECONDS", "15")),
+        grsai_poll_max_count=int(getenv("GRSAI_POLL_MAX_COUNT", "400")),
     )

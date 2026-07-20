@@ -31,6 +31,12 @@ class Settings(BaseModel):
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "hakka-stage-ai"
     m08_video_max_upload_mb: int = 200
+    media_max_upload_mb: int = 200
+    media_mock_mode: bool = True
+    grsai_api_key: str = ""
+    grsai_base_url: str = "https://grsai.dakka.com.cn"
+    runninghub_api_key: str = ""
+    runninghub_base_url: str = "https://www.runninghub.cn"
     practice_upload_dir: str = "uploads"
     practice_max_upload_mb: int = 200
     deepseek_api_key: str = ""
@@ -70,6 +76,12 @@ class Settings(BaseModel):
 
         return self.m08_video_max_upload_mb * 1024 * 1024
 
+    @property
+    def media_max_upload_bytes(self) -> int:
+        """通用媒体输入的最大字节数。"""
+
+        return self.media_max_upload_mb * 1024 * 1024
+
 
 def get_settings() -> Settings:
     """从环境变量读取配置，提供本地开发默认值。"""
@@ -96,6 +108,12 @@ def get_settings() -> Settings:
         minio_secret_key=getenv("MINIO_SECRET_KEY", "minioadmin"),
         minio_bucket=getenv("MINIO_BUCKET", "hakka-stage-ai"),
         m08_video_max_upload_mb=int(getenv("M08_VIDEO_MAX_UPLOAD_MB", "200")),
+        media_max_upload_mb=int(getenv("MEDIA_MAX_UPLOAD_MB", "200")),
+        media_mock_mode=getenv("MEDIA_MOCK_MODE", "true").lower() in {"1", "true", "yes", "on"},
+        grsai_api_key=getenv("GRSAI_API_KEY", ""),
+        grsai_base_url=getenv("GRSAI_BASE_URL", "https://grsai.dakka.com.cn"),
+        runninghub_api_key=getenv("RUNNINGHUB_API_KEY", ""),
+        runninghub_base_url=getenv("RUNNINGHUB_BASE_URL", "https://www.runninghub.cn"),
         practice_upload_dir=getenv("PRACTICE_UPLOAD_DIR", "uploads"),
         practice_max_upload_mb=int(getenv("PRACTICE_MAX_UPLOAD_MB", "200")),
         deepseek_api_key=getenv("DEEPSEEK_API_KEY", ""),

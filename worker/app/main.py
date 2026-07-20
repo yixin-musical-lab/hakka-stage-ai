@@ -10,6 +10,7 @@ import redis
 from app.config import get_settings
 from app.database import SessionLocal, init_db
 from app.llm_client import LLMClient
+from app.media_generation_processor import MediaGenerationProcessor
 from app.models import (
     AiTask,
     ClassInteraction,
@@ -29,6 +30,7 @@ MUSICAL_FUSION_QUEUE = "ai:musical_fusion"
 ROLE_TRAINING_QUEUE = "ai:role_training"
 REHEARSAL_REVIEW_QUEUE = "ai:rehearsal_review"
 CLASS_INTERACTION_QUEUE = "ai:class_interaction"
+MEDIA_GENERATION_QUEUE = "ai:media_generation"
 AI_QUEUES = [
     LESSON_PLAN_QUEUE,
     MUSICAL_SCRIPT_QUEUE,
@@ -37,6 +39,7 @@ AI_QUEUES = [
     ROLE_TRAINING_QUEUE,
     REHEARSAL_REVIEW_QUEUE,
     CLASS_INTERACTION_QUEUE,
+    MEDIA_GENERATION_QUEUE,
 ]
 
 
@@ -58,6 +61,7 @@ def main() -> None:
     init_db()
     redis_client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
     llm_client = LLMClient(settings)
+    media_processor = MediaGenerationProcessor(settings)
     print(
         f"{settings.project_name} worker 已启动，正在监听队列 {', '.join(AI_QUEUES)}。"
         f"默认 LLM={settings.llm_default_provider}:{settings.llm_default_model}/{settings.llm_default_reasoning_level}",
@@ -66,29 +70,50 @@ def main() -> None:
 
     while running:
         try:
-            item = redis_client.blpop(AI_QUEUES, timeout=5)
+            item = redis_client.blpop(AI_QUEUES, timeout=2)
         except redis.RedisError as exc:
             print(f"Redis 读取失败，5 秒后重试：{exc}", flush=True)
             time.sleep(5)
             continue
 
         if item is None:
+            media_processor.poll_due()
             continue
 
         _, raw_payload = item
         try:
             payload = json.loads(raw_payload)
-            _dispatch_task(payload, llm_client)
+            _dispatch_task(payload, llm_client, media_processor)
+            media_processor.poll_due()
         except Exception as exc:  # noqa: BLE001 - Worker 顶层兜底，避免单个任务拖垮进程。
             print(f"任务处理失败：{type(exc).__name__}: {_safe_error_message(exc)}", flush=True)
 
     print("worker 已退出。", flush=True)
 
 
-def _dispatch_task(payload: dict, llm_client: LLMClient) -> None:
+def _dispatch_task(
+    payload: dict,
+    llm_client: LLMClient,
+    media_processor: MediaGenerationProcessor | None = None,
+) -> None:
     """根据 task_type 分发不同业务任务。"""
 
     task_type = payload.get("task_type")
+    if task_type == "media_generation.run":
+        if media_processor is None:
+            raise RuntimeError("媒体任务处理器尚未初始化")
+        media_processor.submit(UUID(payload["generation_id"]), UUID(payload["task_id"]))
+        return
+    if task_type == "media_generation.poll":
+        if media_processor is None:
+            raise RuntimeError("媒体任务处理器尚未初始化")
+        media_processor.poll(UUID(payload["generation_id"]))
+        return
+    if task_type == "media_generation.cancel":
+        if media_processor is None:
+            raise RuntimeError("媒体任务处理器尚未初始化")
+        media_processor.cancel(UUID(payload["generation_id"]))
+        return
     if task_type == "lesson_plan.generate":
         _process_lesson_plan_task(payload, llm_client)
         return

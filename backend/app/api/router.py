@@ -6,6 +6,7 @@ from app.api.routes.class_interactions import router as class_interaction_router
 from app.api.routes.llm_options import router as llm_options_router
 from app.api.routes.lesson_plans import router as lesson_plan_router
 from app.api.routes.movement_guides import router as movement_guide_router
+from app.api.routes.media_generations import router as media_generation_router
 from app.api.routes.musical import router as musical_router
 from app.api.routes.practice import router as practice_router
 from app.api.routes.rehearsal_reviews import router as rehearsal_review_router
@@ -27,6 +28,7 @@ protected_router.include_router(lesson_plan_router)
 protected_router.include_router(class_interaction_router)
 protected_router.include_router(musical_router)
 protected_router.include_router(movement_guide_router)
+protected_router.include_router(media_generation_router)
 protected_router.include_router(practice_router)
 protected_router.include_router(rehearsal_review_router)
 protected_router.include_router(workspace_overview_router)

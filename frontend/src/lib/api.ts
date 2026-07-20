@@ -48,6 +48,15 @@ import type {
   SongAdaptationResponse,
   SongAdaptationSummary,
   WorkspaceOverviewResponse,
+  MediaAsset,
+  MediaGeneration,
+  MediaProviderOptions,
+  MediaWorkbenchConfig,
+  MediaWorkbenchInputConfig,
+  WorkflowOutputConfig,
+  WorkflowParameterConfig,
+  WorkflowTemplate,
+  WorkflowVersion,
 } from "../types";
 
 /**
@@ -711,6 +720,172 @@ export async function fetchPracticeReportMarkdown(reportId: string) {
     throw new Error(await readApiError(response));
   }
   return response.text();
+}
+
+/** 查询媒体供应商配置。响应只包含 configured 布尔值，不泄露 API Key。 */
+export async function fetchMediaProviderOptions(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-providers`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaProviderOptions;
+}
+
+export async function uploadMediaAsset(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(`${apiBaseUrl}/api/media-assets/upload`, { method: "POST", body });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as { asset: MediaAsset; message: string };
+}
+
+export async function createMediaGeneration(payload: {
+  title?: string;
+  provider: "grsai" | "runninghub";
+  capability: "image" | "audio" | "video";
+  model?: string;
+  workflow_version_id?: string;
+  prompt?: string;
+  parameters?: Record<string, unknown>;
+  input_asset_ids?: Record<string, string>;
+  client_request_id?: string;
+}) {
+  const response = await fetch(`${apiBaseUrl}/api/media-generations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaGeneration;
+}
+
+export async function fetchMediaGenerations(signal?: AbortSignal, workbenchSlug?: string) {
+  const query = workbenchSlug ? `?workbench_slug=${encodeURIComponent(workbenchSlug)}` : "";
+  const response = await fetch(`${apiBaseUrl}/api/media-generations${query}`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaGeneration[];
+}
+
+export async function fetchMediaWorkbenches(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-workbenches`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaWorkbenchConfig[];
+}
+
+export async function fetchMediaWorkbench(slug: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-workbenches/${slug}`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaWorkbenchConfig;
+}
+
+export async function updateMediaWorkbenchConfiguration(
+  slug: string,
+  payload: {
+    display_name: string;
+    description: string;
+    workflow_version_id: string | null;
+    model: string;
+    provider_api_mode: "workflow" | "unified" | "legacy";
+    default_parameters: Record<string, unknown>;
+    input_config: MediaWorkbenchInputConfig;
+    enabled: boolean;
+  },
+) {
+  const response = await fetch(`${apiBaseUrl}/api/media-workbenches/${slug}/configuration`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaWorkbenchConfig;
+}
+
+export async function runMediaWorkbench(
+  slug: string,
+  payload: {
+    prompt: string;
+    primary_asset_id: string;
+    secondary_asset_id?: string | null;
+    parameters?: Record<string, unknown>;
+    client_request_id?: string;
+  },
+) {
+  const response = await fetch(`${apiBaseUrl}/api/media-workbenches/${slug}/runs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaGeneration;
+}
+
+export async function refreshMediaGeneration(generationId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/media-generations/${generationId}/refresh`, { method: "POST" });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaGeneration;
+}
+
+export async function cancelMediaGeneration(generationId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/media-generations/${generationId}/cancel`, { method: "POST" });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MediaGeneration;
+}
+
+export async function importRunningHubWorkflow(payload: {
+  file: File;
+  name: string;
+  description: string;
+  mediaType: "image" | "audio" | "video";
+  workflowId: string;
+  templateId?: string;
+}) {
+  const body = new FormData();
+  body.append("file", payload.file);
+  body.append("name", payload.name);
+  body.append("description", payload.description);
+  body.append("media_type", payload.mediaType);
+  body.append("runninghub_workflow_id", payload.workflowId);
+  if (payload.templateId) body.append("template_id", payload.templateId);
+  const response = await fetch(`${apiBaseUrl}/api/runninghub/workflows/import`, { method: "POST", body });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as WorkflowTemplate;
+}
+
+export async function fetchRunningHubWorkflows(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/runninghub/workflows`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as WorkflowTemplate[];
+}
+
+export async function updateRunningHubWorkflow(
+  templateId: string,
+  payload: { name: string; description: string; external_workflow_id: string; media_type: "image" | "audio" | "video" },
+) {
+  const response = await fetch(`${apiBaseUrl}/api/runninghub/workflows/${templateId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as WorkflowTemplate;
+}
+
+export async function configureRunningHubWorkflowVersion(
+  versionId: string,
+  parameters: WorkflowParameterConfig[],
+  outputs: WorkflowOutputConfig[],
+) {
+  const response = await fetch(`${apiBaseUrl}/api/runninghub/workflow-versions/${versionId}/configuration`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parameters, outputs }),
+  });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as WorkflowVersion;
+}
+
+export async function publishRunningHubWorkflowVersion(versionId: string) {
+  const response = await fetch(`${apiBaseUrl}/api/runninghub/workflow-versions/${versionId}/publish`, { method: "POST" });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as WorkflowVersion;
 }
 
 async function readApiError(response: Response) {
