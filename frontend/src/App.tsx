@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "rea
 import { AuthPageShell } from "./components/auth/AuthPageShell";
 import { Shell } from "./components/layout/Shell";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LayoutPreferenceProvider } from "./contexts/LayoutPreferenceContext";
 import { AccountPage } from "./pages/AccountPage";
 import { AccountCreatePage } from "./pages/AccountCreatePage";
 import { ClassInteractionDetailPage } from "./pages/ClassInteractionDetailPage";
@@ -98,5 +99,13 @@ function AppRoutes() {
 }
 
 export function App() {
-  return <BrowserRouter><AuthProvider><AppRoutes /></AuthProvider></BrowserRouter>;
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <LayoutPreferenceProvider>
+          <AppRoutes />
+        </LayoutPreferenceProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }

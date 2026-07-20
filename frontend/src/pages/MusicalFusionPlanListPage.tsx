@@ -5,7 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
-import { deleteMusicalFusionPlan, fetchMusicalFusionPlans } from "../lib/api";
+import { deleteMusicalFusionPlan, fetchMusicalFusionPlans, isAbortError } from "../lib/api";
 import { downloadMusicalFusionMarkdown } from "../lib/download";
 import type { MusicalFusionPlanSummary } from "../types";
 
@@ -22,8 +22,17 @@ export function MusicalFusionPlanListPage() {
         setPlans(data);
         setNotice("");
       })
-      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "读取歌舞融合方案失败。"))
-      .finally(() => setLoading(false));
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setNotice(caughtError instanceof Error ? caughtError.message : "读取歌舞融合方案失败。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

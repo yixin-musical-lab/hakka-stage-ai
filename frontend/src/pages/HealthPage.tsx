@@ -4,7 +4,7 @@ import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { StatusItem } from "../components/ui/StatusItem";
-import { fetchHealth } from "../lib/api";
+import { fetchHealth, isAbortError } from "../lib/api";
 import type { HealthResponse } from "../types";
 
 export function HealthPage() {
@@ -19,8 +19,17 @@ export function HealthPage() {
         setHealth(data);
         setNotice("");
       })
-      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "后端连接失败。"))
-      .finally(() => setLoading(false));
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setNotice(caughtError instanceof Error ? caughtError.message : "后端连接失败。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

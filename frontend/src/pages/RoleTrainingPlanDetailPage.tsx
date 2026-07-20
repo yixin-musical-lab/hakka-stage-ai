@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { RoleTrainingEditor } from "../components/musical/RoleTrainingEditor";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -138,41 +139,43 @@ export function RoleTrainingPlanDetailPage() {
         }
       />
 
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取训练计划" text="请稍候，系统正在读取训练计划详情。" /> : null}
+      <StudioLayout mode="edit" currentStep={plan?.edited_content ? 3 : 2}>
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取训练计划" text="请稍候，系统正在读取训练计划详情。" /> : null}
 
-      {editedContent ? (
-        <>
-          <Card asChild className="surface-panel">
-            <section>
-              <RoleTrainingEditor
-                content={editedContent}
-                onChange={setEditedContent}
-                modelInfo={plan?.raw_model_info ?? null}
-                onExportRole={(roleIndex) => void handleDownloadRoleCard(roleIndex)}
-                exportingRoleIndex={exportingRoleIndex}
-                actionsDisabled={saving || exportingRoleIndex !== null}
-              />
-            </section>
-          </Card>
-          <Card asChild className="surface-panel next-step-panel">
-            <section>
-              <div className="section-heading">
-                <div>
-                  <p className="section-kicker">下一步 · M08</p>
-                  <h2>排练后记录问题并形成下一次计划</h2>
-                  <p>复盘报告会读取本训练计划的角色任务和检查点，也可以上传一个仅供人工回看的视频附件。</p>
+        {editedContent ? (
+          <>
+            <Card asChild className="surface-panel">
+              <section>
+                <RoleTrainingEditor
+                  content={editedContent}
+                  onChange={setEditedContent}
+                  modelInfo={plan?.raw_model_info ?? null}
+                  onExportRole={(roleIndex) => void handleDownloadRoleCard(roleIndex)}
+                  exportingRoleIndex={exportingRoleIndex}
+                  actionsDisabled={saving || exportingRoleIndex !== null}
+                />
+              </section>
+            </Card>
+            <Card asChild className="surface-panel next-step-panel">
+              <section>
+                <div className="section-heading">
+                  <div>
+                    <p className="section-kicker">下一步 · M08</p>
+                    <h2>排练后记录问题并形成下一次计划</h2>
+                    <p>复盘报告会读取本训练计划的角色任务和检查点，也可以上传一个仅供人工回看的视频附件。</p>
+                  </div>
+                  <Button type="button" disabled={saving || exportingRoleIndex !== null} onClick={() => void openRehearsalReview()}>
+                    基于本计划创建复盘
+                  </Button>
                 </div>
-                <Button type="button" disabled={saving || exportingRoleIndex !== null} onClick={() => void openRehearsalReview()}>
-                  基于本计划创建复盘
-                </Button>
-              </div>
-            </section>
-          </Card>
-        </>
-      ) : !loading ? (
-        <EmptyState title="训练计划内容不可用" text="这份训练计划可能尚未生成成功，暂时无法编辑或导出。" />
-      ) : null}
+              </section>
+            </Card>
+          </>
+        ) : !loading ? (
+          <EmptyState title="训练计划内容不可用" text="这份训练计划可能尚未生成成功，暂时无法编辑或导出。" />
+        ) : null}
+      </StudioLayout>
     </main>
   );
 }

@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
-import { deletePracticeSubmission, fetchPracticeSubmissions } from "../lib/api";
+import { deletePracticeSubmission, fetchPracticeSubmissions, isAbortError } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import type { PracticeSubmissionSummary } from "../types";
 
@@ -22,8 +22,17 @@ export function PracticeSubmissionListPage() {
         setSubmissions(data);
         setNotice("");
       })
-      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "读取练习提交列表失败。"))
-      .finally(() => setLoading(false));
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setNotice(caughtError instanceof Error ? caughtError.message : "读取练习提交列表失败。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

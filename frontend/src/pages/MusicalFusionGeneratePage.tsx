@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -16,6 +17,7 @@ import {
   fetchLlmOptions,
   fetchMusicalScripts,
   fetchSongAdaptations,
+  isAbortError,
 } from "../lib/api";
 import { initialMusicalFusionForm } from "../lib/lessonPlanDefaults";
 import type {
@@ -67,12 +69,16 @@ export function MusicalFusionGeneratePage() {
         });
       })
       .catch((caughtError) => {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取剧本和唱段来源失败。");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, [searchParams]);
 
@@ -197,14 +203,19 @@ export function MusicalFusionGeneratePage() {
         }
       />
 
-      {notice ? <p className="notice">{notice}</p> : null}
-      {loading ? <EmptyState title="正在读取歌舞剧资料" text="请稍候，系统正在加载剧本、唱段和模型配置。" /> : null}
-      {!loading && scripts.length === 0 ? (
-        <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再设计歌舞融合结构。" />
-      ) : null}
+      <StudioLayout
+        currentStep={task?.status === "SUCCESS" ? 3 : task ? 2 : 1}
+        libraryTo="/musical-fusion-plans"
+        libraryLabel="查看已保存融合方案"
+      >
+        {notice ? <p className="notice">{notice}</p> : null}
+        {loading ? <EmptyState title="正在读取歌舞剧资料" text="请稍候，系统正在加载剧本、唱段和模型配置。" /> : null}
+        {!loading && scripts.length === 0 ? (
+          <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再设计歌舞融合结构。" />
+        ) : null}
 
-      {!loading && scripts.length > 0 ? (
-        <form className="lesson-layout" onSubmit={submitMusicalFusion}>
+        {!loading && scripts.length > 0 ? (
+          <form className="lesson-layout" onSubmit={submitMusicalFusion}>
           <Card className="surface-panel input-panel">
             <CardHeader>
               <CardTitle>选择剧情与唱段来源</CardTitle>
@@ -324,8 +335,9 @@ export function MusicalFusionGeneratePage() {
               </Button>
             </CardFooter>
           </Card>
-        </form>
-      ) : null}
+          </form>
+        ) : null}
+      </StudioLayout>
     </main>
   );
 

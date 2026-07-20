@@ -107,6 +107,7 @@ from app.schemas.rehearsal_review import (
     ReusableReviewTemplate,
 )
 from app.schemas.system import DependencyConfig, HealthResponse
+from app.schemas.workspace_overview import WorkspaceLatestItem, WorkspaceModuleOverview, WorkspaceOverviewResponse
 
 __all__ = [
     "AccountCreateRequest",
@@ -205,4 +206,7 @@ __all__ = [
     "SongSection",
     "UserResponse",
     "TeacherScriptStep",
+    "WorkspaceLatestItem",
+    "WorkspaceModuleOverview",
+    "WorkspaceOverviewResponse",
 ]

@@ -21,6 +21,7 @@ import {
   fetchMusicalScripts,
   fetchRehearsalReview,
   fetchRoleTrainingPlans,
+  isAbortError,
   uploadRehearsalVideo,
 } from "../lib/api";
 import { initialRehearsalReviewForm } from "../lib/lessonPlanDefaults";
@@ -131,7 +132,7 @@ export function RehearsalReviewGeneratePage() {
         }
         setForm(nextForm);
       } catch (caughtError) {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         showError(caughtError instanceof Error ? caughtError.message : "读取剧本、排练资料和模型配置失败。");

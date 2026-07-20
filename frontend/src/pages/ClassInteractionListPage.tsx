@@ -5,7 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
-import { deleteClassInteraction, fetchClassInteractions } from "../lib/api";
+import { deleteClassInteraction, fetchClassInteractions, isAbortError } from "../lib/api";
 import { downloadClassInteractionMarkdown } from "../lib/download";
 import type { ClassInteractionSummary } from "../types";
 
@@ -20,9 +20,10 @@ export function ClassInteractionListPage() {
     void fetchClassInteractions(controller.signal)
       .then(setInteractions)
       .catch((caughtError) => {
-        if (!controller.signal.aborted) {
-          setNotice(caughtError instanceof Error ? caughtError.message : "读取课堂互动列表失败。");
+        if (isAbortError(caughtError)) {
+          return;
         }
+        setNotice(caughtError instanceof Error ? caughtError.message : "读取课堂互动列表失败。");
       })
       .finally(() => {
         if (!controller.signal.aborted) {

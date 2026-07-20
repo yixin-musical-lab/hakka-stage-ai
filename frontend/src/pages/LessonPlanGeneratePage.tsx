@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { LessonEditor } from "../components/lesson-plans/LessonEditor";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { NumberField, TextareaField, TextField } from "../components/ui/FormFields";
 import { LlmSettings } from "../components/ui/LlmSettings";
 import { PageTitle } from "../components/ui/PageTitle";
-import { createLessonPlanTask, fetchAiTask, fetchLessonPlan, fetchLlmOptions, updateLessonPlan } from "../lib/api";
+import { createLessonPlanTask, fetchAiTask, fetchLessonPlan, fetchLlmOptions, isAbortError, updateLessonPlan } from "../lib/api";
 import { initialLessonPlanForm } from "../lib/lessonPlanDefaults";
 import type { AiTaskResponse, LessonPlanContent, LessonPlanForm, LessonPlanResponse, LlmOptionsResponse } from "../types";
 
@@ -37,7 +38,7 @@ export function LessonPlanGeneratePage() {
         }));
       })
       .catch((caughtError) => {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取模型配置失败。");
@@ -146,7 +147,12 @@ export function LessonPlanGeneratePage() {
         }
       />
 
-      <section className="lesson-layout">
+      <StudioLayout
+        currentStep={lessonPlan ? 3 : task ? 2 : 1}
+        libraryTo="/lesson-plans"
+        libraryLabel="查看已保存教案"
+      >
+        <section className="lesson-layout">
         <Card asChild className="surface-panel input-panel">
           <form onSubmit={submitLessonPlan}>
             <div className="section-heading">
@@ -223,7 +229,8 @@ export function LessonPlanGeneratePage() {
             )}
           </section>
         </Card>
-      </section>
+        </section>
+      </StudioLayout>
     </main>
   );
 

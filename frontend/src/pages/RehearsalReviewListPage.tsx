@@ -5,7 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
-import { deleteRehearsalReview, fetchRehearsalReviews } from "../lib/api";
+import { deleteRehearsalReview, fetchRehearsalReviews, isAbortError } from "../lib/api";
 import { downloadRehearsalReviewMarkdown } from "../lib/download";
 import type { RehearsalReviewSummary } from "../types";
 
@@ -23,8 +23,17 @@ export function RehearsalReviewListPage() {
         setReviews(rows);
         setNotice("");
       })
-      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "读取排练复盘报告失败。"))
-      .finally(() => setLoading(false));
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setNotice(caughtError instanceof Error ? caughtError.message : "读取排练复盘报告失败。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

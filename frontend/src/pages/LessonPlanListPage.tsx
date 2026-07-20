@@ -33,7 +33,7 @@ import {
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
 import { downloadMarkdown } from "../lib/download";
-import { deleteLessonPlan, fetchLessonPlans } from "../lib/api";
+import { deleteLessonPlan, fetchLessonPlans, isAbortError } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import { lessonPlanVariantLabel } from "../lib/lessonPlanVariants";
 import { cn } from "../lib/utils";
@@ -61,10 +61,16 @@ export function LessonPlanListPage() {
         setNotice("");
       })
       .catch((caughtError) => {
-        if (controller.signal.aborted) return;
+        if (isAbortError(caughtError)) {
+          return;
+        }
         setNotice(caughtError instanceof Error ? caughtError.message : "读取教案列表失败。");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 

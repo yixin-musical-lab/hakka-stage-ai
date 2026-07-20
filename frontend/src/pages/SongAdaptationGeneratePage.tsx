@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { TaskProgress } from "../components/lesson-plans/TaskProgress";
+import { StudioLayout } from "../components/studio/StudioLayout";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
@@ -15,6 +16,7 @@ import {
   fetchLlmOptions,
   fetchMusicalScript,
   fetchMusicalScripts,
+  isAbortError,
 } from "../lib/api";
 import { buildSongAdaptationFormFromScript, initialSongAdaptationForm } from "../lib/lessonPlanDefaults";
 import type {
@@ -80,7 +82,7 @@ export function SongAdaptationGeneratePage() {
           showStatus("原链接中的剧本不可用，已为你选择第一份可用剧本。");
         }
       } catch (caughtError) {
-        if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        if (isAbortError(caughtError)) {
           return;
         }
         showError(caughtError instanceof Error ? caughtError.message : "读取剧本和模型配置失败。");
@@ -191,18 +193,23 @@ export function SongAdaptationGeneratePage() {
         }
       />
 
-      {message ? (
-        <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
-          {message}
-        </p>
-      ) : null}
-      {loading ? <EmptyState title="正在读取歌舞剧资料" text="请稍候，系统正在加载剧本和模型配置。" /> : null}
-      {!loading && scripts.length === 0 ? (
-        <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再创建唱段适配。" />
-      ) : null}
+      <StudioLayout
+        currentStep={task?.status === "SUCCESS" ? 3 : task ? 2 : 1}
+        libraryTo="/song-adaptations"
+        libraryLabel="查看已保存唱段"
+      >
+        {message ? (
+          <p className="notice" role={messageType === "error" ? "alert" : "status"} aria-live={messageType === "error" ? "assertive" : "polite"}>
+            {message}
+          </p>
+        ) : null}
+        {loading ? <EmptyState title="正在读取歌舞剧资料" text="请稍候，系统正在加载剧本和模型配置。" /> : null}
+        {!loading && scripts.length === 0 ? (
+          <EmptyState title="还没有可用剧本" text="请先生成并保存一份歌舞剧剧本，再创建唱段适配。" />
+        ) : null}
 
-      {!loading && scripts.length > 0 ? (
-        <form className="lesson-layout" onSubmit={submitSongAdaptation}>
+        {!loading && scripts.length > 0 ? (
+          <form className="lesson-layout" onSubmit={submitSongAdaptation}>
           <Card className="surface-panel input-panel">
             <CardHeader>
               <CardTitle>选择剧本与唱段素材</CardTitle>
@@ -283,8 +290,9 @@ export function SongAdaptationGeneratePage() {
               </Button>
             </CardFooter>
           </Card>
-        </form>
-      ) : null}
+          </form>
+        ) : null}
+      </StudioLayout>
     </main>
   );
 

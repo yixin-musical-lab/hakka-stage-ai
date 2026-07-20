@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageTitle } from "../components/ui/PageTitle";
-import { deleteMovementGuide, fetchMovementGuides } from "../lib/api";
+import { deleteMovementGuide, fetchMovementGuides, isAbortError } from "../lib/api";
 import { downloadMovementGuideMarkdown } from "../lib/download";
 import { formatDateTime } from "../lib/format";
 import type { MovementGuideSummary } from "../types";
@@ -23,8 +23,17 @@ export function MovementGuideListPage() {
         setMovementGuides(data);
         setNotice("");
       })
-      .catch((caughtError) => setNotice(caughtError instanceof Error ? caughtError.message : "读取示范材料列表失败。"))
-      .finally(() => setLoading(false));
+      .catch((caughtError) => {
+        if (isAbortError(caughtError)) {
+          return;
+        }
+        setNotice(caughtError instanceof Error ? caughtError.message : "读取示范材料列表失败。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
     return () => controller.abort();
   }, []);
 
