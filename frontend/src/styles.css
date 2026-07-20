@@ -31,14 +31,14 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: #f3f5f2;
-  --foreground: #1d2927;
+  --radius: 0.5rem;
+  --background: #eef3ef;
+  --foreground: #17211f;
   --card: #ffffff;
-  --card-foreground: #1d2927;
+  --card-foreground: #17211f;
   --popover: #ffffff;
-  --popover-foreground: #1d2927;
-  --primary: #174a45;
+  --popover-foreground: #17211f;
+  --primary: #183f3c;
   --primary-foreground: #ffffff;
   --secondary: #e2ece7;
   --secondary-foreground: #183f3c;
@@ -77,11 +77,9 @@
 }
 
 body {
-  /* 不锁死 320px，避免窄屏出现滚动条后被最小宽度再挤出横向滚动。 */
-  min-width: 0;
+  min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--background);
 }
 
 a:not([data-slot="button"]) {
@@ -2943,25 +2941,25 @@ a.version-strip-item:hover {
    方案 B：项目中心视觉系统
    重复出现的内容面板使用不透明背景与轻阴影，避免大量 backdrop-filter 产生额外合成层。
    -------------------------------------------------------------------------- */
-.page-title,
-.home-hero,
-.content-band,
-.surface-panel,
-.module-tile,
-.lesson-list-item,
-.status-item,
-.dependency-card {
+.app-shell--workspace .page-title,
+.app-shell--workspace .home-hero,
+.app-shell--workspace .content-band,
+.app-shell--workspace .surface-panel,
+.app-shell--workspace .module-tile,
+.app-shell--workspace .lesson-list-item,
+.app-shell--workspace .status-item,
+.app-shell--workspace .dependency-card {
   border-color: var(--border);
   background: var(--card);
   box-shadow: 0 8px 24px rgba(30, 47, 43, 0.055);
   backdrop-filter: none;
 }
 
-.page-frame {
+.app-shell--workspace .page-frame {
   padding-top: 0;
 }
 
-.page-title {
+.app-shell--workspace .page-title {
   align-items: flex-end;
   min-height: 138px;
   padding: 28px 0 22px;
@@ -2972,47 +2970,47 @@ a.version-strip-item:hover {
   box-shadow: none;
 }
 
-.page-title > div:first-child {
+.app-shell--workspace .page-title > div:first-child {
   max-width: 860px;
 }
 
-h1 {
+.app-shell--workspace h1 {
   color: var(--primary);
   font-size: clamp(30px, 3vw, 42px);
   line-height: 1.12;
 }
 
-h2 {
+.app-shell--workspace h2 {
   font-size: 22px;
   line-height: 1.25;
 }
 
-h3 {
+.app-shell--workspace h3 {
   font-size: 16px;
   line-height: 1.35;
 }
 
-.eyebrow,
-.section-kicker {
+.app-shell--workspace .eyebrow,
+.app-shell--workspace .section-kicker {
   color: var(--brand-warm);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.intro {
+.app-shell--workspace .intro {
   margin-top: 9px;
   color: var(--muted-foreground);
   font-size: 15px;
   line-height: 1.65;
 }
 
-.surface-panel {
+.app-shell--workspace .surface-panel {
   padding: 22px;
 }
 
-.input-panel,
-.review-submit-card {
+.app-shell--workspace .input-panel,
+.app-shell--workspace .review-submit-card {
   top: 90px;
 }
 
@@ -3908,23 +3906,23 @@ h3 {
 }
 
 /* 列表页统一为更紧凑的工作资产行，保留各业务页面已有操作。 */
-.lesson-list {
+.app-shell--workspace .lesson-list {
   gap: 10px;
   margin-top: 16px;
 }
 
-.lesson-list-item {
+.app-shell--workspace .lesson-list-item {
   min-height: 98px;
   padding: 18px 20px;
   border-radius: 10px;
 }
 
-.lesson-list-item h2 {
+.app-shell--workspace .lesson-list-item h2 {
   margin-top: 9px;
   font-size: 18px;
 }
 
-.lesson-list-item p {
+.app-shell--workspace .lesson-list-item p {
   margin-top: 7px;
   font-size: 11px;
 }
@@ -4235,22 +4233,22 @@ h3 {
     background: var(--primary);
   }
 
-  .page-title {
+  .app-shell--workspace .page-title {
     min-height: 0;
     padding: 22px 0 18px;
   }
 
-  .page-action {
+  .app-shell--workspace .page-action {
     width: 100%;
     margin-left: 0;
   }
 
-  .page-action > .button-row,
-  .page-action > [data-slot="button"] {
+  .app-shell--workspace .page-action > .button-row,
+  .app-shell--workspace .page-action > [data-slot="button"] {
     width: 100%;
   }
 
-  .page-action .button-row > * {
+  .app-shell--workspace .page-action .button-row > * {
     flex: 1 1 140px;
   }
 
@@ -4345,15 +4343,15 @@ h3 {
     gap: 12px;
   }
 
-  .surface-panel {
+  .app-shell--workspace .surface-panel {
     padding: 16px;
   }
 
-  .lesson-list-item {
+  .app-shell--workspace .lesson-list-item {
     padding: 16px;
   }
 
-  .lesson-list-item .button-row > * {
+  .app-shell--workspace .lesson-list-item .button-row > * {
     flex: 1 1 120px;
   }
 }
@@ -4409,6 +4407,12 @@ h3 {
    两种模式共用同一套路由和业务组件，只保存设备本地的界面偏好。
    -------------------------------------------------------------------------- */
 .app-shell--workspace {
+  --radius: 0.625rem;
+  --background: #f3f5f2;
+  --foreground: #1d2927;
+  --card-foreground: #1d2927;
+  --popover-foreground: #1d2927;
+  --primary: #174a45;
   --secondary: #e8f0ed;
   --secondary-foreground: #174a45;
   --muted: #eef2f0;
@@ -4451,8 +4455,9 @@ h3 {
   padding: 12px;
   border: 1px solid rgba(38, 69, 65, 0.14);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.84);
   box-shadow: 0 18px 52px rgba(31, 47, 43, 0.08);
+  backdrop-filter: blur(16px);
 }
 
 .app-shell--classic .brand-mark {
@@ -4544,10 +4549,26 @@ h3 {
   outline-offset: 1px;
 }
 
+/* 经典页头只保留一个紧凑下拉框，避免新增的布局入口挤压原有十一项导航。 */
+.layout-mode-switch--classic {
+  grid-template-columns: 112px;
+}
+
+.layout-mode-switch--classic > svg,
+.layout-mode-switch--classic > span {
+  display: none;
+}
+
 .layout-mode-switch--sidebar {
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  flex: 0 0 auto;
+  align-self: stretch;
   margin: 0 14px 12px;
-  padding: 9px 10px;
+  padding: 10px;
+  column-gap: 8px;
+  row-gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   color: var(--sidebar-muted);
@@ -4556,9 +4577,16 @@ h3 {
 
 .layout-mode-switch--sidebar select {
   grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
   color: #eef7f4;
   border-color: rgba(255, 255, 255, 0.16);
   background: rgba(6, 30, 28, 0.75);
+}
+
+/* 布局卡片已经提供底部间距，避免新建菜单再叠加上边距造成控件看似错位。 */
+.layout-mode-switch--sidebar + .sidebar-create {
+  margin-top: 0;
 }
 
 .layout-mode-switch--sidebar option {
@@ -4620,7 +4648,7 @@ h3 {
   }
 
   .layout-mode-switch--classic {
-    grid-template-columns: auto auto minmax(130px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
   }
 }
