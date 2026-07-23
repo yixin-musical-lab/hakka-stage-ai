@@ -329,12 +329,15 @@ class GrsaiUnifiedApiTests(unittest.TestCase):
     """验证图生图使用 unified 接口，同时不把 Base64 输入写入任务运行记录。"""
 
     @patch("app.media_providers.grsai.httpx.post")
-    def test_submit_image_to_image_uses_unified_endpoint_and_sanitizes_snapshot(self, post: Mock):
+    def test_submit_image_to_image_orders_multiple_inputs_and_sanitizes_snapshot(self, post: Mock):
         response = Mock()
         response.json.return_value = {"id": "grs-task-1", "status": "running"}
         post.return_value = response
         storage = Mock()
-        storage.read_data_url.return_value = "data:image/png;base64,cHJpdmF0ZS1pbWFnZQ=="
+        storage.read_data_url.side_effect = [
+            "data:image/png;base64,Zmlyc3QtaW1hZ2U=",
+            "data:image/webp;base64,c2Vjb25kLWltYWdl",
+        ]
         settings = SimpleNamespace(
             grsai_api_key="test-key",
             grsai_base_url="https://grs.example",
@@ -359,15 +362,41 @@ class GrsaiUnifiedApiTests(unittest.TestCase):
             size_bytes=1024,
             owner_id=uuid4(),
         )
+        second_asset = MediaAsset(
+            id=uuid4(),
+            role="input",
+            media_type="image",
+            storage_mode="managed",
+            object_key="media-inputs/reference-2.webp",
+            content_type="image/webp",
+            size_bytes=2048,
+            owner_id=uuid4(),
+        )
 
-        result = provider.submit(None, generation, {"source_image": asset}, None, None)
+        # 故意把第二张放在字典前面，模拟 JSONB 读取后键顺序变化。
+        result = provider.submit(
+            None,
+            generation,
+            {"source_image_2": second_asset, "source_image": asset},
+            None,
+            None,
+        )
 
         self.assertEqual(result.task_id, "grs-task-1")
         self.assertEqual(post.call_args.args[0], "https://grs.example/v1/api/generate")
-        self.assertTrue(post.call_args.kwargs["json"]["images"][0].startswith("data:image/png;base64,"))
+        self.assertEqual(
+            post.call_args.kwargs["json"]["images"],
+            [
+                "data:image/png;base64,Zmlyc3QtaW1hZ2U=",
+                "data:image/webp;base64,c2Vjb25kLWltYWdl",
+            ],
+        )
         self.assertEqual(post.call_args.kwargs["json"]["replyType"], "async")
         self.assertEqual(result.provider_status, "RUNNING")
-        self.assertEqual(result.request_payload["images"][0]["asset_id"], str(asset.id))
+        self.assertEqual(
+            [item["asset_id"] for item in result.request_payload["images"]],
+            [str(asset.id), str(second_asset.id)],
+        )
         self.assertNotIn("base64", str(result.request_payload))
 
     @patch("app.media_providers.grsai.httpx.post")

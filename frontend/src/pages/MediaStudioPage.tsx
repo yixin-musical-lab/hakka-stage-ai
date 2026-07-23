@@ -32,7 +32,7 @@ const cards: Record<MediaWorkbenchConfig["slug"], WorkbenchCardMeta> = {
     eyebrow: "图像创作",
     action: "进入图生图",
     to: "/media-studio/image-to-image",
-    steps: ["上传参考图片", "描述修改要求", "获取生成图片"],
+    steps: ["上传一张或多张参考图", "描述合成要求", "获取一张生成图片"],
   },
 };
 

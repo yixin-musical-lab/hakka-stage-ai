@@ -4,7 +4,7 @@ AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生�
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、RunningHub 克隆音频工作台、GRS AI 图生图工作台、阿里云百炼 Wan 2.7 首帧 / 首尾帧图生视频工作台、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
+- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、RunningHub 克隆音频工作台、支持多参考图合成单图的 GRS AI 图生图工作台、阿里云百炼 Wan 2.7 首帧 / 首尾帧图生视频工作台、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
 - 暂不包含：复杂权限与业务数据按账号隔离、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 

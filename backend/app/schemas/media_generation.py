@@ -187,11 +187,29 @@ class MediaWorkbenchConfigResponse(BaseModel):
 
 
 class MediaWorkbenchRunRequest(BaseModel):
-    prompt: str = Field(min_length=1, max_length=20000)
-    primary_asset_id: UUID
-    secondary_asset_id: UUID | None = None
-    parameters: dict[str, Any] = Field(default_factory=dict)
-    client_request_id: str = Field("", max_length=100)
+    """从专注工作台创建任务时使用的用户侧参数。"""
+
+    prompt: str = Field(min_length=1, max_length=20000, description="生成或修改要求")
+    primary_asset_id: UUID | None = Field(
+        None,
+        description="单个主输入素材 ID；保留给克隆音频和旧版单图客户端使用",
+    )
+    primary_asset_ids: list[UUID] = Field(
+        default_factory=list,
+        max_length=10,
+        description="图生图参考素材 ID 列表，按数组顺序传给模型，最多 10 张",
+    )
+    secondary_asset_id: UUID | None = Field(None, description="可选的第二输入素材 ID")
+    parameters: dict[str, Any] = Field(default_factory=dict, description="工作台允许用户调整的参数")
+    client_request_id: str = Field("", max_length=100, description="客户端幂等请求标识")
+
+    @model_validator(mode="after")
+    def validate_primary_asset_ids(self) -> "MediaWorkbenchRunRequest":
+        """重复引用同一素材没有额外信息量，应在任务入队前直接提示。"""
+
+        if len(set(self.primary_asset_ids)) != len(self.primary_asset_ids):
+            raise ValueError("图生图参考素材不能重复")
+        return self
 
 
 class WorkflowVersionConfigureRequest(BaseModel):

@@ -24,7 +24,7 @@ DEFAULT_WORKBENCHES = {
     },
     "image-to-image": {
         "display_name": "图生图",
-        "description": "上传参考图片并描述希望的修改，生成新的图片。",
+        "description": "上传一张或多张参考图片并描述合成要求，生成一张新的图片。",
         "provider": "grsai",
         "capability": "image",
         "model": "nano-banana-fast",
@@ -32,7 +32,7 @@ DEFAULT_WORKBENCHES = {
         "default_parameters": {"aspectRatio": "auto", "imageSize": "1K"},
         "input_config": {
             "prompt": {"label": "修改要求", "help_text": "说明希望保留和改变的内容", "required": True, "target_parameter_key": ""},
-            "primary_asset": {"label": "参考图片", "help_text": "支持 JPG、PNG、JPEG、WEBP", "required": True, "media_type": "image", "target_parameter_key": "source_image"},
+            "primary_asset": {"label": "参考图片", "help_text": "支持 JPG、PNG、JPEG、WEBP，单张不超过 12MB，最多 10 张", "required": True, "media_type": "image", "target_parameter_key": "source_image"},
             "exposed_parameter_keys": ["aspectRatio", "imageSize"],
         },
     },

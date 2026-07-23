@@ -2,16 +2,21 @@ import json
 import unittest
 from contextlib import contextmanager
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.api.routes.media_generations import _validate_runninghub_audio_asset
+from app.api.routes.media_generations import _validate_runninghub_audio_asset, run_media_workbench
 from app.core.schema_migrations import run_schema_migrations
 from app.main import app
-from app.models import MediaGeneration
-from app.schemas.media_generation import MediaGenerationCreateRequest, MediaWorkbenchInputConfig
+from app.models import MediaAsset, MediaGeneration
+from app.schemas.media_generation import (
+    MediaGenerationCreateRequest,
+    MediaWorkbenchInputConfig,
+    MediaWorkbenchRunRequest,
+)
 from app.services.media_workbench_service import (
     DEFAULT_WORKBENCHES,
     validate_workbench_configuration,
@@ -72,6 +77,83 @@ class MediaGenerationSchemaTests(unittest.TestCase):
             provider="runninghub", capability="audio", workflow_version_id=uuid4()
         )
         self.assertIsNotNone(request.workflow_version_id)
+
+    def test_workbench_run_rejects_duplicate_or_excessive_reference_images(self):
+        duplicated_id = uuid4()
+        with self.assertRaisesRegex(ValidationError, "参考素材不能重复"):
+            MediaWorkbenchRunRequest(
+                prompt="融合两张舞台参考图",
+                primary_asset_ids=[duplicated_id, duplicated_id],
+            )
+
+        with self.assertRaises(ValidationError):
+            MediaWorkbenchRunRequest(
+                prompt="融合多张舞台参考图",
+                primary_asset_ids=[uuid4() for _ in range(11)],
+            )
+
+
+class MediaWorkbenchRunTests(unittest.TestCase):
+    """验证多图输入会形成稳定、可由 Worker 识别的编号绑定。"""
+
+    @patch("app.api.routes.media_generations._create_generation_record")
+    @patch("app.api.routes.media_generations._workbench_response")
+    @patch("app.api.routes.media_generations.get_workbench")
+    def test_image_workbench_maps_multiple_references_to_numbered_bindings(
+        self,
+        get_workbench: Mock,
+        workbench_response: Mock,
+        create_generation: Mock,
+    ):
+        owner_id = uuid4()
+        first_asset = MediaAsset(
+            id=uuid4(), owner_id=owner_id, role="input", media_type="image", storage_mode="managed",
+            object_key="media-inputs/first.png", original_file_name="first.png", content_type="image/png",
+            size_bytes=1024, status="AVAILABLE",
+        )
+        second_asset = MediaAsset(
+            id=uuid4(), owner_id=owner_id, role="input", media_type="image", storage_mode="managed",
+            object_key="media-inputs/second.webp", original_file_name="second.webp", content_type="image/webp",
+            size_bytes=2048, status="AVAILABLE",
+        )
+        get_workbench.return_value = SimpleNamespace(
+            display_name="图生图",
+            provider="grsai",
+            capability="image",
+            model="nano-banana-fast",
+            workflow_version_id=None,
+            provider_api_mode="unified",
+            default_parameters={"aspectRatio": "auto", "imageSize": "1K"},
+            input_config={
+                "prompt": {"target_parameter_key": "prompt"},
+                "primary_asset": {"media_type": "image", "target_parameter_key": "source_image"},
+                "exposed_parameter_keys": ["aspectRatio", "imageSize"],
+            },
+        )
+        workbench_response.return_value = SimpleNamespace(configured=True, configuration_issues=[])
+        db = Mock()
+        db.scalar.side_effect = [first_asset, second_asset]
+        expected_response = object()
+        create_generation.return_value = expected_response
+
+        result = run_media_workbench(
+            "image-to-image",
+            MediaWorkbenchRunRequest(
+                prompt="以第一张人物为主，融合第二张舞台背景",
+                primary_asset_ids=[first_asset.id, second_asset.id],
+                parameters={"aspectRatio": "16:9", "imageSize": "1K"},
+            ),
+            SimpleNamespace(id=owner_id),
+            db,
+        )
+
+        self.assertIs(result, expected_response)
+        generation_request = create_generation.call_args.args[1]
+        self.assertEqual(
+            generation_request.input_asset_ids,
+            {"source_image": first_asset.id, "source_image_2": second_asset.id},
+        )
+        self.assertEqual(generation_request.parameters["_api_mode"], "unified")
 
 
 class MediaWorkbenchConfigurationTests(unittest.TestCase):
