@@ -25,8 +25,11 @@ def init_db() -> None:
 
     # 确保 SQLAlchemy metadata 中已经注册业务模型，否则 create_all 看不到表定义。
     from app import models as _models  # noqa: F401
+    from app.core.schema_migrations import run_schema_migrations
 
     Base.metadata.create_all(bind=engine)
+    # create_all 不会给既有表补字段，使用幂等迁移兼容曾运行过原媒体分支的数据库。
+    run_schema_migrations(engine)
 
 
 def get_db() -> Generator[Session, None, None]:

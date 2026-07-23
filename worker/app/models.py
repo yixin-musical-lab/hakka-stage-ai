@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -277,3 +277,133 @@ class AiTask(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+class WorkflowTemplate(Base):
+    """Worker 侧 RunningHub 工作流模板镜像。"""
+
+    __tablename__ = "workflow_templates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")
+    provider: Mapped[str] = mapped_column(String(40), default="runninghub")
+    external_workflow_id: Mapped[str] = mapped_column(String(120), default="")
+    media_type: Mapped[str] = mapped_column(String(40), default="audio")
+    status: Mapped[str] = mapped_column(String(40), default="draft")
+    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class WorkflowTemplateVersion(Base):
+    """Worker 侧工作流版本镜像，只读取已发布参数。"""
+
+    __tablename__ = "workflow_template_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    template_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workflow_templates.id", ondelete="CASCADE"), index=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    source_filename: Mapped[str] = mapped_column(String(240))
+    workflow_hash: Mapped[str] = mapped_column(String(64), index=True)
+    workflow_json: Mapped[dict] = mapped_column(JSONB)
+    analysis: Mapped[dict] = mapped_column(JSONB, default=dict)
+    parameter_config: Mapped[list] = mapped_column(JSONB, default=list)
+    output_config: Mapped[list] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(40), default="draft")
+    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class MediaWorkbenchConfig(Base):
+    """Worker 侧工作台配置镜像；运行参数已固化在媒体任务中，Worker 通常只需注册表结构。"""
+
+    __tablename__ = "media_workbench_configs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text, default="")
+    provider: Mapped[str] = mapped_column(String(40), index=True)
+    capability: Mapped[str] = mapped_column(String(40))
+    workflow_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workflow_template_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    model: Mapped[str] = mapped_column(String(120), default="")
+    provider_api_mode: Mapped[str] = mapped_column(String(40), default="")
+    default_parameters: Mapped[dict] = mapped_column(JSONB, default=dict)
+    input_config: Mapped[dict] = mapped_column(JSONB, default=dict)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class MediaGeneration(Base):
+    """Worker 侧统一媒体任务镜像。"""
+
+    __tablename__ = "media_generations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(200), default="未命名媒体任务")
+    workbench_slug: Mapped[str] = mapped_column(String(80), default="", index=True)
+    provider: Mapped[str] = mapped_column(String(40), index=True)
+    capability: Mapped[str] = mapped_column(String(40), index=True)
+    model: Mapped[str] = mapped_column(String(120), default="")
+    workflow_version_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("workflow_template_versions.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="PENDING", index=True)
+    prompt: Mapped[str] = mapped_column(Text, default="")
+    request_parameters: Mapped[dict] = mapped_column(JSONB, default=dict)
+    input_bindings: Mapped[dict] = mapped_column(JSONB, default=dict)
+    client_request_id: Mapped[str] = mapped_column(String(100), default="", index=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ProviderTaskRun(Base):
+    """Worker 侧供应商运行记录镜像。"""
+
+    __tablename__ = "provider_task_runs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    generation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("media_generations.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(40), index=True)
+    external_task_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    provider_status: Mapped[str] = mapped_column(String(80), default="CREATED", index=True)
+    request_payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    response_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    poll_count: Mapped[int] = mapped_column(Integer, default=0)
+    next_poll_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class MediaAsset(Base):
+    """Worker 侧媒体资产镜像。"""
+
+    __tablename__ = "media_assets"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    generation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("media_generations.id", ondelete="CASCADE"), nullable=True, index=True)
+    provider_task_run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("provider_task_runs.id", ondelete="SET NULL"), nullable=True)
+    role: Mapped[str] = mapped_column(String(40), default="input")
+    media_type: Mapped[str] = mapped_column(String(40), default="other")
+    storage_mode: Mapped[str] = mapped_column(String(40), default="managed")
+    bucket: Mapped[str] = mapped_column(String(120), default="")
+    object_key: Mapped[str] = mapped_column(String(600), default="")
+    external_url: Mapped[str] = mapped_column(Text, default="")
+    original_file_name: Mapped[str] = mapped_column(String(240), default="")
+    content_type: Mapped[str] = mapped_column(String(120), default="application/octet-stream")
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    provider: Mapped[str] = mapped_column(String(40), default="")
+    provider_output_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    asset_metadata: Mapped[dict] = mapped_column(JSONB, default=dict)
+    status: Mapped[str] = mapped_column(String(40), default="AVAILABLE")
+    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

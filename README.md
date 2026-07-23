@@ -4,7 +4,7 @@ AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生�
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
+- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、RunningHub 克隆音频工作台、GRS AI 图生图工作台、GRS AI Veo 3.1 首帧 / 首尾帧图生视频工作台、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
 - 暂不包含：复杂权限与业务数据按账号隔离、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
@@ -97,6 +97,15 @@ flowchart TB
 | `LLM_DEFAULT_REASONING_LEVEL` | `standard` | 默认推理强度，可选 `off`、`standard`、`enhanced` |
 | `LLM_MOCK_MODE` | `false` | API Key 或网络不可用时可临时设为 `true`，使用本地演示教案兜底 |
 | `LLM_TIMEOUT_SECONDS` | `90` | Worker 调用大模型的单次请求超时时间 |
+| `GRSAI_API_KEY` | 空 | GRS AI Veo 服务端密钥，只写入 `.env`，不会返回前端 |
+| `GRSAI_BASE_URL` | `https://grsai.dakka.com.cn` | GRS AI 国内直连节点，可切换到其他官方节点 |
+| `GRSAI_PUBLIC_BASE_URL` | 空 | GRS AI 拉取本地首尾帧时使用的公网后端根地址；纯本地联调可留空并使用公网图片 URL |
+| `GRSAI_MOCK_MODE` | `false` | 不调用真实 Veo、只验证上传与异步状态链路 |
+| `GRSAI_IMAGE_MAX_UPLOAD_MB` | `10` | 媒体工作台单张首帧 / 尾帧上传上限 |
+| `MEDIA_MOCK_MODE` | `true` | 原克隆音频 / 图生图工作台的安全联调模式，不产生第三方费用 |
+| `MEDIA_MAX_UPLOAD_MB` | `200` | 原媒体工作台单个输入素材上传上限 |
+| `RUNNINGHUB_API_KEY` | 空 | RunningHub 克隆音频服务端密钥 |
+| `RUNNINGHUB_BASE_URL` | `https://www.runninghub.cn` | RunningHub API 根地址 |
 | `POSTGRES_HOST` | `postgres` | PostgreSQL 主机名；Docker 内使用 `postgres`，宿主机本地开发通常使用 `localhost` |
 | `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
 | `POSTGRES_DB` | `hakka_stage_ai` | PostgreSQL 数据库名 |

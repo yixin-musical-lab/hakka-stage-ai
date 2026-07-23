@@ -31,6 +31,11 @@ class Settings(BaseModel):
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "hakka-stage-ai"
     m08_video_max_upload_mb: int = 200
+    # 原媒体工作台使用独立 Mock 开关，避免图生图和克隆音频联调触发第三方计费。
+    media_max_upload_mb: int = 200
+    media_mock_mode: bool = True
+    runninghub_api_key: str = ""
+    runninghub_base_url: str = "https://www.runninghub.cn"
     practice_upload_dir: str = "uploads"
     practice_max_upload_mb: int = 200
     deepseek_api_key: str = ""
@@ -41,6 +46,15 @@ class Settings(BaseModel):
     llm_default_model: str = "deepseek-v4-flash"
     llm_default_reasoning_level: str = "standard"
     llm_mock_mode: bool = False
+    # GRS AI Veo 只允许后端读取密钥，前端永远不接触第三方凭据。
+    grsai_api_key: str = ""
+    grsai_base_url: str = "https://grsai.dakka.com.cn"
+    # 用户上传的首帧会暂存 MinIO，并通过带签名的公开短链交给 GRS AI 拉取。
+    # 生产环境应填写外网可访问的后端根地址，例如 https://api.example.com。
+    grsai_public_base_url: str = ""
+    grsai_timeout_seconds: float = 30.0
+    grsai_mock_mode: bool = False
+    grsai_image_max_upload_mb: int = 10
 
     @property
     def database_url(self) -> str:
@@ -70,6 +84,18 @@ class Settings(BaseModel):
 
         return self.m08_video_max_upload_mb * 1024 * 1024
 
+    @property
+    def media_max_upload_bytes(self) -> int:
+        """把通用媒体素材上传上限从 MB 转换为字节。"""
+
+        return self.media_max_upload_mb * 1024 * 1024
+
+    @property
+    def grsai_image_max_upload_bytes(self) -> int:
+        """把 GRS AI 首尾帧上传上限从 MB 转换为字节。"""
+
+        return self.grsai_image_max_upload_mb * 1024 * 1024
+
 
 def get_settings() -> Settings:
     """从环境变量读取配置，提供本地开发默认值。"""
@@ -96,6 +122,10 @@ def get_settings() -> Settings:
         minio_secret_key=getenv("MINIO_SECRET_KEY", "minioadmin"),
         minio_bucket=getenv("MINIO_BUCKET", "hakka-stage-ai"),
         m08_video_max_upload_mb=int(getenv("M08_VIDEO_MAX_UPLOAD_MB", "200")),
+        media_max_upload_mb=int(getenv("MEDIA_MAX_UPLOAD_MB", "200")),
+        media_mock_mode=getenv("MEDIA_MOCK_MODE", "true").lower() in {"1", "true", "yes", "on"},
+        runninghub_api_key=getenv("RUNNINGHUB_API_KEY", ""),
+        runninghub_base_url=getenv("RUNNINGHUB_BASE_URL", "https://www.runninghub.cn"),
         practice_upload_dir=getenv("PRACTICE_UPLOAD_DIR", "uploads"),
         practice_max_upload_mb=int(getenv("PRACTICE_MAX_UPLOAD_MB", "200")),
         deepseek_api_key=getenv("DEEPSEEK_API_KEY", ""),
@@ -106,4 +136,10 @@ def get_settings() -> Settings:
         llm_default_model=getenv("LLM_DEFAULT_MODEL", "deepseek-v4-flash"),
         llm_default_reasoning_level=getenv("LLM_DEFAULT_REASONING_LEVEL", "standard"),
         llm_mock_mode=getenv("LLM_MOCK_MODE", "false").lower() in {"1", "true", "yes", "on"},
+        grsai_api_key=getenv("GRSAI_API_KEY", ""),
+        grsai_base_url=getenv("GRSAI_BASE_URL", "https://grsai.dakka.com.cn"),
+        grsai_public_base_url=getenv("GRSAI_PUBLIC_BASE_URL", ""),
+        grsai_timeout_seconds=float(getenv("GRSAI_TIMEOUT_SECONDS", "30")),
+        grsai_mock_mode=getenv("GRSAI_MOCK_MODE", "false").lower() in {"1", "true", "yes", "on"},
+        grsai_image_max_upload_mb=int(getenv("GRSAI_IMAGE_MAX_UPLOAD_MB", "10")),
     )

@@ -11,6 +11,153 @@ export type HealthResponse = {
   dependencies: DependencyConfig[];
 };
 
+export type MediaAsset = {
+  id: string;
+  role: "input" | "output" | string;
+  media_type: "image" | "audio" | "video" | string;
+  storage_mode: "managed" | "external";
+  url: string;
+  original_file_name: string;
+  content_type: string;
+  size_bytes: number | null;
+  provider: string;
+  status: string;
+  created_at: string;
+};
+
+export type ProviderTaskRun = {
+  id: string;
+  provider: string;
+  external_task_id: string | null;
+  provider_status: string;
+  poll_count: number;
+  error_code: string | null;
+  error_message: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
+export type MediaGeneration = {
+  id: string;
+  task_id: string | null;
+  title: string;
+  workbench_slug: string;
+  provider: "grsai" | "runninghub";
+  capability: "image" | "audio" | "video";
+  model: string;
+  workflow_version_id: string | null;
+  status: string;
+  prompt: string;
+  parameters: Record<string, unknown>;
+  input_asset_ids: Record<string, string>;
+  runs: ProviderTaskRun[];
+  assets: MediaAsset[];
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+};
+
+export type MediaProviderOptions = {
+  mock_mode: boolean;
+  providers: Array<{
+    key: string;
+    label: string;
+    configured: boolean;
+    capabilities: string[];
+    storage_policy: string;
+    models: string[];
+  }>;
+};
+
+export type WorkflowParameterConfig = {
+  key: string;
+  node_id: string;
+  field_name: string;
+  label: string;
+  value_type: "text" | "number" | "boolean" | "file" | "select" | "json";
+  required: boolean;
+  default: unknown;
+  minimum: number | null;
+  maximum: number | null;
+  options: unknown[];
+  visibility: "basic" | "advanced" | "hidden";
+  asset_role: string | null;
+  order: number;
+  description: string;
+};
+
+export type WorkflowOutputConfig = {
+  node_id: string;
+  class_type: string;
+  label: string;
+  media_type: "image" | "audio" | "video";
+  enabled: boolean;
+  primary: boolean;
+};
+
+export type WorkflowVersion = {
+  id: string;
+  template_id: string;
+  version_number: number;
+  source_filename: string;
+  workflow_hash: string;
+  analysis: Record<string, unknown>;
+  parameters: WorkflowParameterConfig[];
+  outputs: WorkflowOutputConfig[];
+  status: "draft" | "published";
+  created_at: string;
+  published_at: string | null;
+};
+
+export type WorkflowTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  provider: "runninghub";
+  external_workflow_id: string;
+  media_type: "image" | "audio" | "video";
+  status: string;
+  versions: WorkflowVersion[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkbenchFieldConfig = {
+  label: string;
+  help_text: string;
+  required: boolean;
+  media_type: "image" | "audio" | "video" | null;
+  target_parameter_key: string;
+};
+
+export type MediaWorkbenchInputConfig = {
+  prompt: WorkbenchFieldConfig;
+  primary_asset: WorkbenchFieldConfig;
+  secondary_asset?: WorkbenchFieldConfig | null;
+  exposed_parameter_keys: string[];
+};
+
+export type MediaWorkbenchConfig = {
+  id: string;
+  slug: "audio-clone" | "image-to-image";
+  display_name: string;
+  description: string;
+  provider: "runninghub" | "grsai";
+  capability: "image" | "audio" | "video";
+  workflow_version_id: string | null;
+  model: string;
+  provider_api_mode: "workflow" | "unified" | "legacy";
+  default_parameters: Record<string, unknown>;
+  input_config: MediaWorkbenchInputConfig;
+  enabled: boolean;
+  provider_configured: boolean;
+  configured: boolean;
+  configuration_issues: string[];
+  workflow_parameters: WorkflowParameterConfig[];
+  updated_at: string;
+};
+
 export type AccountRole = "teacher" | "student";
 
 export type UserAccount = {
@@ -906,4 +1053,47 @@ export type LlmOptionsResponse = {
   default_reasoning_level: "off" | "standard" | "enhanced";
   providers: LlmProviderOption[];
   reasoning_levels: ReasoningLevelOption[];
+};
+
+export type VeoModelCode = "veo3.1-fast" | "veo3.1-pro";
+export type VeoAspectRatio = "16:9" | "9:16";
+export type VeoTaskStatus = "submitting" | "running" | "succeeded" | "failed";
+
+export type VeoModelOption = {
+  code: VeoModelCode;
+  name: string;
+  description: string;
+};
+
+export type VeoOptionsResponse = {
+  provider: "grsai";
+  configured: boolean;
+  mock_mode: boolean;
+  file_upload_available: boolean;
+  image_max_upload_mb: number;
+  accepted_image_types: string[];
+  models: VeoModelOption[];
+  aspect_ratios: VeoAspectRatio[];
+  supports_last_frame: boolean;
+  supports_reference_images: boolean;
+  reference_images_note: string;
+  result_url_ttl_hours: number;
+};
+
+export type VeoTaskResponse = {
+  id: string;
+  status: VeoTaskStatus;
+  progress: number;
+  model: VeoModelCode;
+  prompt: string;
+  aspect_ratio: VeoAspectRatio;
+  source_file_name: string;
+  source_mode: "upload" | "url";
+  has_last_frame: boolean;
+  video_url: string;
+  failure_reason: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
 };
