@@ -9,6 +9,22 @@ from app.media_storage import WorkerMediaStorage
 from app.models import MediaAsset, MediaGeneration, WorkflowTemplate, WorkflowTemplateVersion
 
 
+def _image_binding_order(item: tuple[str, MediaAsset]) -> tuple[int, int, str]:
+    """按 source_image、source_image_2... 的业务顺序排列参考图。
+
+    PostgreSQL JSONB 不承诺保留对象键的写入顺序，因此不能直接依赖
+    ``input_assets.items()``。显式解析编号可以保证用户选择的首图始终先传给模型。
+    """
+
+    binding_key = item[0]
+    if binding_key == "source_image":
+        return (0, 1, binding_key)
+    prefix = "source_image_"
+    if binding_key.startswith(prefix) and binding_key[len(prefix):].isdigit():
+        return (0, int(binding_key[len(prefix):]), binding_key)
+    return (1, 0, binding_key)
+
+
 class GrsaiProvider(MediaProvider):
     """GRS AI Nano Banana 适配器。
 
@@ -79,7 +95,7 @@ class GrsaiProvider(MediaProvider):
 
         images: list[str] = []
         safe_images: list[dict[str, Any]] = []
-        for binding_key, asset in input_assets.items():
+        for binding_key, asset in sorted(input_assets.items(), key=_image_binding_order):
             if asset.media_type != "image" or asset.storage_mode != "managed" or not asset.object_key:
                 raise RuntimeError(f"GRS AI 输入 {binding_key} 必须是 MinIO 中的受管图片")
             images.append(self.storage.read_data_url(asset.object_key, asset.content_type))

@@ -312,7 +312,10 @@ def update_media_workbench_configuration(
     response_model=MediaGenerationResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="从专注工作台创建媒体任务",
-    description="根据教师已保存的绑定配置组装供应商参数，用户无需理解模型或工作流节点。",
+    description=(
+        "根据教师已保存的绑定配置组装供应商参数，用户无需理解模型或工作流节点。"
+        "图生图可通过 primary_asset_ids 按顺序提交 1 至 10 张参考图片。"
+    ),
 )
 def run_media_workbench(
     slug: str,
@@ -329,16 +332,6 @@ def run_media_workbench(
 
     input_config = record.input_config
     primary_config = input_config["primary_asset"]
-    primary_asset = db.scalar(
-        select(MediaAsset).where(MediaAsset.id == request.primary_asset_id, MediaAsset.owner_id == current_user.id)
-    )
-    if primary_asset is None or primary_asset.media_type != primary_config.get("media_type"):
-        raise HTTPException(status_code=400, detail=f"请上传有效的{primary_config.get('label', '主输入文件')}")
-    if slug == "audio-clone":
-        _validate_runninghub_audio_asset(primary_asset, primary_config.get("label", "参考音频"))
-    if slug == "image-to-image" and (primary_asset.size_bytes or 0) > 12 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="GRS AI 图生图参考图片不能超过 12MB")
-
     allowed_keys = set(input_config.get("exposed_parameter_keys", []))
     unknown_keys = set(request.parameters) - allowed_keys
     if unknown_keys:
@@ -348,6 +341,18 @@ def run_media_workbench(
     bindings: dict[str, UUID] = {}
 
     if slug == "audio-clone":
+        if request.primary_asset_id is None:
+            raise HTTPException(status_code=400, detail=f"请上传{primary_config.get('label', '主输入文件')}")
+        primary_asset = db.scalar(
+            select(MediaAsset).where(
+                MediaAsset.id == request.primary_asset_id,
+                MediaAsset.owner_id == current_user.id,
+            )
+        )
+        if primary_asset is None or primary_asset.media_type != primary_config.get("media_type"):
+            raise HTTPException(status_code=400, detail=f"请上传有效的{primary_config.get('label', '主输入文件')}")
+        _validate_runninghub_audio_asset(primary_asset, primary_config.get("label", "参考音频"))
+
         prompt_key = input_config["prompt"]["target_parameter_key"]
         primary_key = primary_config["target_parameter_key"]
         parameters[prompt_key] = request.prompt
@@ -379,9 +384,34 @@ def run_media_workbench(
                 if not secondary_key:
                     raise HTTPException(status_code=409, detail="情绪参考尚未映射到工作流字段")
                 bindings[secondary_key] = request.secondary_asset_id
-    else:
-        bindings[primary_config["target_parameter_key"]] = request.primary_asset_id
+    elif slug == "image-to-image":
+        # 新客户端使用数组提交多张参考图；单数参数仅作为旧客户端的兼容回退。
+        reference_asset_ids = request.primary_asset_ids
+        if not reference_asset_ids and request.primary_asset_id is not None:
+            reference_asset_ids = [request.primary_asset_id]
+        if not reference_asset_ids:
+            raise HTTPException(status_code=400, detail="请至少上传一张参考图片")
+
+        primary_key = primary_config["target_parameter_key"]
+        for index, asset_id in enumerate(reference_asset_ids):
+            asset = db.scalar(
+                select(MediaAsset).where(
+                    MediaAsset.id == asset_id,
+                    MediaAsset.owner_id == current_user.id,
+                )
+            )
+            image_number = index + 1
+            if asset is None or asset.status != "AVAILABLE" or asset.media_type != "image":
+                raise HTTPException(status_code=400, detail=f"第 {image_number} 张参考图片不存在或不可用")
+            if (asset.size_bytes or 0) > 12 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail=f"第 {image_number} 张参考图片不能超过 12MB")
+
+            # 保留首图原有绑定名，避免影响历史任务；后续图片使用稳定编号供 Worker 排序。
+            binding_key = primary_key if index == 0 else f"{primary_key}_{image_number}"
+            bindings[binding_key] = asset_id
         parameters["_api_mode"] = record.provider_api_mode
+    else:
+        raise HTTPException(status_code=400, detail="未知工作台类型")
 
     generation_request = MediaGenerationCreateRequest(
         title=f"{record.display_name} · {request.prompt[:32]}",

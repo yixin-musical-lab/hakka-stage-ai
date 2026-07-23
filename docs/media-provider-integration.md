@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `/media-studio` | 两个工作台入口 | 选择“克隆音频”或“图生图” |
 | `/media-studio/audio-clone` | RunningHub 音色克隆 | 合成文本、参考音色、可选情绪参考 |
-| `/media-studio/image-to-image` | GRS AI 图生图 | 参考图片、修改要求、画幅和尺寸 |
+| `/media-studio/image-to-image` | GRS AI 图生图 | 1 至 10 张参考图片、合成要求、画幅和尺寸 |
 | `/media-studio/configuration` | 教师配置中心 | 工作流版本、节点映射、GRS AI 模型和默认参数 |
 
 配置页只对教师开放。API Key 不保存在浏览器或数据库中，只从后端 / Worker 环境变量读取。
@@ -52,6 +52,11 @@
 - 提交：`POST {GRSAI_BASE_URL}/v1/api/generate`
 - 查询：`GET {GRSAI_BASE_URL}/v1/api/result?id={taskId}`
 - 关键参数：`model`、`prompt`、`images`、`aspectRatio`、`imageSize`、`replyType`
+
+用户可按顺序上传 1 至 10 张参考图片，单张不超过 12MB；工作台把首图保存为
+`source_image`，后续图片保存为 `source_image_2`、`source_image_3`……。Worker 会按编号
+恢复用户选择顺序并组装 Unified API 的 `images` 数组，供应商最终仍返回一张生成图片。
+旧客户端继续提交 `primary_asset_id` 时按单图任务处理，无需迁移历史数据。
 
 Unified API 的 `replyType` 支持 `json`、`stream` 和 `async`。本项目固定使用
 `async`：创建请求立即返回任务 ID，Worker 使用全新的 HTTP 请求轮询结果；不要把

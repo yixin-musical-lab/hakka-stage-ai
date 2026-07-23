@@ -806,7 +806,8 @@ export async function runMediaWorkbench(
   slug: string,
   payload: {
     prompt: string;
-    primary_asset_id: string;
+    primary_asset_id?: string;
+    primary_asset_ids?: string[];
     secondary_asset_id?: string | null;
     parameters?: Record<string, unknown>;
     client_request_id?: string;
