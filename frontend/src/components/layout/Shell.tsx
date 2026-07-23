@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Clapperboard,
   Drama,
+  Film,
   FolderKanban,
   GraduationCap,
   Home,
@@ -65,6 +66,7 @@ const navigationGroups: NavigationGroup[] = [
       { label: "分角色训练", description: "角色任务与排练目标", to: "/role-training-plans", icon: Users },
       { label: "示范材料", description: "动作图解与示范素材", to: "/movement-guides", icon: Video },
       { label: "排练复盘", description: "排练问题、改进计划与反思", to: "/rehearsal-reviews", icon: Clapperboard },
+      { label: "媒体工作台", description: "克隆音频、图生图与 Veo 视频", to: "/media-studio", icon: Film },
     ],
   },
 ];
@@ -74,6 +76,7 @@ const createItems = [
   { label: "新建课堂互动", to: "/interactions/generate", icon: MessageSquareText },
   { label: "新建剧本", to: "/musical-scripts/generate", icon: Drama },
   { label: "新建排练复盘", to: "/rehearsal-reviews/generate", icon: Clapperboard },
+  { label: "生成 Veo 视频", to: "/media-studio/veo", icon: Film },
 ];
 
 const classicNavigationItems = [
@@ -88,6 +91,7 @@ const classicNavigationItems = [
   { label: "排练复盘", to: "/rehearsal-reviews" },
   { label: "示范材料", to: "/movement-guides" },
   { label: "课后练习", to: "/practice-submissions" },
+  { label: "媒体工作台", to: "/media-studio" },
   { label: "系统状态", to: "/health" },
 ];
 
@@ -103,6 +107,7 @@ function getPageContext(pathname: string) {
   if (pathname.startsWith("/role-training-plans")) return { eyebrow: "创编排演", title: "分角色训练" };
   if (pathname.startsWith("/movement-guides")) return { eyebrow: "创编排演", title: "示范材料" };
   if (pathname.startsWith("/rehearsal-reviews")) return { eyebrow: "创编排演", title: "排练复盘" };
+  if (pathname.startsWith("/media-studio")) return { eyebrow: "媒体创作", title: "Veo 图生视频" };
   if (pathname.startsWith("/account")) return { eyebrow: "账号", title: "个人中心" };
   if (pathname.startsWith("/health")) return { eyebrow: "系统", title: "服务状态" };
   return { eyebrow: "工作空间", title: "客韵智演" };

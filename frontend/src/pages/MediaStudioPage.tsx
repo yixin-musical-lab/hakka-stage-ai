@@ -1,13 +1,25 @@
-import { ArrowRight, AudioLines, Image as ImageIcon, Settings2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, AudioLines, Film, Image as ImageIcon, Settings2 } from "lucide-react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { fetchMediaProviderOptions, fetchMediaWorkbenches } from "../lib/api";
-import type { MediaProviderOptions, MediaWorkbenchConfig } from "../types";
+import { fetchMediaProviderOptions, fetchMediaWorkbenches, fetchVeoOptions } from "../lib/api";
+import type {
+  MediaProviderOptions,
+  MediaWorkbenchConfig,
+  VeoOptionsResponse,
+} from "../types";
 import "./media-studio.css";
 
 
-const cards = {
+type WorkbenchCardMeta = {
+  icon: ComponentType<{ "aria-hidden"?: boolean }>;
+  eyebrow: string;
+  action: string;
+  to: string;
+  steps: string[];
+};
+
+const cards: Record<MediaWorkbenchConfig["slug"], WorkbenchCardMeta> = {
   "audio-clone": {
     icon: AudioLines,
     eyebrow: "声音创作",
@@ -24,22 +36,44 @@ const cards = {
   },
 };
 
+const veoCard: WorkbenchCardMeta = {
+  icon: Film,
+  eyebrow: "视频创作",
+  action: "进入 Veo 图生视频",
+  to: "/media-studio/veo",
+  steps: ["上传首帧或填写图片 URL", "描述动作与镜头", "获取 Veo 视频"],
+};
+
 
 export function MediaStudioPage() {
   const { user } = useAuth();
   const [workbenches, setWorkbenches] = useState<MediaWorkbenchConfig[]>([]);
-  const [options, setOptions] = useState<MediaProviderOptions | null>(null);
+  const [mediaOptions, setMediaOptions] = useState<MediaProviderOptions | null>(null);
+  const [veoOptions, setVeoOptions] = useState<VeoOptionsResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([fetchMediaWorkbenches(controller.signal), fetchMediaProviderOptions(controller.signal)])
-      .then(([workbenchData, providerData]) => { setWorkbenches(workbenchData); setOptions(providerData); })
-      .catch((reason: unknown) => {
-        if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "工作台加载失败");
-      });
+    void Promise.allSettled([
+      fetchMediaWorkbenches(controller.signal),
+      fetchMediaProviderOptions(controller.signal),
+      fetchVeoOptions(controller.signal),
+    ]).then(([workbenchResult, mediaOptionsResult, veoOptionsResult]) => {
+      if (controller.signal.aborted) return;
+
+      if (workbenchResult.status === "fulfilled") {
+        setWorkbenches(workbenchResult.value);
+      } else {
+        setError(workbenchResult.reason instanceof Error ? workbenchResult.reason.message : "原有媒体工作台加载失败");
+      }
+      if (mediaOptionsResult.status === "fulfilled") setMediaOptions(mediaOptionsResult.value);
+      if (veoOptionsResult.status === "fulfilled") setVeoOptions(veoOptionsResult.value);
+    });
     return () => controller.abort();
   }, []);
+
+  const mediaRuntimeLabel = mediaOptions?.mock_mode ? "Mock 安全模式" : "真实运行模式";
+  const VeoIcon = veoCard.icon;
 
   return (
     <main className="workbench-hub">
@@ -47,15 +81,20 @@ export function MediaStudioPage() {
         <div>
           <p className="eyebrow">AI 媒体创作</p>
           <h1>选择一个工作台开始创作</h1>
-          <p>工作流和供应商参数已由配置页统一管理。你只需要提供素材、输入要求，然后等待结果。</p>
+          <p>原有克隆音频、图生图工作流完整保留，并新增独立的 GRS AI Veo 图生视频入口。</p>
         </div>
-        <div className={`workbench-runtime-badge ${options?.mock_mode ? "is-mock" : ""}`}>
-          <strong>{options?.mock_mode ? "Mock 安全模式" : "真实运行模式"}</strong>
-          <span>{options?.mock_mode ? "不会产生第三方费用" : "执行任务会产生供应商费用"}</span>
+        <div className={`workbench-runtime-badge ${mediaOptions?.mock_mode ? "is-mock" : ""}`}>
+          <strong>{mediaRuntimeLabel}</strong>
+          <span>
+            原媒体任务：{mediaOptions?.mock_mode ? "不会产生第三方费用" : "执行时可能产生供应商费用"}
+            {" · "}
+            Veo：{veoOptions?.configured ? (veoOptions.mock_mode ? "Mock" : "已配置") : "待配置"}
+          </span>
         </div>
       </header>
 
       {error ? <div className="workbench-error" role="alert">{error}</div> : null}
+
       <section className="workbench-card-grid" aria-label="媒体工作台列表">
         {workbenches.map((workbench) => {
           const meta = cards[workbench.slug];
@@ -72,17 +111,39 @@ export function MediaStudioPage() {
               ) : (
                 <div className="workbench-not-ready">
                   <strong>尚未完成配置</strong>
-                  <span>{workbench.configuration_issues[0]}</span>
+                  <span>{workbench.configuration_issues[0] ?? "请在配置页检查供应商和工作流设置"}</span>
                 </div>
               )}
             </article>
           );
         })}
+
+        <article className="workbench-entry-card workbench-entry-card--veo-video">
+          <div className="workbench-entry-icon"><VeoIcon aria-hidden /></div>
+          <p>{veoCard.eyebrow}</p>
+          <h2>Veo 图生视频</h2>
+          <p>使用首帧或首尾帧生成舞台分镜、动作示范和创意短片。</p>
+          <ol>{veoCard.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+          {veoOptions?.configured ? (
+            <Link to={veoCard.to}>{veoCard.action}<ArrowRight aria-hidden /></Link>
+          ) : (
+            <div className="workbench-not-ready">
+              <strong>尚未完成配置</strong>
+              <span>请在服务端配置 GRSAI_API_KEY，或开启 GRSAI_MOCK_MODE</span>
+            </div>
+          )}
+        </article>
       </section>
 
       {user?.role === "teacher" ? (
         <footer className="workbench-config-entry">
-          <div><Settings2 aria-hidden /><span><strong>工作台配置</strong><small>绑定 RunningHub 工作流和 GRS AI 模型</small></span></div>
+          <div>
+            <Settings2 aria-hidden />
+            <span>
+              <strong>原工作台配置</strong>
+              <small>绑定 RunningHub 克隆音频工作流和 GRS AI 图生图模型</small>
+            </span>
+          </div>
           <Link to="/media-studio/configuration">打开配置页<ArrowRight aria-hidden /></Link>
         </footer>
       ) : null}

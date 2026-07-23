@@ -1,5 +1,13 @@
 from app.models.class_interaction import ClassInteraction
 from app.models.lesson_plan import AiTask, Course, LessonPlan, LessonPlanVariant
+from app.models.media_generation import (
+    MediaAsset,
+    MediaGeneration,
+    MediaWorkbenchConfig,
+    ProviderTaskRun,
+    WorkflowTemplate,
+    WorkflowTemplateVersion,
+)
 from app.models.movement_guide import MovementGuide
 from app.models.media_generation import (
     MediaAsset,

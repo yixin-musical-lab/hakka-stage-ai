@@ -100,6 +100,7 @@
 }
 
 .workbench-entry-card--image-to-image::after { background: rgba(65, 105, 137, .09); }
+.workbench-entry-card--veo-video::after { background: rgba(29, 122, 114, .1); }
 .workbench-entry-icon {
   display: grid;
   width: 58px;
@@ -110,6 +111,7 @@
   color: var(--media-accent);
 }
 .workbench-entry-card--image-to-image .workbench-entry-icon { background: #e9f0f5; color: #365f7c; }
+.workbench-entry-card--veo-video .workbench-entry-icon { background: #e3f0ed; color: #1d7a72; }
 .workbench-entry-icon svg { width: 28px; height: 28px; }
 .workbench-entry-card > p:first-of-type { margin: 22px 0 4px; color: var(--media-accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; }
 .workbench-entry-card h2 { margin: 0 0 10px; font-size: 30px; }

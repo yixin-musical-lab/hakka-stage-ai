@@ -1054,3 +1054,46 @@ export type LlmOptionsResponse = {
   providers: LlmProviderOption[];
   reasoning_levels: ReasoningLevelOption[];
 };
+
+export type VeoModelCode = "veo3.1-fast" | "veo3.1-pro";
+export type VeoAspectRatio = "16:9" | "9:16";
+export type VeoTaskStatus = "submitting" | "running" | "succeeded" | "failed";
+
+export type VeoModelOption = {
+  code: VeoModelCode;
+  name: string;
+  description: string;
+};
+
+export type VeoOptionsResponse = {
+  provider: "grsai";
+  configured: boolean;
+  mock_mode: boolean;
+  file_upload_available: boolean;
+  image_max_upload_mb: number;
+  accepted_image_types: string[];
+  models: VeoModelOption[];
+  aspect_ratios: VeoAspectRatio[];
+  supports_last_frame: boolean;
+  supports_reference_images: boolean;
+  reference_images_note: string;
+  result_url_ttl_hours: number;
+};
+
+export type VeoTaskResponse = {
+  id: string;
+  status: VeoTaskStatus;
+  progress: number;
+  model: VeoModelCode;
+  prompt: string;
+  aspect_ratio: VeoAspectRatio;
+  source_file_name: string;
+  source_mode: "upload" | "url";
+  has_last_frame: boolean;
+  video_url: string;
+  failure_reason: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+};

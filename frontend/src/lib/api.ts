@@ -47,6 +47,10 @@ import type {
   SongAdaptationForm,
   SongAdaptationResponse,
   SongAdaptationSummary,
+  VeoAspectRatio,
+  VeoModelCode,
+  VeoOptionsResponse,
+  VeoTaskResponse,
   WorkspaceOverviewResponse,
   MediaAsset,
   MediaGeneration,
@@ -886,6 +890,60 @@ export async function publishRunningHubWorkflowVersion(versionId: string) {
   const response = await fetch(`${apiBaseUrl}/api/runninghub/workflow-versions/${versionId}/publish`, { method: "POST" });
   if (!response.ok) throw new Error(await readApiError(response));
   return (await response.json()) as WorkflowVersion;
+}
+
+export type CreateVeoTaskInput = {
+  prompt: string;
+  model: VeoModelCode;
+  aspectRatio: VeoAspectRatio;
+  firstFrameFile: File | null;
+  firstFrameUrl: string;
+  lastFrameFile: File | null;
+  lastFrameUrl: string;
+};
+
+export async function fetchVeoOptions(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/veo/options`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as VeoOptionsResponse;
+}
+
+export async function fetchVeoTasks(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/veo/tasks`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as VeoTaskResponse[];
+}
+
+export async function createVeoTask(input: CreateVeoTaskInput) {
+  const formData = new FormData();
+  formData.append("prompt", input.prompt);
+  formData.append("model", input.model);
+  formData.append("aspect_ratio", input.aspectRatio);
+  if (input.firstFrameFile) formData.append("first_frame", input.firstFrameFile);
+  if (input.firstFrameUrl.trim()) formData.append("first_frame_url", input.firstFrameUrl.trim());
+  if (input.lastFrameFile) formData.append("last_frame", input.lastFrameFile);
+  if (input.lastFrameUrl.trim()) formData.append("last_frame_url", input.lastFrameUrl.trim());
+
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/veo/tasks`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as VeoTaskResponse;
+}
+
+export async function fetchVeoTask(taskId: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/veo/tasks/${taskId}`, { signal });
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+  return (await response.json()) as VeoTaskResponse;
 }
 
 async function readApiError(response: Response) {
