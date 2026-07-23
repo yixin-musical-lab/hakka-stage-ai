@@ -47,9 +47,9 @@ import type {
   SongAdaptationForm,
   SongAdaptationResponse,
   SongAdaptationSummary,
-  VeoAspectRatio,
   VeoModelCode,
   VeoOptionsResponse,
+  VeoResolution,
   VeoTaskResponse,
   WorkspaceOverviewResponse,
   MediaAsset,
@@ -895,7 +895,8 @@ export async function publishRunningHubWorkflowVersion(versionId: string) {
 export type CreateVeoTaskInput = {
   prompt: string;
   model: VeoModelCode;
-  aspectRatio: VeoAspectRatio;
+  resolution: VeoResolution;
+  durationSeconds: number;
   firstFrameFile: File | null;
   firstFrameUrl: string;
   lastFrameFile: File | null;
@@ -922,7 +923,10 @@ export async function createVeoTask(input: CreateVeoTaskInput) {
   const formData = new FormData();
   formData.append("prompt", input.prompt);
   formData.append("model", input.model);
-  formData.append("aspect_ratio", input.aspectRatio);
+  // Wan 2.7 的输出比例跟随首帧；分辨率和时长才是供应商实际支持的输出参数。
+  formData.append("aspect_ratio", "auto");
+  formData.append("resolution", input.resolution);
+  formData.append("duration_seconds", String(input.durationSeconds));
   if (input.firstFrameFile) formData.append("first_frame", input.firstFrameFile);
   if (input.firstFrameUrl.trim()) formData.append("first_frame_url", input.firstFrameUrl.trim());
   if (input.lastFrameFile) formData.append("last_frame", input.lastFrameFile);

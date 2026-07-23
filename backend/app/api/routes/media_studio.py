@@ -23,16 +23,17 @@ from app.services.grsai_veo import (
 )
 
 
-router = APIRouter(prefix="/api/media-studio/veo", tags=["媒体工作台 - Veo 图生视频"])
-public_router = APIRouter(prefix="/api/public/media-studio/veo-inputs", tags=["媒体工作台 - Veo 临时素材"])
+# 路径中的 veo 为兼容已有前端地址和部署规则而保留，实际供应商已经迁移为百炼 Wan 2.7。
+router = APIRouter(prefix="/api/media-studio/veo", tags=["媒体工作台 - Wan 图生视频"])
+public_router = APIRouter(prefix="/api/public/media-studio/veo-inputs", tags=["媒体工作台 - 视频临时素材"])
 
 
 @router.get(
     "/options",
     response_model=VeoOptionsResponse,
-    summary="查询 Veo 图生视频能力与配置状态",
+    summary="查询 Wan 图生视频能力与配置状态",
     description=(
-        "返回当前开放的 Veo 模型、画幅、图片限制以及服务端是否已配置 GRS AI。"
+        "返回当前开放的 Wan 模型、分辨率、时长、图片限制以及服务端是否已配置百炼。"
         "接口只返回布尔配置状态，不会泄露 API Key 或对象存储凭据。"
     ),
 )
@@ -44,20 +45,28 @@ def get_veo_options() -> VeoOptionsResponse:
     "/tasks",
     response_model=VeoTaskResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="创建 Veo 图生视频任务",
+    summary="创建 Wan 图生视频任务",
     description=(
-        "上传首帧图片或填写公网图片 URL，创建 GRS AI Veo 3.1 异步任务。"
-        "可额外提供尾帧；服务端使用 webHook=-1 获取任务 ID，视频生成不会阻塞本请求。"
+        "上传首帧图片或填写公网图片 URL，创建阿里云百炼 Wan 2.7 异步任务。"
+        "可额外提供尾帧；接口只保存任务 ID，视频生成不会阻塞本请求。"
     ),
 )
 def create_veo_task(
     current_user: CurrentUser,
     prompt: Annotated[str, Form(min_length=1, max_length=2000, description="视频动作、镜头与氛围提示词")],
-    model: Annotated[str, Form(description="GRS AI 模型：veo3.1-fast 或 veo3.1-pro")] = "veo3.1-fast",
-    aspect_ratio: Annotated[str, Form(description="输出画幅：16:9 或 9:16")] = "16:9",
+    model: Annotated[str, Form(description="百炼模型：wan2.7-i2v-2026-04-25")] = "wan2.7-i2v-2026-04-25",
+    aspect_ratio: Annotated[
+        str,
+        Form(description="兼容旧前端的画幅字段；Wan 2.7 实际输出比例始终跟随首帧"),
+    ] = "auto",
+    resolution: Annotated[str, Form(description="输出分辨率：720P 或 1080P")] = "720P",
+    duration_seconds: Annotated[
+        int,
+        Form(ge=2, le=15, description="输出时长，单位秒，范围 2 到 15"),
+    ] = 5,
     first_frame: Annotated[
         UploadFile | None,
-        File(description="首帧图片；与 first_frame_url 二选一，支持 JPG、PNG、WEBP，最大 10MB"),
+        File(description="首帧图片；与 first_frame_url 二选一，支持 JPG、PNG、WEBP，大小上限由服务端配置"),
     ] = None,
     first_frame_url: Annotated[
         str,
@@ -70,8 +79,8 @@ def create_veo_task(
     last_frame_url: Annotated[str, Form(max_length=2048, description="可选公开尾帧 HTTP(S) 地址")] = "",
 ) -> VeoTaskResponse:
     settings = get_settings()
-    if not settings.grsai_mock_mode and not settings.grsai_api_key:
-        raise HTTPException(status_code=503, detail="服务端尚未配置 GRSAI_API_KEY，暂不能创建视频任务。")
+    if not settings.video_mock_mode and not settings.dashscope_api_key:
+        raise HTTPException(status_code=503, detail="服务端尚未配置 DASHSCOPE_API_KEY，暂不能创建视频任务。")
 
     first_frame_url = first_frame_url.strip()
     last_frame_url = last_frame_url.strip()
@@ -79,10 +88,12 @@ def create_veo_task(
         raise HTTPException(status_code=400, detail="请上传一张首帧图片，或填写一个首帧公网 URL，二者只能选一个。")
     if last_frame and last_frame_url:
         raise HTTPException(status_code=400, detail="尾帧图片与尾帧 URL 只能选一个。")
-    if first_frame and not settings.grsai_mock_mode and not settings.grsai_public_base_url:
+    if aspect_ratio not in {"auto", "16:9", "9:16"}:
+        raise HTTPException(status_code=400, detail="视频画幅参数无效。")
+    if (first_frame or last_frame) and not settings.video_mock_mode and not settings.video_public_base_url:
         raise HTTPException(
             status_code=503,
-            detail="本地图片回源地址未配置，请设置 GRSAI_PUBLIC_BASE_URL，或改用公网图片 URL。",
+            detail="本地图片回源地址未配置，请设置 VIDEO_PUBLIC_BASE_URL，或改用公网图片 URL。",
         )
 
     source_mode = "upload" if first_frame else "url"
@@ -99,7 +110,10 @@ def create_veo_task(
             owner_id=current_user.id,
             prompt=prompt,
             model=model,
-            aspect_ratio=aspect_ratio,
+            # Wan 2.7 不接受独立画幅参数；保留 auto 可避免页面误导用户。
+            aspect_ratio="auto",
+            resolution=resolution,
+            duration_seconds=duration_seconds,
             source_mode=source_mode,
             source_file_name=source_file_name or "",
             has_last_frame=bool(last_frame or last_frame_url),
@@ -111,7 +125,7 @@ def create_veo_task(
             stored_object_keys.append(stored_first_frame.object_key)
             resolved_first_url = (
                 "https://example.invalid/mock-first-frame.png"
-                if settings.grsai_mock_mode
+                if settings.video_mock_mode
                 else create_public_input_url(stored_first_frame, settings)
             )
         else:
@@ -122,7 +136,7 @@ def create_veo_task(
             stored_object_keys.append(stored_last_frame.object_key)
             resolved_last_url = (
                 "https://example.invalid/mock-last-frame.png"
-                if settings.grsai_mock_mode
+                if settings.video_mock_mode
                 else create_public_input_url(stored_last_frame, settings)
             )
         else:
@@ -145,7 +159,7 @@ def create_veo_task(
 @router.get(
     "/tasks",
     response_model=list[VeoTaskResponse],
-    summary="查询当前账号最近的 Veo 任务",
+    summary="查询当前账号最近的视频任务",
     description="返回当前登录账号最近 12 条任务；供应商任务 ID、MinIO 对象键与密钥不会返回。",
 )
 def get_recent_veo_tasks(current_user: CurrentUser) -> list[VeoTaskResponse]:
@@ -159,8 +173,8 @@ def get_recent_veo_tasks(current_user: CurrentUser) -> list[VeoTaskResponse]:
 @router.get(
     "/tasks/{task_id}",
     response_model=VeoTaskResponse,
-    summary="刷新 Veo 图生视频任务状态",
-    description="校验任务归属后向 GRS AI 查询一次结果，并返回平台统一状态。建议前端每 10-15 秒调用一次。",
+    summary="刷新 Wan 图生视频任务状态",
+    description="校验任务归属后向阿里云百炼查询一次结果，并返回平台统一状态。建议前端每 10-15 秒调用一次。",
 )
 def get_veo_task(task_id: str, current_user: CurrentUser) -> VeoTaskResponse:
     try:
@@ -174,10 +188,10 @@ def get_veo_task(task_id: str, current_user: CurrentUser) -> VeoTaskResponse:
 @public_router.get(
     "/{token}",
     include_in_schema=False,
-    summary="供应商限时读取 Veo 首尾帧",
+    summary="供应商限时读取视频首尾帧",
 )
 def read_veo_input_image(token: str) -> StreamingResponse:
-    """仅供 GRS AI 回源：令牌签名、对象目录和过期时间全部通过后才返回图片。"""
+    """仅供视频供应商回源：令牌签名、对象目录和过期时间全部通过后才返回图片。"""
 
     try:
         response, content_type = open_public_input(token)

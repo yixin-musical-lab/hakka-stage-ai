@@ -1055,8 +1055,10 @@ export type LlmOptionsResponse = {
   reasoning_levels: ReasoningLevelOption[];
 };
 
-export type VeoModelCode = "veo3.1-fast" | "veo3.1-pro";
-export type VeoAspectRatio = "16:9" | "9:16";
+// 旧 Veo 值只用于展示 Redis 中尚未过期的历史任务；新任务仅开放 Wan 2.7。
+export type VeoModelCode = "wan2.7-i2v-2026-04-25" | "veo3.1-fast" | "veo3.1-pro";
+export type VeoAspectRatio = "auto" | "16:9" | "9:16";
+export type VeoResolution = "720P" | "1080P";
 export type VeoTaskStatus = "submitting" | "running" | "succeeded" | "failed";
 
 export type VeoModelOption = {
@@ -1066,7 +1068,7 @@ export type VeoModelOption = {
 };
 
 export type VeoOptionsResponse = {
-  provider: "grsai";
+  provider: "dashscope";
   configured: boolean;
   mock_mode: boolean;
   file_upload_available: boolean;
@@ -1074,6 +1076,11 @@ export type VeoOptionsResponse = {
   accepted_image_types: string[];
   models: VeoModelOption[];
   aspect_ratios: VeoAspectRatio[];
+  resolutions: VeoResolution[];
+  duration_min_seconds: number;
+  duration_max_seconds: number;
+  default_duration_seconds: number;
+  output_ratio_note: string;
   supports_last_frame: boolean;
   supports_reference_images: boolean;
   reference_images_note: string;
@@ -1084,9 +1091,12 @@ export type VeoTaskResponse = {
   id: string;
   status: VeoTaskStatus;
   progress: number;
+  provider: "dashscope" | "grsai";
   model: VeoModelCode;
   prompt: string;
   aspect_ratio: VeoAspectRatio;
+  resolution: VeoResolution;
+  duration_seconds: number;
   source_file_name: string;
   source_mode: "upload" | "url";
   has_last_frame: boolean;

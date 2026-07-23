@@ -39,9 +39,9 @@ const cards: Record<MediaWorkbenchConfig["slug"], WorkbenchCardMeta> = {
 const veoCard: WorkbenchCardMeta = {
   icon: Film,
   eyebrow: "视频创作",
-  action: "进入 Veo 图生视频",
+  action: "进入 Wan 图生视频",
   to: "/media-studio/veo",
-  steps: ["上传首帧或填写图片 URL", "描述动作与镜头", "获取 Veo 视频"],
+  steps: ["上传首帧或填写图片 URL", "描述动作与镜头", "获取 Wan 视频"],
 };
 
 
@@ -81,14 +81,14 @@ export function MediaStudioPage() {
         <div>
           <p className="eyebrow">AI 媒体创作</p>
           <h1>选择一个工作台开始创作</h1>
-          <p>原有克隆音频、图生图工作流完整保留，并新增独立的 GRS AI Veo 图生视频入口。</p>
+          <p>原有克隆音频、GRS AI 图生图工作流完整保留，视频生成使用阿里云百炼 Wan 2.7。</p>
         </div>
         <div className={`workbench-runtime-badge ${mediaOptions?.mock_mode ? "is-mock" : ""}`}>
           <strong>{mediaRuntimeLabel}</strong>
           <span>
             原媒体任务：{mediaOptions?.mock_mode ? "不会产生第三方费用" : "执行时可能产生供应商费用"}
             {" · "}
-            Veo：{veoOptions?.configured ? (veoOptions.mock_mode ? "Mock" : "已配置") : "待配置"}
+            Wan 视频：{veoOptions?.configured ? (veoOptions.mock_mode ? "Mock" : "已配置") : "待配置"}
           </span>
         </div>
       </header>
@@ -121,7 +121,7 @@ export function MediaStudioPage() {
         <article className="workbench-entry-card workbench-entry-card--veo-video">
           <div className="workbench-entry-icon"><VeoIcon aria-hidden /></div>
           <p>{veoCard.eyebrow}</p>
-          <h2>Veo 图生视频</h2>
+          <h2>Wan 2.7 图生视频</h2>
           <p>使用首帧或首尾帧生成舞台分镜、动作示范和创意短片。</p>
           <ol>{veoCard.steps.map((step) => <li key={step}>{step}</li>)}</ol>
           {veoOptions?.configured ? (
@@ -129,7 +129,7 @@ export function MediaStudioPage() {
           ) : (
             <div className="workbench-not-ready">
               <strong>尚未完成配置</strong>
-              <span>请在服务端配置 GRSAI_API_KEY，或开启 GRSAI_MOCK_MODE</span>
+              <span>请在服务端配置 DASHSCOPE_API_KEY，或开启 VIDEO_MOCK_MODE</span>
             </div>
           )}
         </article>

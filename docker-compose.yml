@@ -91,6 +91,13 @@ services:
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
       QWEN_BASE_URL: ${QWEN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      # Wan 2.7 使用百炼原生异步视频接口，不复用 QWEN_BASE_URL 的 OpenAI 兼容路径。
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_BASE_URL: ${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com}
+      VIDEO_PUBLIC_BASE_URL: ${VIDEO_PUBLIC_BASE_URL:-}
+      VIDEO_TIMEOUT_SECONDS: ${VIDEO_TIMEOUT_SECONDS:-30}
+      VIDEO_MOCK_MODE: ${VIDEO_MOCK_MODE:-}
+      VIDEO_IMAGE_MAX_UPLOAD_MB: ${VIDEO_IMAGE_MAX_UPLOAD_MB:-20}
       LLM_DEFAULT_PROVIDER: ${LLM_DEFAULT_PROVIDER:-deepseek}
       LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-deepseek-v4-flash}
       LLM_DEFAULT_REASONING_LEVEL: ${LLM_DEFAULT_REASONING_LEVEL:-standard}
