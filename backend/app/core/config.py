@@ -44,6 +44,10 @@ class Settings(BaseModel):
     deepseek_base_url: str = "https://api.deepseek.com"
     qwen_api_key: str = ""
     qwen_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    # Wan 2.7 视频接口使用百炼原生异步协议，不能复用 OpenAI 兼容接口地址。
+    # 建议为视频生成单独创建 API Key，便于独立审计费用与轮换密钥。
+    dashscope_api_key: str = ""
+    dashscope_base_url: str = "https://dashscope.aliyuncs.com"
     llm_default_provider: str = "deepseek"
     llm_default_model: str = "deepseek-v4-flash"
     llm_default_reasoning_level: str = "standard"
@@ -54,6 +58,11 @@ class Settings(BaseModel):
     grsai_timeout_seconds: float = 30.0
     grsai_mock_mode: bool = False
     grsai_image_max_upload_mb: int = 10
+    # 图生视频保留独立配置，避免 GRS AI 图生图与百炼 Wan 2.7 共用开关或密钥。
+    video_public_base_url: str = ""
+    video_timeout_seconds: float = 30.0
+    video_mock_mode: bool = False
+    video_image_max_upload_mb: int = 20
 
     @property
     def database_url(self) -> str:
@@ -95,8 +104,21 @@ class Settings(BaseModel):
 
         return self.grsai_image_max_upload_mb * 1024 * 1024
 
+    @property
+    def video_image_max_upload_bytes(self) -> int:
+        """把 Wan 图生视频单张首尾帧上传上限从 MB 转换为字节。"""
+
+        return self.video_image_max_upload_mb * 1024 * 1024
+
 def get_settings() -> Settings:
     """从环境变量读取配置，提供本地开发默认值。"""
+
+    # 兼容已经部署的旧版 Veo 环境变量，便于先升级镜像、再平滑迁移 .env。
+    # 新部署应优先使用 VIDEO_*，后续不会再通过旧 GRS AI 视频通道生成。
+    legacy_video_public_base_url = getenv("GRSAI_PUBLIC_BASE_URL", "")
+    legacy_video_timeout_seconds = getenv("GRSAI_TIMEOUT_SECONDS", "30")
+    legacy_video_mock_mode = getenv("GRSAI_MOCK_MODE", "false")
+    legacy_video_image_max_upload_mb = getenv("GRSAI_IMAGE_MAX_UPLOAD_MB", "20")
 
     return Settings(
         project_name=getenv("PROJECT_NAME", "hakka-stage-ai"),
@@ -132,6 +154,8 @@ def get_settings() -> Settings:
         deepseek_base_url=getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
         qwen_api_key=getenv("QWEN_API_KEY", ""),
         qwen_base_url=getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        dashscope_api_key=getenv("DASHSCOPE_API_KEY", ""),
+        dashscope_base_url=getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com"),
         llm_default_provider=getenv("LLM_DEFAULT_PROVIDER", "deepseek"),
         llm_default_model=getenv("LLM_DEFAULT_MODEL", "deepseek-v4-flash"),
         llm_default_reasoning_level=getenv("LLM_DEFAULT_REASONING_LEVEL", "standard"),
@@ -140,4 +164,11 @@ def get_settings() -> Settings:
         grsai_timeout_seconds=float(getenv("GRSAI_TIMEOUT_SECONDS", "30")),
         grsai_mock_mode=getenv("GRSAI_MOCK_MODE", "false").lower() in {"1", "true", "yes", "on"},
         grsai_image_max_upload_mb=int(getenv("GRSAI_IMAGE_MAX_UPLOAD_MB", "10")),
+        video_public_base_url=getenv("VIDEO_PUBLIC_BASE_URL") or legacy_video_public_base_url,
+        video_timeout_seconds=float(getenv("VIDEO_TIMEOUT_SECONDS") or legacy_video_timeout_seconds),
+        video_mock_mode=(getenv("VIDEO_MOCK_MODE") or legacy_video_mock_mode).lower()
+        in {"1", "true", "yes", "on"},
+        video_image_max_upload_mb=int(
+            getenv("VIDEO_IMAGE_MAX_UPLOAD_MB") or legacy_video_image_max_upload_mb
+        ),
     )

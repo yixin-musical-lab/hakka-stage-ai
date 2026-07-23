@@ -17,8 +17,13 @@ from minio.error import S3Error
 from app.core.config import Settings, get_settings
 
 
-VEO_MODELS = {"veo3.1-fast", "veo3.1-pro"}
-VEO_ASPECT_RATIOS = {"16:9", "9:16"}
+WAN_VIDEO_MODEL = "wan2.7-i2v-2026-04-25"
+WAN_VIDEO_MODELS = {WAN_VIDEO_MODEL}
+WAN_VIDEO_RESOLUTIONS = {"720P", "1080P"}
+WAN_VIDEO_DURATION_MIN_SECONDS = 2
+WAN_VIDEO_DURATION_MAX_SECONDS = 15
+# `auto` 是 Wan 2.7 的真实行为：输出比例跟随首帧。另两个值只用于读取升级前的历史任务。
+VIDEO_ASPECT_RATIOS = {"auto", "16:9", "9:16"}
 ALLOWED_IMAGE_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
@@ -28,14 +33,17 @@ VEO_INPUT_PREFIX = "media-studio/veo-inputs/"
 VEO_TASK_KEY_PREFIX = "media:veo:task:"
 VEO_USER_TASKS_PREFIX = "media:veo:user:"
 VEO_TASK_RETENTION_SECONDS = 24 * 60 * 60
-# GRS AI 文档说明结果资源仅保证两小时有效；页面据此提醒用户及时下载。
-VEO_RESULT_TTL_SECONDS = 2 * 60 * 60
+# 百炼结果 URL 保留 24 小时；成功后仍建议尽快转存到项目对象存储。
+VEO_RESULT_TTL_SECONDS = 24 * 60 * 60
 VEO_INPUT_TOKEN_SECONDS = 2 * 60 * 60
 STREAM_CHUNK_SIZE = 1024 * 1024
 
 
 class GrsaiVeoError(RuntimeError):
-    """可安全返回给前端的 GRS AI / 媒体工作台错误。"""
+    """可安全返回给前端的视频供应商 / 媒体工作台错误。
+
+    类名暂时保留是为了兼容现有路由导入；真实视频供应商已经切换为阿里云百炼 Wan 2.7。
+    """
 
     def __init__(self, message: str, status_code: int = 502) -> None:
         super().__init__(message)
@@ -53,35 +61,36 @@ class VeoInputImage:
 
 
 def create_veo_options(settings: Settings | None = None) -> dict[str, Any]:
-    """返回页面可用能力；只报告是否配置，不返回密钥、节点或内部对象地址。"""
+    """返回 Wan 视频能力；只报告是否配置，不返回密钥、节点或内部对象地址。"""
 
     active_settings = settings or get_settings()
     return {
-        "provider": "grsai",
-        "configured": bool(active_settings.grsai_mock_mode or active_settings.grsai_api_key),
-        "mock_mode": active_settings.grsai_mock_mode,
+        "provider": "dashscope",
+        "configured": bool(active_settings.video_mock_mode or active_settings.dashscope_api_key),
+        "mock_mode": active_settings.video_mock_mode,
         "file_upload_available": bool(
-            active_settings.grsai_mock_mode or _valid_public_base_url(active_settings.grsai_public_base_url)
+            active_settings.video_mock_mode
+            or _valid_public_base_url(active_settings.video_public_base_url)
         ),
-        "image_max_upload_mb": active_settings.grsai_image_max_upload_mb,
+        "image_max_upload_mb": active_settings.video_image_max_upload_mb,
         "accepted_image_types": list(ALLOWED_IMAGE_TYPES),
         "models": [
             {
-                "code": "veo3.1-fast",
-                "name": "Veo 3.1 Fast",
-                "description": "适合快速预演、分镜试做与多轮迭代。",
-            },
-            {
-                "code": "veo3.1-pro",
-                "name": "Veo 3.1 Pro",
-                "description": "适合对画面细节、稳定性和最终质感要求更高的片段。",
+                "code": WAN_VIDEO_MODEL,
+                "name": "万相 Wan 2.7 图生视频",
+                "description": "支持首帧或首尾帧、720P/1080P 与 2–15 秒异步生成。",
             },
         ],
-        "aspect_ratios": ["16:9", "9:16"],
+        "aspect_ratios": ["auto"],
+        "resolutions": ["720P", "1080P"],
+        "duration_min_seconds": WAN_VIDEO_DURATION_MIN_SECONDS,
+        "duration_max_seconds": WAN_VIDEO_DURATION_MAX_SECONDS,
+        "default_duration_seconds": 5,
+        "output_ratio_note": "输出画幅跟随首帧图片比例；如需竖屏视频，请上传竖版首帧。",
         "supports_last_frame": True,
-        "supports_reference_images": True,
-        "reference_images_note": "GRS AI 还支持 Fast 模型最多三张参考图，但参考图模式不能与首尾帧混用，本页首版不开放该模式。",
-        "result_url_ttl_hours": 2,
+        "supports_reference_images": False,
+        "reference_images_note": "当前接入 Wan 2.7 首帧 / 首尾帧协议；参考生视频需另接 wan2.7-r2v。",
+        "result_url_ttl_hours": 24,
     }
 
 
@@ -91,6 +100,8 @@ def create_task_record(
     prompt: str,
     model: str,
     aspect_ratio: str,
+    resolution: str,
+    duration_seconds: int,
     source_mode: str,
     source_file_name: str,
     has_last_frame: bool,
@@ -98,7 +109,7 @@ def create_task_record(
 ) -> dict[str, Any]:
     """在访问计费接口前创建本地记录，保证后续任务只能由创建者查询。"""
 
-    _validate_generation_fields(prompt, model, aspect_ratio)
+    _validate_generation_fields(prompt, model, aspect_ratio, resolution, duration_seconds)
     if source_mode not in {"upload", "url"}:
         raise GrsaiVeoError("首帧来源类型无效。", status_code=400)
 
@@ -113,8 +124,11 @@ def create_task_record(
         "status": "submitting",
         "progress": 0,
         "model": model,
+        "provider": "dashscope",
         "prompt": prompt.strip(),
         "aspect_ratio": aspect_ratio,
+        "resolution": resolution,
+        "duration_seconds": duration_seconds,
         "source_file_name": source_file_name,
         "source_mode": source_mode,
         "has_last_frame": has_last_frame,
@@ -171,7 +185,7 @@ def get_task_record(task_id: str, owner_id: UUID, settings: Settings | None = No
 
 
 def list_task_records(owner_id: UUID, settings: Settings | None = None, limit: int = 12) -> list[dict[str, Any]]:
-    """读取当前账号最近的 Veo 任务，供页面刷新后恢复轮询。"""
+    """读取当前账号最近的视频任务，供页面刷新后恢复轮询。"""
 
     active_settings = settings or get_settings()
     client = _redis_client(active_settings)
@@ -198,7 +212,7 @@ def save_input_image(
     settings: Settings | None = None,
     client: Minio | None = None,
 ) -> VeoInputImage:
-    """校验并暂存 GRS AI 首尾帧；不把 Base64 或二进制写入数据库/Redis。"""
+    """校验并暂存 Wan 首尾帧；不把 Base64 或二进制写入数据库/Redis。"""
 
     active_settings = settings or get_settings()
     original_file_name = (file.filename or "").replace("\\", "/").rsplit("/", 1)[-1].strip()
@@ -218,9 +232,9 @@ def save_input_image(
         raise GrsaiVeoError("无法读取上传图片，请重新选择文件。", status_code=400) from exc
     if size_bytes <= 0:
         raise GrsaiVeoError("上传图片为空，请重新选择文件。", status_code=400)
-    if size_bytes > active_settings.grsai_image_max_upload_bytes:
+    if size_bytes > active_settings.video_image_max_upload_bytes:
         raise GrsaiVeoError(
-            f"图片超过 {active_settings.grsai_image_max_upload_mb}MB 上限，请压缩后重试。",
+            f"图片超过 {active_settings.video_image_max_upload_mb}MB 上限，请压缩后重试。",
             status_code=413,
         )
 
@@ -246,9 +260,9 @@ def create_public_input_url(image: VeoInputImage, settings: Settings | None = No
     """为供应商创建限时、只读的图片地址；地址中不暴露 MinIO 凭据。"""
 
     active_settings = settings or get_settings()
-    if not _valid_public_base_url(active_settings.grsai_public_base_url):
+    if not _valid_public_base_url(active_settings.video_public_base_url):
         raise GrsaiVeoError(
-            "本地图片上传尚未配置外网回源地址，请设置 GRSAI_PUBLIC_BASE_URL，或改用公网图片 URL。",
+            "本地图片上传尚未配置外网回源地址，请设置 VIDEO_PUBLIC_BASE_URL，或改用公网图片 URL。",
             status_code=503,
         )
     now = datetime.now(timezone.utc)
@@ -266,7 +280,7 @@ def create_public_input_url(image: VeoInputImage, settings: Settings | None = No
         algorithm="HS256",
     )
     return (
-        f"{active_settings.grsai_public_base_url.rstrip('/')}"
+        f"{active_settings.video_public_base_url.rstrip('/')}"
         f"/api/public/media-studio/veo-inputs/{quote(token, safe='')}"
     )
 
@@ -318,35 +332,52 @@ def submit_task(
     input_object_keys: list[str] | None = None,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
-    """使用轮询模式提交任务；接口立即返回，不在 FastAPI 请求中等待视频生成。"""
+    """提交百炼 Wan 2.7 异步任务；接口立即返回，不在请求中等待视频生成。"""
 
     active_settings = settings or get_settings()
-    if active_settings.grsai_mock_mode:
+    if active_settings.video_mock_mode:
         provider_task_id = f"mock-{uuid4()}"
     else:
-        if not active_settings.grsai_api_key:
-            raise GrsaiVeoError("服务端尚未配置 GRSAI_API_KEY。", status_code=503)
+        if not active_settings.dashscope_api_key:
+            raise GrsaiVeoError("服务端尚未配置 DASHSCOPE_API_KEY。", status_code=503)
+
+        # Wan 2.7 新协议通过 media 数组区分首帧与尾帧；输出比例会跟随首帧素材。
+        media = [
+            {
+                "type": "first_frame",
+                "url": _validate_remote_image_url(first_frame_url, "首帧"),
+            }
+        ]
+        if last_frame_url:
+            media.append(
+                {
+                    "type": "last_frame",
+                    "url": _validate_remote_image_url(last_frame_url, "尾帧"),
+                }
+            )
         payload = {
             "model": record["model"],
-            "prompt": record["prompt"],
-            "firstFrameUrl": _validate_remote_image_url(first_frame_url, "首帧"),
-            "lastFrameUrl": _validate_remote_image_url(last_frame_url, "尾帧") if last_frame_url else "",
-            "urls": [],
-            "aspectRatio": record["aspect_ratio"],
-            # 官方文档约定 -1 表示立即返回任务 ID，后续由 /v1/draw/result 轮询。
-            "webHook": "-1",
-            "shutProgress": True,
+            "input": {
+                "prompt": record["prompt"],
+                "media": media,
+            },
+            "parameters": {
+                "resolution": record["resolution"],
+                "duration": record["duration_seconds"],
+                "prompt_extend": True,
+                "watermark": False,
+            },
         }
         data = _request_json(
-            f"{active_settings.grsai_base_url.rstrip('/')}/v1/video/veo",
+            _dashscope_api_url(active_settings, "services/aigc/video-generation/video-synthesis"),
             payload,
             active_settings,
         )
-        if data.get("code") not in {None, 0, "0"}:
-            raise GrsaiVeoError(f"GRS AI 拒绝创建任务：{_error_message(data)}")
+        if data.get("code") not in {None, 0, "0", ""}:
+            raise GrsaiVeoError(f"百炼拒绝创建 Wan 视频任务：{_error_message(data)}")
         provider_task_id = _extract_task_id(data)
         if not provider_task_id:
-            raise GrsaiVeoError(f"GRS AI 未返回任务 ID：{_error_message(data)}")
+            raise GrsaiVeoError(f"百炼未返回 Wan 视频任务 ID：{_error_message(data)}")
 
     record.update(
         {
@@ -362,53 +393,88 @@ def submit_task(
 
 
 def refresh_task(record: dict[str, Any], settings: Settings | None = None) -> dict[str, Any]:
-    """查询一次 GRS AI 结果并归一化状态；前端可低频轮询本接口。"""
+    """查询一次百炼异步结果并归一化状态；前端可低频轮询本接口。"""
 
     if record["status"] in {"succeeded", "failed"}:
         return record
     active_settings = settings or get_settings()
-    if active_settings.grsai_mock_mode:
-        data: dict[str, Any] = {
-            "code": 0,
-            "data": {
-                "id": record["provider_task_id"],
-                "url": "",
+
+    # 升级前仍在运行的 GRS AI 任务无法通过百炼任务接口继续查询，明确结束而不是误请求新供应商。
+    if record.get("model") not in WAN_VIDEO_MODELS:
+        record.update(
+            {
+                "status": "failed",
                 "progress": 100,
-                "status": "succeeded",
-                "failure_reason": "",
-                "error": "",
+                "failure_reason": "LEGACY_PROVIDER_RETIRED",
+                "error_message": "该任务来自已停用的 GRS AI Veo 通道，请使用 Wan 2.7 重新创建。",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        save_task_record(record, active_settings)
+        return record
+
+    if active_settings.video_mock_mode:
+        data: dict[str, Any] = {
+            "output": {
+                "task_id": record["provider_task_id"],
+                "task_status": "SUCCEEDED",
+                "video_url": "",
             },
         }
     else:
         data = _request_json(
-            f"{active_settings.grsai_base_url.rstrip('/')}/v1/draw/result",
-            {"id": record["provider_task_id"]},
+            _dashscope_api_url(
+                active_settings,
+                f"tasks/{quote(str(record['provider_task_id']), safe='')}",
+            ),
+            None,
             active_settings,
+            method="GET",
         )
-    body = data.get("data") if isinstance(data.get("data"), dict) else data
-    raw_status = str(body.get("status") or "running").strip().lower()
-    failure_reason = str(body.get("failure_reason") or "")[:200]
-    error_message = str(body.get("error") or "")[:500]
-    progress = _safe_progress(body.get("progress"))
+    body = data.get("output") if isinstance(data.get("output"), dict) else data
+    provider_status = str(body.get("task_status") or body.get("status") or "RUNNING").strip().upper()
+    failure_reason = str(body.get("code") or "")[:200]
+    error_message = str(body.get("message") or "")[:500]
+    progress = {
+        "PENDING": 10,
+        "RUNNING": 50,
+        "SUCCEEDED": 100,
+        "FAILED": 100,
+        "CANCELED": 100,
+        "UNKNOWN": 100,
+    }.get(provider_status, 50)
     refreshed_at = datetime.now(timezone.utc)
     expires_at = record["expires_at"]
-    if data.get("code") not in {None, 0, "0"}:
-        raw_status = "failed"
+    if data.get("code") not in {None, 0, "0", ""}:
+        provider_status = "FAILED"
+        failure_reason = str(data.get("code") or "DASHSCOPE_REQUEST_FAILED")[:200]
         error_message = _error_message(data)
-    if raw_status in {"success", "succeeded", "completed", "finished"}:
+    if provider_status == "SUCCEEDED":
         raw_status = "succeeded"
-        video_url = str(body.get("url") or "")
+        video_url = str(body.get("video_url") or "")
         if video_url and urlparse(video_url).scheme not in {"http", "https"}:
             raw_status = "failed"
-            error_message = "GRS AI 返回了无法识别的视频地址。"
+            failure_reason = "INVALID_VIDEO_URL"
+            error_message = "百炼返回了无法识别的视频地址。"
             video_url = ""
+        elif not video_url and not active_settings.video_mock_mode:
+            raw_status = "failed"
+            failure_reason = "VIDEO_URL_MISSING"
+            error_message = "百炼任务已完成，但响应中没有视频地址。"
         record["video_url"] = video_url
         progress = 100
-        # 文档中的两小时从结果生成后计算；成功时重新校准页面提醒所依据的过期时间。
+        # 百炼的 24 小时从结果生成后计算；成功时重新校准页面提醒所依据的过期时间。
         expires_at = (refreshed_at + timedelta(seconds=VEO_RESULT_TTL_SECONDS)).isoformat()
-    elif raw_status in {"failed", "failure", "error", "violation"} or failure_reason or error_message:
+    elif provider_status in {"FAILED", "CANCELED", "UNKNOWN"}:
         raw_status = "failed"
         progress = 100
+        if not failure_reason:
+            failure_reason = provider_status
+        if not error_message:
+            error_message = {
+                "CANCELED": "百炼视频任务已取消。",
+                "UNKNOWN": "百炼视频任务不存在或任务 ID 已超过 24 小时有效期。",
+            }.get(provider_status, "百炼视频任务生成失败。")
     else:
         raw_status = "running"
     record.update(
@@ -446,9 +512,12 @@ def public_task_record(record: dict[str, Any]) -> dict[str, Any]:
         "id",
         "status",
         "progress",
+        "provider",
         "model",
         "prompt",
         "aspect_ratio",
+        "resolution",
+        "duration_seconds",
         "source_file_name",
         "source_mode",
         "has_last_frame",
@@ -459,24 +528,43 @@ def public_task_record(record: dict[str, Any]) -> dict[str, Any]:
         "updated_at",
         "expires_at",
     }
-    return {key: record[key] for key in allowed_keys}
+    public_record = {key: record[key] for key in allowed_keys if key in record}
+    # Redis 中可能仍有升级前的 Veo 任务；补默认值可以继续展示历史终态而不触发响应校验错误。
+    public_record.setdefault("provider", "grsai" if str(record.get("model", "")).startswith("veo") else "dashscope")
+    public_record.setdefault("aspect_ratio", "auto")
+    public_record.setdefault("resolution", "720P")
+    public_record.setdefault("duration_seconds", 5)
+    return public_record
 
 
-def _request_json(url: str, payload: dict[str, Any], settings: Settings) -> dict[str, Any]:
-    """使用标准库调用 GRS AI，避免只为两个轻量代理接口增加后端依赖。"""
+def _request_json(
+    url: str,
+    payload: dict[str, Any] | None,
+    settings: Settings,
+    *,
+    method: str = "POST",
+) -> dict[str, Any]:
+    """使用标准库调用百炼原生异步接口，避免仅为两个请求增加后端依赖。"""
 
+    headers = {
+        "Authorization": f"Bearer {settings.dashscope_api_key}",
+        "Accept": "application/json",
+    }
+    request_body = None
+    if payload is not None:
+        request_body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    if method == "POST":
+        # 百炼视频 HTTP 接口只支持异步调用，缺少此请求头会被拒绝。
+        headers["X-DashScope-Async"] = "enable"
     request = Request(
         url,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {settings.grsai_api_key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
+        data=request_body,
+        method=method,
+        headers=headers,
     )
     try:
-        with urlopen(request, timeout=settings.grsai_timeout_seconds) as response:
+        with urlopen(request, timeout=settings.video_timeout_seconds) as response:
             raw_body = response.read().decode("utf-8")
     except HTTPError as exc:
         raw_body = exc.read().decode("utf-8", errors="replace")
@@ -484,21 +572,24 @@ def _request_json(url: str, payload: dict[str, Any], settings: Settings) -> dict
             error_data = json.loads(raw_body)
         except json.JSONDecodeError:
             error_data = {}
-        raise GrsaiVeoError(f"GRS AI 请求失败：{_error_message(error_data, f'HTTP {exc.code}')}") from exc
+        raise GrsaiVeoError(f"百炼请求失败：{_error_message(error_data, f'HTTP {exc.code}')}") from exc
     except (URLError, TimeoutError) as exc:
-        raise GrsaiVeoError("无法连接 GRS AI，请稍后重试或检查节点配置。") from exc
+        raise GrsaiVeoError("无法连接阿里云百炼，请稍后重试或检查 DASHSCOPE_BASE_URL。") from exc
     try:
         data = json.loads(raw_body)
     except json.JSONDecodeError as exc:
-        raise GrsaiVeoError("GRS AI 返回了无法解析的数据。") from exc
+        raise GrsaiVeoError("百炼返回了无法解析的数据。") from exc
     if not isinstance(data, dict):
-        raise GrsaiVeoError("GRS AI 返回结构异常。")
+        raise GrsaiVeoError("百炼返回结构异常。")
     return data
 
 
 def _extract_task_id(data: dict[str, Any]) -> str:
     body = data.get("data")
     candidates = [data.get("id"), data.get("taskId"), data.get("task_id")]
+    output = data.get("output")
+    if isinstance(output, dict):
+        candidates.extend([output.get("task_id"), output.get("taskId"), output.get("id")])
     if isinstance(body, dict):
         candidates.extend([body.get("id"), body.get("taskId"), body.get("task_id")])
     elif isinstance(body, str):
@@ -508,6 +599,7 @@ def _extract_task_id(data: dict[str, Any]) -> str:
 
 def _error_message(data: dict[str, Any], fallback: str = "未知错误") -> str:
     body = data.get("data") if isinstance(data.get("data"), dict) else {}
+    output = data.get("output") if isinstance(data.get("output"), dict) else {}
     return str(
         data.get("error")
         or data.get("message")
@@ -515,27 +607,49 @@ def _error_message(data: dict[str, Any], fallback: str = "未知错误") -> str:
         or body.get("error")
         or body.get("message")
         or body.get("msg")
+        or output.get("error")
+        or output.get("message")
+        or output.get("msg")
         or fallback
     )[:500]
 
 
-def _safe_progress(value: Any) -> int:
-    try:
-        return max(0, min(100, int(float(value))))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _validate_generation_fields(prompt: str, model: str, aspect_ratio: str) -> None:
+def _validate_generation_fields(
+    prompt: str,
+    model: str,
+    aspect_ratio: str,
+    resolution: str,
+    duration_seconds: int,
+) -> None:
     normalized_prompt = prompt.strip()
     if not normalized_prompt:
         raise GrsaiVeoError("请填写视频提示词。", status_code=400)
     if len(normalized_prompt) > 2000:
         raise GrsaiVeoError("视频提示词不能超过 2000 个字符。", status_code=400)
-    if model not in VEO_MODELS:
-        raise GrsaiVeoError("暂只支持 veo3.1-fast 与 veo3.1-pro。", status_code=400)
-    if aspect_ratio not in VEO_ASPECT_RATIOS:
-        raise GrsaiVeoError("视频画幅只支持 16:9 或 9:16。", status_code=400)
+    if model not in WAN_VIDEO_MODELS:
+        raise GrsaiVeoError(f"暂只支持 {WAN_VIDEO_MODEL}。", status_code=400)
+    if aspect_ratio not in VIDEO_ASPECT_RATIOS:
+        raise GrsaiVeoError("视频画幅参数无效。", status_code=400)
+    if resolution not in WAN_VIDEO_RESOLUTIONS:
+        raise GrsaiVeoError("Wan 视频分辨率只支持 720P 或 1080P。", status_code=400)
+    if not WAN_VIDEO_DURATION_MIN_SECONDS <= duration_seconds <= WAN_VIDEO_DURATION_MAX_SECONDS:
+        raise GrsaiVeoError("Wan 视频时长必须在 2 到 15 秒之间。", status_code=400)
+
+
+def _dashscope_api_url(settings: Settings, path: str) -> str:
+    """拼接百炼原生 API 地址，并对误填 OpenAI 兼容地址给出明确错误。"""
+
+    base_url = settings.dashscope_base_url.strip().rstrip("/")
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise GrsaiVeoError("DASHSCOPE_BASE_URL 必须是有效的 HTTP(S) 根地址。", status_code=503)
+    if "/compatible-mode" in parsed.path:
+        raise GrsaiVeoError(
+            "DASHSCOPE_BASE_URL 不能填写 Qwen 的 /compatible-mode/v1 地址，请填写百炼业务空间根地址。",
+            status_code=503,
+        )
+    api_root = base_url if base_url.endswith("/api/v1") else f"{base_url}/api/v1"
+    return f"{api_root}/{path.lstrip('/')}"
 
 
 def _validate_remote_image_url(value: str, label: str) -> str:
