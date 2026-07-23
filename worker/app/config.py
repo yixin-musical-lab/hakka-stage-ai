@@ -38,7 +38,9 @@ class WorkerSettings(BaseModel):
     media_http_timeout_seconds: float = 120.0
     media_poll_interval_seconds: int = 5
     media_poll_max_count: int = 720
-    # GRS AI 图生图使用低频轮询，减少无效查询并确保在临时结果过期前结束任务。
+    # GRS AI 的真实图生图通常需要几十秒到数分钟。独立使用较低频率轮询，
+    # 避免沿用 RunningHub 的 5 秒间隔产生不必要请求；100 分钟上限也小于
+    # 供应商异步查询结果约 2 小时的有效期，便于在结果失效前明确结束任务。
     grsai_poll_interval_seconds: int = 15
     grsai_poll_max_count: int = 400
 

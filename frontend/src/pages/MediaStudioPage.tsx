@@ -8,7 +8,7 @@ import type {
   MediaWorkbenchConfig,
   VeoOptionsResponse,
 } from "../types";
-import "./media-workbenches.css";
+import "./media-studio.css";
 
 
 type WorkbenchCardMeta = {

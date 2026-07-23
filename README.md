@@ -88,6 +88,7 @@ flowchart TB
 | `BOOTSTRAP_ACCOUNT_DISPLAY_NAME` | `平台初始账号` | 首账号显示名称 |
 | `BOOTSTRAP_ACCOUNT_ROLE` | `teacher` | 首账号身份，可选 `teacher` 或 `student` |
 | `VITE_API_BASE_URL` | `auto` | 前端请求后端的基础地址；`auto` 会按当前访问主机自动请求同一台机器的 `8000` 端口 |
+| `FRONTEND_HOST_PORT` | `5173` | Docker 映射到宿主机的前端端口；端口被占用时可在本地 `.env` 改为 `3000` 等可用端口 |
 | `DEEPSEEK_API_KEY` | 空 | DeepSeek 本地真实密钥，只写入 `.env`，不能提交到 Git |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | DeepSeek OpenAI 兼容接口地址 |
 | `QWEN_API_KEY` | 空 | 百炼 Qwen 本地真实密钥，只写入 `.env`，不能提交到 Git |
@@ -108,6 +109,7 @@ flowchart TB
 | `RUNNINGHUB_BASE_URL` | `https://www.runninghub.cn` | RunningHub API 根地址 |
 | `POSTGRES_HOST` | `postgres` | PostgreSQL 主机名；Docker 内使用 `postgres`，宿主机本地开发通常使用 `localhost` |
 | `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
+| `POSTGRES_HOST_PORT` | `5432` | Docker 映射到宿主机的 PostgreSQL 端口；容器内服务仍固定使用 `POSTGRES_PORT` |
 | `POSTGRES_DB` | `hakka_stage_ai` | PostgreSQL 数据库名 |
 | `POSTGRES_USER` | `hakka` | PostgreSQL 用户名 |
 | `POSTGRES_PASSWORD` | `hakka_password` | PostgreSQL 密码，本地演示默认值 |
@@ -119,6 +121,13 @@ flowchart TB
 | `MINIO_SECRET_KEY` | `minioadmin` | MinIO 本地演示访问密码 |
 | `MINIO_BUCKET` | `hakka-stage-ai` | 默认对象存储桶名 |
 | `M08_VIDEO_MAX_UPLOAD_MB` | `200` | M08 单个排练 / 演出视频附件的上传上限，单位 MB |
+
+### 时间与时区约定
+
+- PostgreSQL、后端和 Worker 统一保存、计算 UTC 时间；现有 `timestamp without time zone` 字段中的值按 UTC 解释，禁止直接批量加 8 小时。
+- API Schema 会把 UTC 时间序列化为带 `Z` 的 ISO 8601 字符串，第三方客户端应按时区感知时间解析。
+- 前端所有记录时刻统一使用 `frontend/src/lib/format.ts`；该工具同时兼容历史无后缀时间和新版带时区时间。
+- `event_date` 等纯日历日期不代表具体时刻，不做 UTC 转换，避免日期跨天。
 
 ### 账号创建边界
 

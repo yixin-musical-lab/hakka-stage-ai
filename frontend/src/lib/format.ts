@@ -11,7 +11,12 @@ export function parseApiDateTime(value: string) {
   return Number.isNaN(parsedValue.getTime()) ? null : parsedValue;
 }
 
-/** 为 time 元素输出标准 ISO 字符串，同时兼容历史无时区数据。 */
+/** 返回统一的时间戳，供跨模块列表排序使用；非法时间排到有效记录之后。 */
+export function apiDateTimeToEpoch(value: string) {
+  return parseApiDateTime(value)?.getTime() ?? 0;
+}
+
+/** 为 time 元素输出带 UTC 标记的标准 ISO 字符串，同时兼容历史无时区数据。 */
 export function normalizeApiDateTime(value: string) {
   return parseApiDateTime(value)?.toISOString() ?? value;
 }
@@ -29,7 +34,7 @@ export function formatDateTime(value: string) {
   }).format(parsedValue);
 }
 
-/** 窄屏媒体任务卡只显示当地时分，完整时间保留在 time 标签中。 */
+/** 仅显示当地时分，用于移动端窄卡片；完整时间仍保留在语义标签中。 */
 export function formatTime(value: string) {
   const parsedValue = parseApiDateTime(value);
   if (!parsedValue) return "—";

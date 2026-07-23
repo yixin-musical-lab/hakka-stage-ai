@@ -9,6 +9,14 @@ from app.models.media_generation import (
     WorkflowTemplateVersion,
 )
 from app.models.movement_guide import MovementGuide
+from app.models.media_generation import (
+    MediaAsset,
+    MediaGeneration,
+    MediaWorkbenchConfig,
+    ProviderTaskRun,
+    WorkflowTemplate,
+    WorkflowTemplateVersion,
+)
 from app.models.musical import MusicalFusionPlan, MusicalProject, MusicalScript, RoleTrainingPlan, SongAdaptation
 from app.models.practice import PracticeReport, PracticeSubmission
 from app.models.rehearsal_review import RehearsalReview

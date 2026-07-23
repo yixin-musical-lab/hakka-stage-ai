@@ -31,7 +31,7 @@ import type {
   WorkflowTemplate,
   WorkflowVersion,
 } from "../types";
-import "./media-workbenches.css";
+import "./media-studio.css";
 
 
 function readableError(reason: unknown, fallback: string) {

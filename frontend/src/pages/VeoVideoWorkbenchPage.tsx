@@ -20,7 +20,7 @@ import { Progress } from "../components/ui/progress";
 import { createVeoTask, fetchVeoOptions, fetchVeoTask, fetchVeoTasks, isAbortError } from "../lib/api";
 import { formatDateTime } from "../lib/format";
 import type { VeoAspectRatio, VeoModelCode, VeoOptionsResponse, VeoTaskResponse } from "../types";
-import "./media-studio.css";
+import "./veo-video-workbench.css";
 
 
 type ImageInputMode = "upload" | "url";
@@ -311,4 +311,3 @@ function resultMessage(task: VeoTaskResponse) {
   if (task.status === "submitting") return "正在提交到 GRS AI";
   return "GRS AI 正在生成视频";
 }
-

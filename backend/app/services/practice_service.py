@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.core.time import utc_now_isoformat
 from app.models import AiTask, PracticeReport, PracticeSubmission
 from app.schemas import (
     PracticeIssuePoint,
@@ -125,7 +126,7 @@ def upsert_basic_practice_report(db: Session, submission: PracticeSubmission) ->
         "pose_estimation": "not_connected",
         "dtw_alignment": "not_connected",
         "llm_report": "not_connected",
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": utc_now_isoformat(),
     }
 
     if report is None:

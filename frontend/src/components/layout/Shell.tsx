@@ -44,7 +44,10 @@ type NavigationGroup = {
 const navigationGroups: NavigationGroup[] = [
   {
     label: "工作总览",
-    items: [{ label: "项目工作台", description: "查看阶段、资产与最近工作", to: "/", icon: Home }],
+    items: [
+      { label: "项目工作台", description: "查看阶段、资产与最近工作", to: "/", icon: Home },
+        { label: "媒体创作工作台", description: "克隆音频与图生图", to: "/media-studio", icon: Sparkles },
+    ],
   },
   {
     label: "教学闭环",
@@ -78,6 +81,7 @@ const createItems = [
 
 const classicNavigationItems = [
   { label: "首页", to: "/", end: true },
+    { label: "媒体工作台", to: "/media-studio" },
   { label: "教案生成", to: "/lesson-plans/generate" },
   { label: "课堂互动", to: "/interactions" },
   { label: "剧本创编", to: "/musical-scripts/generate" },
@@ -93,6 +97,7 @@ const classicNavigationItems = [
 
 function getPageContext(pathname: string) {
   if (pathname === "/") return { eyebrow: "工作空间", title: "项目工作台" };
+  if (pathname.startsWith("/media-studio")) return { eyebrow: "AI 媒体", title: "媒体创作工作台" };
   if (pathname.startsWith("/lesson-plans")) return { eyebrow: "教学闭环", title: "教案" };
   if (pathname.startsWith("/interactions")) return { eyebrow: "教学闭环", title: "课堂互动" };
   if (pathname.startsWith("/practice-submissions")) return { eyebrow: "教学闭环", title: "课后练习" };

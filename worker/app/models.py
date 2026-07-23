@@ -278,6 +278,7 @@ class AiTask(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+
 class WorkflowTemplate(Base):
     """Worker 侧 RunningHub 工作流模板镜像。"""
 

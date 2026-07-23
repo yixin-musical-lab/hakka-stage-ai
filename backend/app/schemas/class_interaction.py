@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import Field, StringConstraints
 
+from app.schemas.base import ApiSchema as BaseModel
 from app.schemas.lesson_plan import LessonPlanVariantType
 
 

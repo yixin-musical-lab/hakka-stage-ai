@@ -28,7 +28,7 @@ def init_db() -> None:
     from app.core.schema_migrations import run_schema_migrations
 
     Base.metadata.create_all(bind=engine)
-    # create_all 不会给既有表补字段，使用幂等迁移兼容曾运行过原媒体分支的数据库。
+    # create_all 只负责新表，已有表新增字段必须显式迁移，否则 ORM 查询会在运行期报 UndefinedColumn。
     run_schema_migrations(engine)
 
 

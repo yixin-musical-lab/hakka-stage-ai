@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+
+from app.schemas.base import ApiSchema as BaseModel
 
 
 M08_OBJECT_KEY_PATTERN = re.compile(

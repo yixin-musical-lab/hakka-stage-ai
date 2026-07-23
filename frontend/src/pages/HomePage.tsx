@@ -21,7 +21,7 @@ import { ModuleTile } from "../components/home/ModuleTile";
 import { Button } from "../components/ui/button";
 import { useLayoutPreference } from "../contexts/LayoutPreferenceContext";
 import { fetchHealth, fetchWorkspaceOverview, isAbortError } from "../lib/api";
-import { formatDateTime } from "../lib/format";
+import { apiDateTimeToEpoch, formatDateTime } from "../lib/format";
 import { futureModules } from "../lib/lessonPlanDefaults";
 import type { HealthResponse, WorkspaceOverviewResponse } from "../types";
 
@@ -80,7 +80,7 @@ export function HomePage() {
   if (latestMovementGuide) recentAssets.push({ id: latestMovementGuide.id, title: latestMovementGuide.title, kind: "示范材料", updatedAt: latestMovementGuide.updated_at, to: `/movement-guides/${latestMovementGuide.id}`, icon: Video });
   if (latestPracticeSubmission) recentAssets.push({ id: latestPracticeSubmission.id, title: latestPracticeSubmission.title, kind: "课后练习", updatedAt: latestPracticeSubmission.updated_at, to: `/practice-submissions/${latestPracticeSubmission.id}`, icon: GraduationCap });
   if (latestRehearsalReview) recentAssets.push({ id: latestRehearsalReview.id, title: latestRehearsalReview.title, kind: "排练复盘", updatedAt: latestRehearsalReview.updated_at, to: `/rehearsal-reviews/${latestRehearsalReview.id}`, icon: Clapperboard });
-  recentAssets.sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
+  recentAssets.sort((left, right) => apiDateTimeToEpoch(right.updatedAt) - apiDateTimeToEpoch(left.updatedAt));
 
   // 当前后端尚未提供跨模块的项目归属关系，因此这里只做全站资产阶段汇总，
   // 不把不同课程、剧目或练习记录误判为同一个“当前项目”。

@@ -6,7 +6,7 @@ import { MediaTaskHistory, isActiveMediaTask } from "../components/media/MediaTa
 import { useAuth } from "../contexts/AuthContext";
 import { fetchMediaGenerations, fetchMediaWorkbench, runMediaWorkbench, uploadMediaAsset } from "../lib/api";
 import type { MediaGeneration, MediaWorkbenchConfig, WorkflowParameterConfig } from "../types";
-import "./media-workbenches.css";
+import "./media-studio.css";
 
 
 function ParameterInput({

@@ -8,7 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-hakka}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hakka_password}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # 宿主机端口与容器内数据库端口分离，避免 Windows 动态保留 5432 时连带改坏服务间连接。
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -82,6 +83,10 @@ services:
       M08_VIDEO_MAX_UPLOAD_MB: ${M08_VIDEO_MAX_UPLOAD_MB:-200}
       MEDIA_MAX_UPLOAD_MB: ${MEDIA_MAX_UPLOAD_MB:-200}
       MEDIA_MOCK_MODE: ${MEDIA_MOCK_MODE:-true}
+      GRSAI_API_KEY: ${GRSAI_API_KEY:-}
+      GRSAI_BASE_URL: ${GRSAI_BASE_URL:-https://grsai.dakka.com.cn}
+      RUNNINGHUB_API_KEY: ${RUNNINGHUB_API_KEY:-}
+      RUNNINGHUB_BASE_URL: ${RUNNINGHUB_BASE_URL:-https://www.runninghub.cn}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       QWEN_API_KEY: ${QWEN_API_KEY:-}
@@ -91,14 +96,10 @@ services:
       LLM_DEFAULT_REASONING_LEVEL: ${LLM_DEFAULT_REASONING_LEVEL:-standard}
       LLM_MOCK_MODE: ${LLM_MOCK_MODE:-false}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-120}
-      GRSAI_API_KEY: ${GRSAI_API_KEY:-}
-      GRSAI_BASE_URL: ${GRSAI_BASE_URL:-https://grsai.dakka.com.cn}
       GRSAI_PUBLIC_BASE_URL: ${GRSAI_PUBLIC_BASE_URL:-}
       GRSAI_TIMEOUT_SECONDS: ${GRSAI_TIMEOUT_SECONDS:-30}
       GRSAI_MOCK_MODE: ${GRSAI_MOCK_MODE:-false}
       GRSAI_IMAGE_MAX_UPLOAD_MB: ${GRSAI_IMAGE_MAX_UPLOAD_MB:-10}
-      RUNNINGHUB_API_KEY: ${RUNNINGHUB_API_KEY:-}
-      RUNNINGHUB_BASE_URL: ${RUNNINGHUB_BASE_URL:-https://www.runninghub.cn}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -176,7 +177,7 @@ services:
     container_name: hakka-stage-ai-frontend
     restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
     depends_on:
       backend:
         condition: service_healthy
