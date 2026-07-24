@@ -15,6 +15,9 @@ import type {
   LessonPlanSummary,
   LessonPlanVariantForm,
   LlmOptionsResponse,
+  MotionTransferMode,
+  MotionTransferOptionsResponse,
+  MotionTransferTaskResponse,
   MovementGuideContent,
   MovementGuideForm,
   MovementGuideResponse,
@@ -949,6 +952,77 @@ export async function fetchVeoTask(taskId: string, signal?: AbortSignal) {
     throw new Error(await readApiError(response));
   }
   return (await response.json()) as VeoTaskResponse;
+}
+
+export type CreateMotionTransferTaskInput = {
+  personImage: File;
+  motionVideo: File;
+  mode: MotionTransferMode;
+  watermark: boolean;
+  motionDurationSeconds: number;
+  rightsConfirmed: boolean;
+};
+
+export async function fetchMotionTransferOptions(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/motion-transfer/options`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MotionTransferOptionsResponse;
+}
+
+export async function fetchMotionTransferTasks(signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/motion-transfer/tasks`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MotionTransferTaskResponse[];
+}
+
+export function createMotionTransferTask(
+  input: CreateMotionTransferTaskInput,
+  onProgress?: (percent: number) => void,
+) {
+  // 动作视频最高 200MB，使用 XHR 才能向用户持续展示 multipart 上传进度。
+  return new Promise<MotionTransferTaskResponse>((resolve, reject) => {
+    const body = new FormData();
+    body.append("person_image", input.personImage);
+    body.append("motion_video", input.motionVideo);
+    body.append("mode", input.mode);
+    body.append("watermark", String(input.watermark));
+    body.append("motion_duration_seconds", String(input.motionDurationSeconds));
+    body.append("rights_confirmed", String(input.rightsConfirmed));
+
+    const request = new XMLHttpRequest();
+    request.open("POST", `${apiBaseUrl}/api/media-studio/motion-transfer/tasks`);
+    const accessToken = getAccessToken();
+    if (accessToken) request.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    request.withCredentials = true;
+    request.responseType = "json";
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) {
+        onProgress?.(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+      }
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve(request.response as MotionTransferTaskResponse);
+        return;
+      }
+      reject(new Error(readUploadError(request)));
+    });
+    request.addEventListener("error", () => reject(new Error("无法连接后端，动作模仿素材上传失败。")));
+    request.addEventListener("abort", () => reject(new Error("动作模仿素材上传已取消。")));
+    request.send(body);
+  });
+}
+
+export async function fetchMotionTransferTask(taskId: string, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/media-studio/motion-transfer/tasks/${taskId}`, { signal });
+  if (!response.ok) throw new Error(await readApiError(response));
+  return (await response.json()) as MotionTransferTaskResponse;
+}
+
+export function motionTransferResultUrl(taskId: string, download = false) {
+  const suffix = download ? "?download=true" : "";
+  return `${apiBaseUrl}/api/media-studio/motion-transfer/tasks/${taskId}/result${suffix}`;
 }
 
 async function readApiError(response: Response) {

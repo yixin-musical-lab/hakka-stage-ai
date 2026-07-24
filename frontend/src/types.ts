@@ -1107,3 +1107,59 @@ export type VeoTaskResponse = {
   updated_at: string;
   expires_at: string;
 };
+
+export type MotionTransferMode = "wan-std" | "wan-pro";
+
+export type MotionTransferModeOption = {
+  code: MotionTransferMode;
+  name: string;
+  description: string;
+  frames_per_second: number;
+  price_cny_per_second: number;
+};
+
+export type MotionTransferOptionsResponse = {
+  provider: "dashscope";
+  configured: boolean;
+  mock_mode: boolean;
+  file_upload_available: boolean;
+  model: "wan2.2-animate-move";
+  modes: MotionTransferModeOption[];
+  image_max_upload_mb: number;
+  video_max_upload_mb: number;
+  accepted_image_types: string[];
+  accepted_video_types: string[];
+  duration_min_seconds: number;
+  duration_max_seconds: number;
+  image_dimension_min_pixels: number;
+  image_dimension_max_pixels: number;
+  video_dimension_min_pixels: number;
+  video_dimension_max_pixels: number;
+  aspect_ratio_min: number;
+  aspect_ratio_max: number;
+  resolution: "720P";
+  result_url_ttl_hours: number;
+  input_guidance: string[];
+};
+
+export type MotionTransferTaskResponse = {
+  id: string;
+  status: VeoTaskStatus;
+  progress: number;
+  provider: "dashscope";
+  model: "wan2.2-animate-move";
+  mode: MotionTransferMode;
+  resolution: "720P";
+  watermark: boolean;
+  person_file_name: string;
+  motion_file_name: string;
+  motion_duration_seconds: number | null;
+  result_available: boolean;
+  result_persisted: boolean;
+  storage_warning: string;
+  failure_reason: string;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+};

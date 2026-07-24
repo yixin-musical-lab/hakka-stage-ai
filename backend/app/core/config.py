@@ -63,6 +63,10 @@ class Settings(BaseModel):
     video_timeout_seconds: float = 30.0
     video_mock_mode: bool = False
     video_image_max_upload_mb: int = 20
+    # 动作模仿继续复用百炼视频密钥与公网回源地址，但按官方协议使用更严格的独立素材上限。
+    motion_image_max_upload_mb: int = 5
+    motion_video_max_upload_mb: int = 200
+    motion_result_max_download_mb: int = 500
 
     @property
     def database_url(self) -> str:
@@ -109,6 +113,24 @@ class Settings(BaseModel):
         """把 Wan 图生视频单张首尾帧上传上限从 MB 转换为字节。"""
 
         return self.video_image_max_upload_mb * 1024 * 1024
+
+    @property
+    def motion_image_max_upload_bytes(self) -> int:
+        """把动作模仿人物图片上限从 MB 转换为字节。"""
+
+        return self.motion_image_max_upload_mb * 1024 * 1024
+
+    @property
+    def motion_video_max_upload_bytes(self) -> int:
+        """把动作模仿参考视频上限从 MB 转换为字节。"""
+
+        return self.motion_video_max_upload_mb * 1024 * 1024
+
+    @property
+    def motion_result_max_download_bytes(self) -> int:
+        """把动作模仿结果转存上限从 MB 转换为字节，防止异常远端响应占满磁盘。"""
+
+        return self.motion_result_max_download_mb * 1024 * 1024
 
 def get_settings() -> Settings:
     """从环境变量读取配置，提供本地开发默认值。"""
@@ -171,4 +193,7 @@ def get_settings() -> Settings:
         video_image_max_upload_mb=int(
             getenv("VIDEO_IMAGE_MAX_UPLOAD_MB") or legacy_video_image_max_upload_mb
         ),
+        motion_image_max_upload_mb=int(getenv("MOTION_IMAGE_MAX_UPLOAD_MB", "5")),
+        motion_video_max_upload_mb=int(getenv("MOTION_VIDEO_MAX_UPLOAD_MB", "200")),
+        motion_result_max_download_mb=int(getenv("MOTION_RESULT_MAX_DOWNLOAD_MB", "500")),
     )
