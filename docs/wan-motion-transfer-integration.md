@@ -83,8 +83,8 @@ Content-Type: application/json
 {
   "model": "wan2.2-animate-move",
   "input": {
-    "image_url": "https://video.example.com/api/public/media-studio/motion-inputs/<token>",
-    "video_url": "https://video.example.com/api/public/media-studio/motion-inputs/<token>",
+    "image_url": "https://video.example.com/api/public/media-studio/motion-inputs/<token>.jpeg",
+    "video_url": "https://video.example.com/api/public/media-studio/motion-inputs/<token>.mp4",
     "watermark": true
   },
   "parameters": {
@@ -114,7 +114,7 @@ Authorization: Bearer <DASHSCOPE_API_KEY>
 | `GET /api/media-studio/motion-transfer/tasks` | 查询当前账号最近 12 条任务 |
 | `GET /api/media-studio/motion-transfer/tasks/{task_id}` | 查询一次百炼状态，成功后触发结果转存 |
 | `GET /api/media-studio/motion-transfer/tasks/{task_id}/result` | 鉴权播放或下载结果，支持单段 HTTP Range |
-| `GET /api/public/media-studio/motion-inputs/{token}` | 供百炼限时回源，不进入 OpenAPI 文档 |
+| `GET /api/public/media-studio/motion-inputs/{token}.{ext}` | 供百炼限时回源；保留真实媒体后缀，不进入 OpenAPI 文档 |
 
 创建接口使用 `multipart/form-data`，包含 `person_image`、`motion_video`、`mode`、
 `watermark`、`motion_duration_seconds` 和 `rights_confirmed`。未确认人物肖像与参考视频授权时
@@ -123,7 +123,7 @@ Authorization: Bearer <DASHSCOPE_API_KEY>
 ## 6. 存储与安全边界
 
 1. 后端先校验文件名、扩展名、浏览器媒体类型和文件大小，再把二进制流写入私有 MinIO。
-2. 回源 JWT 只允许访问 `media-studio/motion-inputs/` 前缀，包含签发方、受众和两小时过期时间。
+2. 回源 JWT 只允许访问 `media-studio/motion-inputs/` 前缀，包含签发方、受众和两小时过期时间；URL 后缀必须与签名对象键一致，供百炼正确识别媒体格式。
 3. 百炼任务 ID、账号 ID、MinIO 对象键和密钥只保存在服务端，不进入 API 响应。
 4. 任务读取先校验当前账号归属；未知任务和越权任务统一返回 404。
 5. 任务完成或失败后幂等删除输入素材；结果对象建议配置 MinIO 前缀生命周期，避免长期堆积。

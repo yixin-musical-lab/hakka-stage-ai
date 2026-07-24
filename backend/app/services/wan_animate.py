@@ -352,7 +352,11 @@ def create_motion_public_input_url(
     asset: MotionInputAsset,
     settings: Settings | None = None,
 ) -> str:
-    """创建供应商可回源的两小时签名短链，不暴露 MinIO 凭据。"""
+    """创建供应商可回源的两小时签名短链，不暴露 MinIO 凭据。
+
+    百炼会结合 URL 路径后缀识别媒体格式，因此签名令牌后必须保留 MinIO
+    对象的真实扩展名；只返回无后缀 JWT 会被误判为不支持的视频类型。
+    """
 
     active_settings = settings or get_settings()
     if not _valid_public_base_url(active_settings.video_public_base_url):
@@ -374,15 +378,33 @@ def create_motion_public_input_url(
         active_settings.auth_secret_key,
         algorithm="HS256",
     )
+    extension = Path(asset.object_key).suffix.lower()
+    allowed_extensions = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
+    if extension not in allowed_extensions:
+        raise MotionTransferError("动作模仿素材扩展名无效，无法创建临时地址。", status_code=500)
     return (
         f"{active_settings.video_public_base_url.rstrip('/')}"
-        f"/api/public/media-studio/motion-inputs/{quote(token, safe='')}"
+        f"/api/public/media-studio/motion-inputs/{quote(token, safe='')}{extension}"
     )
+
+
+def split_motion_public_input_path(signed_asset: str) -> tuple[str, str]:
+    """从带真实媒体后缀的公开路径中拆出 JWT 和扩展名。"""
+
+    extension = Path(signed_asset).suffix.lower()
+    allowed_extensions = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
+    if extension not in allowed_extensions:
+        raise MotionTransferError("动作模仿素材临时地址无效或已过期。", status_code=404)
+    token = signed_asset[: -len(extension)]
+    if not token:
+        raise MotionTransferError("动作模仿素材临时地址无效或已过期。", status_code=404)
+    return token, extension
 
 
 def open_motion_public_input(
     token: str,
     settings: Settings | None = None,
+    expected_extension: str | None = None,
 ) -> tuple[Any, str, int]:
     """验证供应商回源令牌并打开对应的私有 MinIO 对象。"""
 
@@ -400,6 +422,9 @@ def open_motion_public_input(
         raise MotionTransferError("动作模仿素材临时地址无效或已过期。", status_code=404) from exc
     object_key = str(payload.get("sub") or "")
     if payload.get("type") != "motion_input" or not object_key.startswith(MOTION_INPUT_PREFIX):
+        raise MotionTransferError("动作模仿素材临时地址无效或已过期。", status_code=404)
+    # URL 后缀既供百炼识别格式，也必须与签名对象一致，不能由请求方任意伪造。
+    if expected_extension and Path(object_key).suffix.lower() != expected_extension.lower():
         raise MotionTransferError("动作模仿素材临时地址无效或已过期。", status_code=404)
     try:
         client = _minio_client(active_settings)

@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from urllib.parse import unquote, urlparse
 from uuid import uuid4
 
+from app.api.routes.motion_transfer import read_motion_transfer_input
 from app.core.config import Settings
 from app.main import app
 from app.services.wan_animate import (
@@ -18,6 +19,7 @@ from app.services.wan_animate import (
     parse_motion_video_range,
     public_motion_task_record,
     refresh_motion_task,
+    split_motion_public_input_path,
     submit_motion_task,
 )
 
@@ -184,12 +186,33 @@ class MotionTransferInputTokenTests(unittest.TestCase):
         )
 
         public_url = create_motion_public_input_url(asset, settings)
-        token = unquote(urlparse(public_url).path.rsplit("/", 1)[-1])
-        opened, content_type, size_bytes = open_motion_public_input(token, settings)
+        signed_asset = unquote(urlparse(public_url).path.rsplit("/", 1)[-1])
+        self.assertTrue(signed_asset.endswith(".mp4"))
+        token, extension = split_motion_public_input_path(signed_asset)
+        opened, content_type, size_bytes = open_motion_public_input(
+            token,
+            settings,
+            expected_extension=extension,
+        )
 
         self.assertEqual(opened, response)
         self.assertEqual(content_type, "video/mp4")
         self.assertEqual(size_bytes, 2048)
+
+        with self.assertRaises(MotionTransferError):
+            open_motion_public_input(token, settings, expected_extension=".mov")
+
+    @patch("app.api.routes.motion_transfer.open_motion_public_input")
+    def test_public_input_route_keeps_media_suffix(self, open_input: Mock):
+        """公开回源路由必须保留后缀，并把后缀绑定到签名对象校验。"""
+
+        open_input.return_value = (object(), "video/mp4", 2048)
+
+        response = read_motion_transfer_input("signed-token.mp4")
+
+        open_input.assert_called_once_with("signed-token", expected_extension=".mp4")
+        self.assertEqual(response.media_type, "video/mp4")
+        self.assertEqual(response.headers["content-disposition"], 'inline; filename="motion-input.mp4"')
 
     def test_result_range_supports_standard_and_suffix_ranges(self):
         self.assertEqual(parse_motion_video_range("bytes=100-199", 1000).length, 100)
