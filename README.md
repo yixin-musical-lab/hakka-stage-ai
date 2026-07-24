@@ -4,8 +4,8 @@ AI 歌舞剧教学与排演辅助系统。当前仓库已接入课前教案生�
 
 ## 当前范围
 
-- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、RunningHub 克隆音频工作台、支持多参考图合成单图的 GRS AI 图生图工作台、阿里云百炼 Wan 2.7 首帧 / 首尾帧图生视频工作台、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
-- 暂不包含：复杂权限与业务数据按账号隔离、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、动作生成、Word 导出。
+- 已包含：Docker Compose、FastAPI `/health`、邮箱密码登录、登录后单个 / JSON 批量创建账号、Bearer 鉴权、个人资料与密码管理、课前教案生成 API、T02 教案变体生成 / 版本关系 / 快照对照 / Markdown 导出 API、课堂互动方案生成与教案版本预填 API、歌舞剧剧本生成 API、唱段适配 API、歌舞融合 API、分角色训练计划及按角色训练卡 Markdown 导出 API、M08 排练复盘生成 / 编辑 / Markdown 导出 API、M08 MinIO 私有视频上传与鉴权代理播放、课后练习提交与本地视频上传 API、基础练习观察报告和老师复核 API、RunningHub 克隆音频工作台、支持多参考图合成单图的 GRS AI 图生图工作台、阿里云百炼 Wan 2.7 首帧 / 首尾帧图生视频工作台、百炼 Wan 2.2 人物图片动作模仿工作台、PostgreSQL 开发期自动建表、Redis AI 任务队列、Python Worker 调用 DeepSeek / 百炼 Qwen，以及对应的 React 工作台页面。
+- 暂不包含：复杂权限与业务数据按账号隔离、可运行 Web 课堂游戏、2D / 3D 游戏、课堂 TTS 与设备控制、音频自动分析、曲谱解析、M08 视频内容自动分析、真实视频姿态分析、标准动作 DTW 纠错、LLM 练习报告生成、视频换人、多人物动作迁移、长视频分段生成、Word 导出。
 - 算力边界：本地开发环境仅用于服务联调、轻量功能验证和短样例测试；不要在本地跑长视频批量分析、大模型训练 / 微调、大规模模型测试或大规模视频生成等高负载任务，这类任务应放到云端 GPU 或服务器执行。
 
 M05 详情页的每张角色任务卡提供“保存并导出训练卡”操作：系统会先保存页面上的全部编辑内容，再按当前角色索引下载独立训练卡，避免导出旧稿。
@@ -100,10 +100,13 @@ flowchart TB
 | `LLM_TIMEOUT_SECONDS` | `90` | Worker 调用大模型的单次请求超时时间 |
 | `DASHSCOPE_API_KEY` | 空 | 百炼 Wan 视频服务端密钥；建议使用独立的北京地域密钥，只写入 `.env` |
 | `DASHSCOPE_BASE_URL` | `https://dashscope.aliyuncs.com` | 百炼原生 API 根地址；生产环境可改为同地域业务空间专属域名，不要填写 `/compatible-mode/v1` |
-| `VIDEO_PUBLIC_BASE_URL` | 空 | 百炼拉取本地首尾帧时使用的公网 HTTPS 后端根地址；纯本地联调可留空并使用公网图片 URL |
+| `VIDEO_PUBLIC_BASE_URL` | 空 | 百炼拉取本地首尾帧、人物图片和动作视频时使用的公网 HTTPS 后端根地址 |
 | `VIDEO_TIMEOUT_SECONDS` | `30` | 创建与查询百炼异步任务的单次 HTTP 超时 |
 | `VIDEO_MOCK_MODE` | `false` | 不调用真实 Wan、只验证上传与异步状态链路 |
 | `VIDEO_IMAGE_MAX_UPLOAD_MB` | `20` | Wan 工作台单张首帧 / 尾帧上传上限 |
+| `MOTION_IMAGE_MAX_UPLOAD_MB` | `5` | Wan 2.2 动作模仿人物图片上传上限，不能高于百炼官方限制 |
+| `MOTION_VIDEO_MAX_UPLOAD_MB` | `200` | Wan 2.2 参考动作视频上传上限，不能高于百炼官方限制 |
+| `MOTION_RESULT_MAX_DOWNLOAD_MB` | `500` | 后端把百炼临时结果转存 MinIO 时允许的最大文件体积 |
 | `GRSAI_API_KEY` | 空 | GRS AI 图生图服务端密钥，只写入 `.env`，不会返回前端 |
 | `GRSAI_BASE_URL` | `https://grsai.dakka.com.cn` | GRS AI 图生图节点，可切换到其他官方节点 |
 | `MEDIA_MOCK_MODE` | `true` | 原克隆音频 / 图生图工作台的安全联调模式，不产生第三方费用 |
@@ -160,9 +163,16 @@ flowchart TB
 
 ### M08 视频存储边界
 
-- 当前只有 M08 排练 / 演出复盘视频使用 MinIO；T06 课后练习继续使用 `/uploads/practice/` 本地开发链路，本次未改造其接口和数据结构。
+- M08 排练视频与 Wan 动作模仿素材使用 MinIO；T06 课后练习继续使用 `/uploads/practice/` 本地开发链路，本次未改造其接口和数据结构。
 - M08 对象保存在私有桶的 `rehearsal-reviews/` 前缀下，浏览器通过后端 `/api/rehearsal-reviews/{id}/video` 代理播放，不获得 MinIO 永久公开地址。
 - AI 仅整理老师填写的观察记录；上传视频仅供人工查看，系统未分析视频内容。当前已要求登录访问，但尚未实现班级权限和业务数据按账号隔离，仍不应上传真实敏感学生视频。
+
+### Wan 2.2 动作模仿边界
+
+- 媒体工作台的“动作模仿”固定使用 `wan2.2-animate-move`，把参考视频的动作与表情迁移到单人人物图片，并保留图片背景；不通过 RunningHub。
+- 人物图片最大 5MB，宽高均为 200～4096px；参考视频最大 200MB、2～30 秒，宽高均为 200～2048px；两者宽高比均须在 1:3～3:1。
+- 输入素材先进入私有 MinIO，再通过两小时有效的签名地址供百炼回源。成功结果会优先转存 MinIO，浏览器始终通过鉴权接口播放或下载。
+- 任务记录和结果访问入口保留约 24 小时；当前版本不写入永久媒体资产库，重要结果应及时下载归档。详细配置与接口见 [`docs/wan-motion-transfer-integration.md`](docs/wan-motion-transfer-integration.md)。
 
 ## Docker Compose 全栈启动
 

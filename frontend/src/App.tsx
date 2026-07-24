@@ -19,6 +19,7 @@ import { AudioCloneWorkbenchPage } from "./pages/AudioCloneWorkbenchPage";
 import { ImageToImageWorkbenchPage } from "./pages/ImageToImageWorkbenchPage";
 import { MediaStudioPage } from "./pages/MediaStudioPage";
 import { MediaWorkbenchConfigPage } from "./pages/MediaWorkbenchConfigPage";
+import { MotionTransferWorkbenchPage } from "./pages/MotionTransferWorkbenchPage";
 import { VeoVideoWorkbenchPage } from "./pages/VeoVideoWorkbenchPage";
 import { MovementGuideCreatePage } from "./pages/MovementGuideCreatePage";
 import { MovementGuideDetailPage } from "./pages/MovementGuideDetailPage";
@@ -71,6 +72,7 @@ function AppRoutes() {
           <Route path="/media-studio/audio-clone" element={<AudioCloneWorkbenchPage />} />
           <Route path="/media-studio/image-to-image" element={<ImageToImageWorkbenchPage />} />
           <Route path="/media-studio/veo" element={<VeoVideoWorkbenchPage />} />
+          <Route path="/media-studio/motion-transfer" element={<MotionTransferWorkbenchPage />} />
           <Route path="/media-studio/configuration" element={<MediaWorkbenchConfigPage />} />
           <Route path="/lesson-plans/generate" element={<LessonPlanGeneratePage />} />
           <Route path="/lesson-plans" element={<LessonPlanListPage />} />

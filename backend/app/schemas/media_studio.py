@@ -9,6 +9,8 @@ VeoModelCode = Literal["wan2.7-i2v-2026-04-25", "veo3.1-fast", "veo3.1-pro"]
 VeoAspectRatio = Literal["auto", "16:9", "9:16"]
 VeoResolution = Literal["720P", "1080P"]
 VeoTaskStatus = Literal["submitting", "running", "succeeded", "failed"]
+MotionTransferModelCode = Literal["wan2.2-animate-move"]
+MotionTransferMode = Literal["wan-std", "wan-pro"]
 
 
 class VeoModelOption(BaseModel):
@@ -57,6 +59,66 @@ class VeoTaskResponse(BaseModel):
     source_mode: Literal["upload", "url"]
     has_last_frame: bool = False
     video_url: str = ""
+    failure_reason: str = ""
+    error_message: str = ""
+    created_at: datetime
+    updated_at: datetime
+    expires_at: datetime
+
+
+class MotionTransferModeOption(BaseModel):
+    """动作模仿页面展示的质量档位与费用提示。"""
+
+    code: MotionTransferMode
+    name: str
+    description: str
+    frames_per_second: int = Field(ge=1)
+    price_cny_per_second: float = Field(ge=0)
+
+
+class MotionTransferOptionsResponse(BaseModel):
+    """Wan 2.2 图生动作工作台初始化所需的公开能力信息。"""
+
+    provider: Literal["dashscope"] = "dashscope"
+    configured: bool
+    mock_mode: bool
+    file_upload_available: bool
+    model: MotionTransferModelCode = "wan2.2-animate-move"
+    modes: list[MotionTransferModeOption]
+    image_max_upload_mb: int = 5
+    video_max_upload_mb: int = 200
+    accepted_image_types: list[str]
+    accepted_video_types: list[str]
+    duration_min_seconds: int = 2
+    duration_max_seconds: int = 30
+    image_dimension_min_pixels: int = 200
+    image_dimension_max_pixels: int = 4096
+    video_dimension_min_pixels: int = 200
+    video_dimension_max_pixels: int = 2048
+    aspect_ratio_min: float = Field(1 / 3, gt=0)
+    aspect_ratio_max: float = Field(3, gt=0)
+    resolution: Literal["720P"] = "720P"
+    result_url_ttl_hours: int = 24
+    input_guidance: list[str]
+
+
+class MotionTransferTaskResponse(BaseModel):
+    """动作模仿任务的安全响应，不返回供应商任务 ID 或 MinIO 对象键。"""
+
+    id: str
+    status: VeoTaskStatus
+    progress: int = Field(ge=0, le=100)
+    provider: Literal["dashscope"] = "dashscope"
+    model: MotionTransferModelCode = "wan2.2-animate-move"
+    mode: MotionTransferMode
+    resolution: Literal["720P"] = "720P"
+    watermark: bool
+    person_file_name: str
+    motion_file_name: str
+    motion_duration_seconds: float | None = Field(None, ge=0)
+    result_available: bool = False
+    result_persisted: bool = False
+    storage_warning: str = ""
     failure_reason: str = ""
     error_message: str = ""
     created_at: datetime

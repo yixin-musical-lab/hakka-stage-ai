@@ -66,7 +66,7 @@ const navigationGroups: NavigationGroup[] = [
       { label: "分角色训练", description: "角色任务与排练目标", to: "/role-training-plans", icon: Users },
       { label: "示范材料", description: "动作图解与示范素材", to: "/movement-guides", icon: Video },
       { label: "排练复盘", description: "排练问题、改进计划与反思", to: "/rehearsal-reviews", icon: Clapperboard },
-      { label: "媒体工作台", description: "克隆音频、图生图与 Wan 视频", to: "/media-studio", icon: Film },
+      { label: "媒体工作台", description: "音频、图像、视频与动作模仿", to: "/media-studio", icon: Film },
     ],
   },
 ];
@@ -77,6 +77,7 @@ const createItems = [
   { label: "新建剧本", to: "/musical-scripts/generate", icon: Drama },
   { label: "新建排练复盘", to: "/rehearsal-reviews/generate", icon: Clapperboard },
   { label: "生成 Wan 视频", to: "/media-studio/veo", icon: Film },
+  { label: "创建动作模仿", to: "/media-studio/motion-transfer", icon: Clapperboard },
 ];
 
 const classicNavigationItems = [
@@ -91,7 +92,6 @@ const classicNavigationItems = [
   { label: "排练复盘", to: "/rehearsal-reviews" },
   { label: "示范材料", to: "/movement-guides" },
   { label: "课后练习", to: "/practice-submissions" },
-  { label: "媒体工作台", to: "/media-studio" },
   { label: "系统状态", to: "/health" },
 ];
 

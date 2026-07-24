@@ -1,11 +1,12 @@
-import { ArrowRight, AudioLines, Film, Image as ImageIcon, Settings2 } from "lucide-react";
+import { ArrowRight, AudioLines, Film, Footprints, Image as ImageIcon, Settings2 } from "lucide-react";
 import { useEffect, useState, type ComponentType } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
-import { fetchMediaProviderOptions, fetchMediaWorkbenches, fetchVeoOptions } from "../lib/api";
+import { fetchMediaProviderOptions, fetchMediaWorkbenches, fetchMotionTransferOptions, fetchVeoOptions } from "../lib/api";
 import type {
   MediaProviderOptions,
   MediaWorkbenchConfig,
+  MotionTransferOptionsResponse,
   VeoOptionsResponse,
 } from "../types";
 import "./media-studio.css";
@@ -44,12 +45,21 @@ const veoCard: WorkbenchCardMeta = {
   steps: ["上传首帧或填写图片 URL", "描述动作与镜头", "获取 Wan 视频"],
 };
 
+const motionCard: WorkbenchCardMeta = {
+  icon: Footprints,
+  eyebrow: "动作创作",
+  action: "进入动作模仿",
+  to: "/media-studio/motion-transfer",
+  steps: ["上传单人人物图片", "上传参考动作视频", "获取动作模仿视频"],
+};
+
 
 export function MediaStudioPage() {
   const { user } = useAuth();
   const [workbenches, setWorkbenches] = useState<MediaWorkbenchConfig[]>([]);
   const [mediaOptions, setMediaOptions] = useState<MediaProviderOptions | null>(null);
   const [veoOptions, setVeoOptions] = useState<VeoOptionsResponse | null>(null);
+  const [motionOptions, setMotionOptions] = useState<MotionTransferOptionsResponse | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,7 +68,8 @@ export function MediaStudioPage() {
       fetchMediaWorkbenches(controller.signal),
       fetchMediaProviderOptions(controller.signal),
       fetchVeoOptions(controller.signal),
-    ]).then(([workbenchResult, mediaOptionsResult, veoOptionsResult]) => {
+      fetchMotionTransferOptions(controller.signal),
+    ]).then(([workbenchResult, mediaOptionsResult, veoOptionsResult, motionOptionsResult]) => {
       if (controller.signal.aborted) return;
 
       if (workbenchResult.status === "fulfilled") {
@@ -68,12 +79,14 @@ export function MediaStudioPage() {
       }
       if (mediaOptionsResult.status === "fulfilled") setMediaOptions(mediaOptionsResult.value);
       if (veoOptionsResult.status === "fulfilled") setVeoOptions(veoOptionsResult.value);
+      if (motionOptionsResult.status === "fulfilled") setMotionOptions(motionOptionsResult.value);
     });
     return () => controller.abort();
   }, []);
 
   const mediaRuntimeLabel = mediaOptions?.mock_mode ? "Mock 安全模式" : "真实运行模式";
   const VeoIcon = veoCard.icon;
+  const MotionIcon = motionCard.icon;
 
   return (
     <main className="workbench-hub">
@@ -81,7 +94,7 @@ export function MediaStudioPage() {
         <div>
           <p className="eyebrow">AI 媒体创作</p>
           <h1>选择一个工作台开始创作</h1>
-          <p>原有克隆音频、GRS AI 图生图工作流完整保留，视频生成使用阿里云百炼 Wan 2.7。</p>
+          <p>克隆音频、图生图、Wan 图生视频与动作模仿集中在同一创作入口。</p>
         </div>
         <div className={`workbench-runtime-badge ${mediaOptions?.mock_mode ? "is-mock" : ""}`}>
           <strong>{mediaRuntimeLabel}</strong>
@@ -89,6 +102,8 @@ export function MediaStudioPage() {
             原媒体任务：{mediaOptions?.mock_mode ? "不会产生第三方费用" : "执行时可能产生供应商费用"}
             {" · "}
             Wan 视频：{veoOptions?.configured ? (veoOptions.mock_mode ? "Mock" : "已配置") : "待配置"}
+            {" · "}
+            动作模仿：{motionOptions?.configured ? (motionOptions.mock_mode ? "Mock" : "已配置") : "待配置"}
           </span>
         </div>
       </header>
@@ -130,6 +145,22 @@ export function MediaStudioPage() {
             <div className="workbench-not-ready">
               <strong>尚未完成配置</strong>
               <span>请在服务端配置 DASHSCOPE_API_KEY，或开启 VIDEO_MOCK_MODE</span>
+            </div>
+          )}
+        </article>
+
+        <article className="workbench-entry-card workbench-entry-card--motion-transfer">
+          <div className="workbench-entry-icon"><MotionIcon aria-hidden /></div>
+          <p>{motionCard.eyebrow}</p>
+          <h2>Wan 2.2 动作模仿</h2>
+          <p>把参考视频中的动作与表情迁移到人物定妆照，保留图片背景。</p>
+          <ol>{motionCard.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+          {motionOptions?.configured ? (
+            <Link to={motionCard.to}>{motionCard.action}<ArrowRight aria-hidden /></Link>
+          ) : (
+            <div className="workbench-not-ready">
+              <strong>尚未完成配置</strong>
+              <span>请配置 DASHSCOPE_API_KEY 与 VIDEO_PUBLIC_BASE_URL，或开启 VIDEO_MOCK_MODE</span>
             </div>
           )}
         </article>

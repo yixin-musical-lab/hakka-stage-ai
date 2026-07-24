@@ -1,0 +1,422 @@
+.motion-transfer-page {
+  --motion-night: #102724;
+  --motion-ink: #173a37;
+  --motion-jade: #1d7a72;
+  --motion-jade-soft: #e3f0ed;
+  --motion-coral: #b45538;
+  --motion-gold: #c49a57;
+}
+
+.motion-summary article:nth-child(2) > svg,
+.motion-summary article:nth-child(3) > svg {
+  color: var(--motion-coral);
+}
+
+.motion-studio-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, .82fr);
+}
+
+.motion-generator-panel {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 96% 2%, rgba(29, 122, 114, .09), transparent 28%),
+    var(--card);
+}
+
+.motion-source-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+  align-items: stretch;
+  margin-bottom: 22px;
+}
+
+.motion-source-card {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .9);
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.motion-source-card:hover,
+.motion-source-card:focus-within {
+  border-color: rgba(29, 122, 114, .58);
+  box-shadow: 0 13px 26px rgba(23, 58, 55, .1);
+  transform: translateY(-2px);
+}
+
+.motion-source-card--video:hover,
+.motion-source-card--video:focus-within {
+  border-color: rgba(180, 85, 56, .55);
+}
+
+.motion-source-card > input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.motion-source-card > input:disabled {
+  cursor: not-allowed;
+}
+
+.motion-source-index {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  color: rgba(23, 58, 55, .18);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.motion-source-copy {
+  display: grid;
+  gap: 3px;
+  padding-right: 42px;
+}
+
+.motion-source-copy strong {
+  color: var(--motion-ink);
+  font-size: 14px;
+}
+
+.motion-source-copy small {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.motion-source-preview {
+  display: grid;
+  min-height: 244px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  overflow: hidden;
+  border: 1px dashed rgba(29, 122, 114, .35);
+  border-radius: 11px;
+  background:
+    linear-gradient(rgba(255, 255, 255, .62), rgba(255, 255, 255, .62)),
+    repeating-linear-gradient(90deg, transparent 0 25px, rgba(29, 122, 114, .08) 25px 26px),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(29, 122, 114, .08) 25px 26px),
+    #edf5f2;
+  color: var(--motion-ink);
+  text-align: center;
+}
+
+.motion-source-card--video .motion-source-preview {
+  border-color: rgba(180, 85, 56, .34);
+  background:
+    linear-gradient(rgba(255, 255, 255, .66), rgba(255, 255, 255, .66)),
+    repeating-linear-gradient(135deg, transparent 0 16px, rgba(180, 85, 56, .08) 16px 17px),
+    #f7eee8;
+}
+
+.motion-source-preview > svg {
+  width: 38px;
+  height: 38px;
+  color: var(--motion-jade);
+}
+
+.motion-source-card--video .motion-source-preview > svg {
+  color: var(--motion-coral);
+}
+
+.motion-source-preview > span {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.motion-source-preview > small {
+  max-width: 190px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.motion-source-preview img,
+.motion-source-preview video {
+  width: 100%;
+  height: 244px;
+  background: #0d1917;
+  object-fit: contain;
+}
+
+.motion-source-card > em {
+  position: absolute;
+  right: 23px;
+  bottom: 23px;
+  z-index: 2;
+  border-radius: 999px;
+  background: rgba(10, 25, 23, .86);
+  padding: 4px 8px;
+  color: white;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.motion-flow-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: var(--motion-jade);
+}
+
+.motion-flow-mark::before,
+.motion-flow-mark::after {
+  width: 1px;
+  height: 54px;
+  background: linear-gradient(transparent, rgba(29, 122, 114, .5));
+  content: "";
+}
+
+.motion-flow-mark::after {
+  background: linear-gradient(rgba(180, 85, 56, .5), transparent);
+}
+
+.motion-flow-mark svg {
+  width: 25px;
+  height: 25px;
+}
+
+.motion-flow-mark span {
+  writing-mode: vertical-rl;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.motion-quality-fieldset {
+  padding: 0;
+  margin: 0 0 18px;
+  border: 0;
+}
+
+.motion-quality-fieldset legend {
+  margin-bottom: 9px;
+  color: var(--motion-ink);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.motion-quality-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.motion-quality-grid > label {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  padding: 14px 42px 14px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--muted);
+  cursor: pointer;
+}
+
+.motion-quality-grid > label.is-selected {
+  border-color: rgba(29, 122, 114, .6);
+  background: var(--motion-jade-soft);
+  box-shadow: inset 0 0 0 1px rgba(29, 122, 114, .12);
+}
+
+.motion-quality-grid input[type="radio"] {
+  position: absolute;
+  top: 15px;
+  right: 14px;
+  /* 全局表单样式会把所有 input 拉伸为 100% 宽，这里恢复原生单选框尺寸。 */
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  appearance: auto;
+  accent-color: var(--motion-jade);
+}
+
+.motion-quality-grid span,
+.motion-quality-grid strong,
+.motion-quality-grid small {
+  display: block;
+}
+
+.motion-quality-grid strong {
+  color: var(--motion-ink);
+  font-size: 13px;
+}
+
+.motion-quality-grid small {
+  margin-top: 3px;
+  color: var(--motion-jade);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.motion-quality-grid p,
+.motion-cost-estimate {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.motion-cost-estimate {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.motion-safety-panel {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #d9c8a8;
+  border-radius: 11px;
+  background: #fbf6e9;
+}
+
+.motion-safety-panel > svg {
+  width: 27px;
+  height: 27px;
+  color: #8c6a2e;
+}
+
+.motion-safety-panel > div {
+  display: grid;
+  gap: 8px;
+}
+
+.motion-safety-panel strong {
+  color: #654b22;
+  font-size: 12px;
+}
+
+.motion-safety-panel label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #6d5b3e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.motion-safety-panel input[type="checkbox"] {
+  /* 避免继承 styles.css 中面向文本输入框的宽度、内边距和最小高度。 */
+  flex: 0 0 auto;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  appearance: auto;
+  accent-color: #8c6a2e;
+}
+
+.motion-safety-panel label > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.motion-upload-progress {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.motion-upload-progress span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--motion-jade);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.motion-upload-progress svg {
+  width: 14px;
+  height: 14px;
+}
+
+.motion-result-panel {
+  background:
+    radial-gradient(circle at 50% 0, rgba(196, 154, 87, .12), transparent 26%),
+    var(--card);
+}
+
+.motion-result-preview {
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(255, 255, 255, .08) 50%, transparent 50.2%),
+    radial-gradient(ellipse at 50% 14%, rgba(196, 154, 87, .3), transparent 35%),
+    linear-gradient(145deg, #173a37, #0d211f);
+}
+
+.motion-task-meta dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-empty-result {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(29, 122, 114, .12), transparent 24%),
+    repeating-radial-gradient(circle at 50% 90%, transparent 0 24px, rgba(29, 122, 114, .07) 25px 26px),
+    var(--muted);
+}
+
+.motion-capability-boundary ul {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.motion-capability-boundary li:nth-child(even) {
+  border-left-color: var(--motion-jade);
+}
+
+@media (max-width: 1180px) {
+  .motion-studio-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .motion-source-flow { grid-template-columns: 1fr; gap: 10px; }
+  .motion-flow-mark { grid-template-columns: 1fr auto 1fr; min-height: 44px; }
+  .motion-flow-mark::before,
+  .motion-flow-mark::after { width: auto; height: 1px; background: linear-gradient(90deg, transparent, rgba(29, 122, 114, .5)); }
+  .motion-flow-mark::after { background: linear-gradient(90deg, rgba(180, 85, 56, .5), transparent); }
+  .motion-flow-mark span { writing-mode: initial; }
+  .motion-quality-grid,
+  .motion-capability-boundary ul { grid-template-columns: 1fr; }
+  .motion-source-preview,
+  .motion-source-preview img,
+  .motion-source-preview video { min-height: 210px; height: 210px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-source-card { transition: none; }
+  .motion-source-card:hover,
+  .motion-source-card:focus-within { transform: none; }
+}

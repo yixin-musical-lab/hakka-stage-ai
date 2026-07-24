@@ -28,7 +28,9 @@ GRS AI 图生图与 RunningHub 克隆音频保持原样，本次迁移只替换�
 | 供应商结果地址 | 约 24 小时有效，成功后应尽快下载 |
 
 参考生视频、驱动音频、视频续写和结果自动转存暂未开放。参考生视频属于
-`wan2.7-r2v` 的独立能力，不应把参数混入当前 I2V 请求。
+`wan2.7-r2v` 的独立能力，不应把参数混入当前 I2V 请求。人物图片动作模仿已通过独立的
+`wan2.2-animate-move` 工作台接入，配置与接口见
+[`wan-motion-transfer-integration.md`](wan-motion-transfer-integration.md)。
 
 ## 3. 环境变量
 
