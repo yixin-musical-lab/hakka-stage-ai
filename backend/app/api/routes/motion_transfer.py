@@ -23,6 +23,7 @@ from app.services.wan_animate import (
     refresh_motion_task,
     remove_motion_inputs,
     save_motion_input,
+    split_motion_public_input_path,
     submit_motion_task,
 )
 
@@ -232,15 +233,19 @@ def read_motion_transfer_result(
 
 
 @public_router.get(
-    "/{token}",
+    "/{signed_asset}",
     include_in_schema=False,
     summary="供百炼限时读取动作模仿输入素材",
 )
-def read_motion_transfer_input(token: str) -> StreamingResponse:
+def read_motion_transfer_input(signed_asset: str) -> StreamingResponse:
     """仅供百炼回源；令牌签名、目录和过期时间全部通过后才流式返回素材。"""
 
     try:
-        response, content_type, size_bytes = open_motion_public_input(token)
+        token, extension = split_motion_public_input_path(signed_asset)
+        response, content_type, size_bytes = open_motion_public_input(
+            token,
+            expected_extension=extension,
+        )
     except MotionTransferError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return StreamingResponse(
@@ -248,6 +253,7 @@ def read_motion_transfer_input(token: str) -> StreamingResponse:
         media_type=content_type,
         headers={
             "Cache-Control": "public, max-age=300",
+            "Content-Disposition": f'inline; filename="motion-input{extension}"',
             "Content-Length": str(size_bytes),
             "X-Content-Type-Options": "nosniff",
         },
