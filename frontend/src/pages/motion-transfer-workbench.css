@@ -40,7 +40,6 @@
   border: 1px solid var(--border);
   border-radius: 15px;
   background: rgba(255, 255, 255, .9);
-  cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
@@ -56,17 +55,38 @@
   border-color: rgba(180, 85, 56, .55);
 }
 
-.motion-source-card > input {
+.motion-source-file-input {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-.motion-source-card > input:disabled {
+.motion-source-picker {
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.motion-source-picker:hover {
+  border-color: rgba(29, 122, 114, .65);
+  background-color: #e8f3f0;
+}
+
+.motion-source-card--video .motion-source-picker:hover {
+  border-color: rgba(180, 85, 56, .58);
+  background-color: #f8e9e1;
+}
+
+.motion-source-card.is-disabled .motion-source-picker,
+.motion-source-card.is-disabled .motion-source-replace {
+  opacity: .55;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .motion-source-index {
@@ -153,17 +173,50 @@
   object-fit: contain;
 }
 
-.motion-source-card > em {
-  position: absolute;
-  right: 23px;
-  bottom: 23px;
-  z-index: 2;
+.motion-source-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.motion-source-meta {
+  min-width: 0;
   border-radius: 999px;
   background: rgba(10, 25, 23, .86);
   padding: 4px 8px;
   color: white;
   font-size: 10px;
-  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motion-source-replace {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(29, 122, 114, .28);
+  border-radius: 999px;
+  background: #edf6f3;
+  padding: 5px 9px;
+  color: var(--motion-jade);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.motion-source-card--video .motion-source-replace {
+  border-color: rgba(180, 85, 56, .26);
+  background: #fbefe9;
+  color: var(--motion-coral);
+}
+
+.motion-source-replace svg {
+  width: 12px;
+  height: 12px;
 }
 
 .motion-flow-mark {
@@ -364,6 +417,7 @@
 }
 
 .motion-result-panel {
+  min-width: 0;
   background:
     radial-gradient(circle at 50% 0, rgba(196, 154, 87, .12), transparent 26%),
     var(--card);
@@ -376,7 +430,18 @@
     linear-gradient(145deg, #173a37, #0d211f);
 }
 
+.motion-task-meta,
+.motion-task-meta > div {
+  min-width: 0;
+}
+
+.motion-task-meta > div {
+  overflow: hidden;
+}
+
 .motion-task-meta dd {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
