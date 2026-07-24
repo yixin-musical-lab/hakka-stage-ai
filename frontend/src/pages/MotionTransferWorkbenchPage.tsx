@@ -288,27 +288,45 @@ export function MotionTransferWorkbenchPage() {
           </div>
 
           <div className="motion-source-flow">
-            <label className={`motion-source-card motion-source-card--person${personPreviewUrl ? " has-preview" : ""}`}>
+            <article className={`motion-source-card motion-source-card--person${personPreviewUrl ? " has-preview" : ""}${loading || submitting ? " is-disabled" : ""}`}>
               <span className="motion-source-index">01</span>
               <span className="motion-source-copy"><strong>人物定妆照</strong><small>决定人物形象与最终背景</small></span>
-              <div className="motion-source-preview">
-                {personPreviewUrl ? <img src={personPreviewUrl} alt="人物定妆照预览" onLoad={readPersonMetadata} /> : <><ImagePlus aria-hidden /><span>选择人物图片</span><small>JPG / PNG / BMP / WEBP · ≤ {options?.image_max_upload_mb ?? 5}MB</small></>}
+              {personPreviewUrl ? (
+                <div className="motion-source-preview">
+                  <img src={personPreviewUrl} alt="人物定妆照预览" onLoad={readPersonMetadata} />
+                </div>
+              ) : (
+                <label className="motion-source-preview motion-source-picker" htmlFor="motion-person-input">
+                  <ImagePlus aria-hidden /><span>选择人物图片</span><small>JPG / PNG / BMP / WEBP · ≤ {options?.image_max_upload_mb ?? 5}MB</small>
+                </label>
+              )}
+              <input id="motion-person-input" className="motion-source-file-input" type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*" disabled={loading || submitting} onChange={(event) => selectPersonImage(event.target.files?.[0] ?? null)} />
+              <div className="motion-source-footer">
+                <span className="motion-source-meta">{personDimensions ? `${personDimensions.width} × ${personDimensions.height}px` : "等待图片"}</span>
+                <label className="motion-source-replace" htmlFor="motion-person-input"><RefreshCw aria-hidden />{personPreviewUrl ? "更换图片" : "选择图片"}</label>
               </div>
-              <input type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,image/*" disabled={loading || submitting} onChange={(event) => selectPersonImage(event.target.files?.[0] ?? null)} />
-              {personDimensions ? <em>{personDimensions.width} × {personDimensions.height}px</em> : null}
-            </label>
+            </article>
 
             <div className="motion-flow-mark" aria-hidden><Move3d /><span>动作轨迹</span></div>
 
-            <label className={`motion-source-card motion-source-card--video${motionPreviewUrl ? " has-preview" : ""}`}>
+            <article className={`motion-source-card motion-source-card--video${motionPreviewUrl ? " has-preview" : ""}${loading || submitting ? " is-disabled" : ""}`}>
               <span className="motion-source-index">02</span>
               <span className="motion-source-copy"><strong>参考动作视频</strong><small>决定动作、表情与节奏</small></span>
-              <div className="motion-source-preview">
-                {motionPreviewUrl ? <video src={motionPreviewUrl} muted controls playsInline preload="metadata" onLoadedMetadata={readMotionMetadata} /> : <><FileVideo2 aria-hidden /><span>选择动作视频</span><small>MP4 / AVI / MOV · ≤ {options?.video_max_upload_mb ?? 200}MB</small></>}
+              {motionPreviewUrl ? (
+                <div className="motion-source-preview">
+                  <video src={motionPreviewUrl} muted controls playsInline preload="metadata" onLoadedMetadata={readMotionMetadata} />
+                </div>
+              ) : (
+                <label className="motion-source-preview motion-source-picker" htmlFor="motion-video-input">
+                  <FileVideo2 aria-hidden /><span>选择动作视频</span><small>MP4 / AVI / MOV · ≤ {options?.video_max_upload_mb ?? 200}MB</small>
+                </label>
+              )}
+              <input id="motion-video-input" className="motion-source-file-input" type="file" accept=".mp4,.avi,.mov,video/mp4,video/quicktime,video/x-msvideo" disabled={loading || submitting} onChange={(event) => selectMotionVideo(event.target.files?.[0] ?? null)} />
+              <div className="motion-source-footer">
+                <span className="motion-source-meta">{motionDuration !== null && motionDimensions ? `${formatDuration(motionDuration)} · ${motionDimensions.width} × ${motionDimensions.height}px` : "等待视频"}</span>
+                <label className="motion-source-replace" htmlFor="motion-video-input"><RefreshCw aria-hidden />{motionPreviewUrl ? "更换视频" : "选择视频"}</label>
               </div>
-              <input type="file" accept=".mp4,.avi,.mov,video/mp4,video/quicktime,video/x-msvideo" disabled={loading || submitting} onChange={(event) => selectMotionVideo(event.target.files?.[0] ?? null)} />
-              {motionDuration !== null && motionDimensions ? <em>{formatDuration(motionDuration)} · {motionDimensions.width} × {motionDimensions.height}px</em> : null}
-            </label>
+            </article>
           </div>
 
           <fieldset className="motion-quality-fieldset" disabled={loading || submitting}>
